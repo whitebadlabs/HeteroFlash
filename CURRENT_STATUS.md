@@ -59,3 +59,4 @@ This project has started at the reproducible analysis/software-scaffolding phase
 - MaxQ: trace container healthy in about 3 min; the hook matched `GateLinear` output (has `e_score_correction_bias`), 42 MoE layers per forward -> PASS. M1 trace run started 22:52Z: 364 prompts, sequential, ~25 s per 256-token prompt in eager mode (~10 tok/s; capture overhead not separated).
 - Link: deep idle states off -> ping 0.347 ms, TCP 64 B 0.211 ms; 8 KB unchanged at 0.52 ms (1 GbE serialization). The Spark's ConnectX-7 functions are missing from the PCI bus since 2026-10-18.
 - Forgejo whitebadlabs/HeteroFlash created; main pushed (9f0d63a); GitHub push mirror synced 22:54Z after clean gitleaks + identity scans.
+- Complete CPU expert FFN kernel (v3, int4 g128 + dynamic activation quant + SiLU): 73.5 us per expert layer-batched at 193 GB/s, verified (rel. L2 2e-5). This replaces the bare-dot 52 us as the CPU-tier cost.

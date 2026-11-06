@@ -115,3 +115,21 @@ The proxy covers routed-expert traffic only. It leaves out attention, KDA/MLA pr
 - Idle-state exit latency was most of the small-message RTT. Activation-sized messages (8-16 KB) are now dominated by 1 GbE serialization through the switch (~0.13 ms per hop each way), so the next step is a 10G/ConnectX link.
 - RDMA tools installed on both machines; `ibv_devinfo` finds no RDMA devices on either.
 - Spark ConnectX-7: the mlx5 drivers are loaded, but no ConnectX PCI function is present on the bus. The kernel log shows all four functions (0000:01:00.0/.1, 0002:01:00.0/.1) unloading on 2026-10-18 21:46 and never coming back. The QSFP ports are unusable until this is fixed (PCI rescan / reboot / firmware check).
+
+## Complete CPU expert FFN v3 (`bench/moe_cpu_expert_v3.c`; `check` mode: relative L2 error 2.0e-5 vs scalar reference)
+Dynamic per-token u8 activation quantization, int4 weights with an fp32 scale per 128-weight group (+ folded zero-point constant; 4.5 bpw incl. metadata), gate/up -> SiLU(gate)*up -> requantize -> down, gate-weighted sum over experts. 32 threads pinned to cores unless noted. The M1 trace capture was running on the same machine (GPU-bound, light CPU load).
+
+| Variant | Experts | ms per layer | us per expert | GB/s (weights + scales) |
+|---|---|---|---|---|
+| per-expert barriers | 8 | 0.640 | 80.0 | 177 |
+| per-expert barriers, 24 threads | 8 | 0.843 | 105.4 | 134 |
+| per-expert barriers, 16 threads | 8 | 1.100 | 137.5 | 103 |
+| layer-batched | 2 | 0.171 | 85.3 | 166 |
+| layer-batched | 4 | 0.324 | 81.0 | 175 |
+| layer-batched | 8 | 0.588 | 73.5 | 193 |
+| layer-batched | 12 | 0.878 | 73.1 | 194 |
+| layer-batched | 24 | 1.765 | 73.5 | 192 |
+| layer-batched, 16 threads | 8 | 1.100 | 137.4 | 103 |
+
+- Planner input: **~73.5 us per distinct cold expert per layer** (complete FFN, 32 cores); about 1.4x the bare int4 dot product (52 us). The remaining overhead is per-group scale/correction work (next optimization: apply scales per 2 groups, vectorize corrections across rows).
+- Thread scaling is roughly linear in cores, so CPU-tier capacity is set by how many workstation cores research jobs leave free.
