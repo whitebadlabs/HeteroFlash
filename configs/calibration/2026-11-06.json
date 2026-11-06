@@ -2,7 +2,7 @@
   "schema": "heteroflash-calibration-v1",
   "date": "2026-11-06",
   "measurements": {
-    "spark_gpu_effective_bw_GBps": {"value": 170, "status": "assumed", "source": "~80% of published GB10 STREAM-triad 200-213 GB/s; Spark GPU not yet measured locally"},
+    "spark_gpu_effective_bw_GBps": {"value": 222, "status": "measured", "source": "bench/spark_gpu_bench.py decode-shape expert GEMV, BF16 T>=4 / FP8 T16-32 weight streaming 221-224 GB/s; read-reduce 241 GB/s (co-resident idle model)"},
     "spark_arm_bw_GBps": {"value": 100, "status": "measured", "source": "bench/mem_bw.c, 20 threads, 2 GB buffer, GPU model co-resident (results/2026-11-06-m0-calibration)"},
     "remote_cpu_expert_bw_GBps": {"value": 206, "status": "measured", "source": "bench/moe_cpu_vnni.c int8, 32 threads, 1 expert x 1 token (206-217 GB/s range)"},
     "remote_roundtrip_ms": {"value": 0.54, "status": "measured", "source": "bench/tcp_pingpong.py 8 KB median over current 1 GbE switched path"}

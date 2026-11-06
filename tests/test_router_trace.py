@@ -103,7 +103,7 @@ class TestRouterTrace(unittest.TestCase):
         cfg = json.loads((ROOT / 'configs/synthetic_demo.json').read_text())
         prov = placement_sim.apply_calibration(cfg, json.loads((ROOT / 'configs/calibration/2026-11-06.json').read_text()))
         self.assertEqual(prov['assumed_remote_roundtrip_ms']['status'], 'measured')
-        self.assertEqual(prov['assumed_spark_bw_GBps']['status'], 'assumed')
+        self.assertEqual(prov['assumed_spark_bw_GBps']['status'], 'measured')
         self.assertEqual(cfg['assumed_remote_roundtrip_ms'], 0.54)
         with self.assertRaises(ValueError):
             placement_sim.apply_calibration(cfg, {'schema': 'other', 'measurements': {}})

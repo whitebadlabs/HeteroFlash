@@ -37,6 +37,19 @@ The Arm and GPU share one memory interface, so their bandwidth figures must not 
 - The naive int4 kernel is compute/unpack-bound and only ~13% faster than int8. A tuned int4 kernel (for example kt-kernel RAWINT4) is the next thing to measure.
 - With 16 threads every number is ~1.7x slower. Reserving cores for research jobs directly costs CPU-tier speed.
 
+## Spark GPU (`bench/spark_gpu_bench.py`, vllm/vllm-openai:v0.32.0, torch 2.13 cu130, GB10 sm_121; idle co-resident model, 2.2 GB allocated)
+| Test | Result |
+|---|---|
+| Read-reduce, 1 GiB bf16 | **241 GB/s** |
+| Copy (read + write) | 233 GB/s |
+| Expert gate+up GEMV [T x 4096] @ [4096 x 4096], weights cycled over 24 experts | BF16 T1 162 GB/s; BF16 T4/T8 222 GB/s; FP8 T16/T32 222-224 GB/s |
+| Prefill GEMM [T x 4096] @ [4096 x 2048] TFLOPS | BF16 22 / 74 / 88 / 96 / 102 at T 64 / 256 / 1024 / 4096 / 8192 |
+| | FP8 82 / 127 / 193 / 192 / 195 |
+| | NVFP4 (vLLM cutlass_scaled_fp4_mm) 227 / 252 / 297 / 300 at T 256 / 1024 / 4096 / 8192 |
+
+- Weight streaming of ~222 GB/s beats the published 200-213 GB/s STREAM figures. The calibration value moves from 170 (assumed) to 222 (measured).
+- Single dense NVFP4 GEMMs reach ~300 TFLOPS at prefill sizes. Grouped MoE GEMM with per-expert token counts has not been measured yet.
+
 ## Tuned CPU expert kernel v2 (`bench/moe_cpu_vnni_v2.c`; verified exact vs scalar reference by `bench/check_v2.c`)
 4-row register blocking; int4 as unsigned nibbles with the zero point folded into one per-row correction.
 

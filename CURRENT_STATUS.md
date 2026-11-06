@@ -44,3 +44,13 @@ This project has started at the reproducible analysis/software-scaffolding phase
 - Tests: 17/17 pass (7 new).
 - Added `AGENTS.md`, `docs/CONVERSATION_CONTEXT.md` and `docs/CODEX_KICKOFF.md` (handoff from the planning conversation).
 - Still missing for M0: Spark GPU bandwidth/GEMM, CPU kernel with activation quant/scales/SiLU, tuned/RDMA link latency, Spark Arm kernel under contention, model baselines S0/T.
+
+## M0/M1 continued: 2026-11-06 (later)
+- Spark GPU measured (`bench/spark_gpu_bench.py`): read 241 GB/s; expert-weight streaming ~222 GB/s at decode shapes; dense GEMM at [T x 4096 x 2048]: BF16 ~100, FP8 ~195, NVFP4 ~300 TFLOPS (T >= 4096). Calibration updated: Spark GPU bandwidth 222 GB/s (measured).
+- M1 capture pipeline built (owner approved use of the Max-Q GPUs for teacher/trace work):
+  - `src/build_calibration_prompts.py`: 364 general-purpose public prompts across 7 domains (writing/chat, knowledge QA, math, code, multilingual, instruction following, 4 x ~40K-token long-context), with a deterministic 25% holdout. No private data.
+  - `src/trace_hook/sitecustomize.py`: global torch hooks that save full 288-way router logits (fp16) per MoE layer per forward. Validated on a fake 42-layer MoE (exact layer order, token counts and row totals).
+  - `ops/maxq-trace/compose.yaml`: the serving recipe in eager mode, without MTP or prefix caching, max-num-seqs 1, loopback port 8001.
+  - `ops/maxq-heteroflash.sh` / `ops/spark-heteroflash.sh`: one sudo script per machine (temporary CPU idle-state disable for link-latency tests, RDMA tools, ConnectX diagnosis on the Spark; trace container start + hook self-check on MaxQ), each with an `-off.sh` undo script.
+  - `src/run_trace_client.py`: sequential, resumable request driver.
+- Not yet run: the trace capture itself (waiting for the owner to run the MaxQ sudo script), and the RDMA/idle-state latency test.
