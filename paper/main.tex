@@ -1,0 +1,120 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.78in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,graphicx,xcolor,hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\hypersetup{colorlinks=true,urlcolor=blue!50!black,citecolor=blue!50!black,linkcolor=blue!50!black}
+\title{\vspace{-1.0em}\textbf{HeteroFlash: Joint Expert Compression, Tier-Aware Quantization, and Asynchronous Cross-Processor Scheduling for Memory-Constrained MoE Inference}\\[0.5em]\large Research Design and Reproducibility Protocol --- Preliminary Draft}
+\author{Author information withheld pending research completion}
+\date{November 6, 2026 --- Draft 0.1 (no experimental results)}
+\begin{document}
+\maketitle
+\begin{abstract}
+Large mixture-of-experts (MoE) language models separate parameter capacity from activated compute, yet memory residency, irregular expert selection, and interprocessor coordination make single-user inference on resource-constrained hardware difficult. We propose \emph{HeteroFlash}, a research framework that jointly studies top-$k$ router adaptation, nonuniform expert pruning, knowledge-distillation recovery, sensitivity-aware quantization, and overlapping expert execution on heterogeneous processing tiers. The target is a general-purpose GLM-5.3-Flash-derived model running with one NVIDIA GB10 DGX Spark GPU, its integrated Arm CPU, and optional CPU-only support from an external workstation with approximately 230~GB of RAM; workstation GPUs may be used during development but not at deployment. The goals are 120--130 output tokens/s for single-stream prose, a cold 45,000-token prompt to first token within 10.8~s, and a cached 45,000-token-prefix follow-up to first token within 200~ms for a specified short suffix. \textbf{These targets have not been demonstrated.} This draft specifies the hypotheses, scheduler cost model, negative controls, quality gates, statistical study and reproducibility protocol needed to establish the performance--quality frontier without fabricating results.
+\end{abstract}
+
+\section{Introduction}
+A 320B-parameter, approximately 18B-active GLM-5.3-Flash checkpoint combines 45 decoder layers, of which 42 use sparse MoE, with hybrid Kimi Delta Attention (KDA), DeepSeek Sparse Attention (DSA) and manifold-constrained hyper-connections \cite{nvidia-glm-doc}. Each of the 42 MoE blocks selects eight routed experts from 288 candidates, alongside a shared expert. An exact sparse implementation reduces active work but does not guarantee that the selected weight tensors fit into a device's fast memory or execute efficiently at batch size one.
+
+The target GB10 integrates a GPU and 20-core Arm CPU within 128~GB of \emph{physically shared} LPDDR5X with a rated 273~GB/s memory interface \cite{nvidia-spark}; it cannot be treated as an independent 128~GB VRAM plus another 128~GB CPU RAM pool. External workstation DDR5 adds capacity but not local GPU bandwidth. We deliberately disallow inference on the workstation's two GPUs, preserving them for other research. We allow their temporary use for teacher evaluations and model compression during development.
+
+Prior work explores expert pruning \cite{reap,hope}, offload-aware scheduling \cite{prescope,hetroute,spice}, and hybrid execution. Of particular interest, Hecate assigns disjoint expert bands to a GB300, separate RTX GPU and Grace CPU and performs processor-specific quantized execution in parallel \cite{hecate}. However, Hecate runs \emph{GLM-5.3 (753B)}, not GLM-5.3-Flash, on a DGX Station with far more accelerator bandwidth and a different memory/interconnect topology. Its performance values must not be transferred to a single GB10 without measurement.
+
+Our research question is therefore not whether offloading by itself speeds up a model. It is whether \emph{model sparsification and weight recovery can be trained jointly with a processor-aware placement policy} to expose enough parallelism and reduce total active weight traffic without losing broad model competence. A credible negative result---for example, that remote CPU participation always lengthens the per-layer critical path---is equally informative.
+
+\section{System and Hardware Model}
+\paragraph{Three compute tiers.} Tier $G$ is the Spark GPU, tier $A$ the integrated Spark Arm CPU, and tier $R$ the separate workstation CPU. The latter holds up to approximately 230~GB of available DDR5, conditional on its actual physical layout and other workloads. The Spark GPU and Arm CPU draw on a \emph{common} memory-bandwidth budget. The remote CPU has its own memory bandwidth but adds network message latency. Processor-specific quantization candidates include compact low-bit GPU kernels, Arm NEON int4/int8 kernels, and x86 integer kernels selected only after CPU instruction-set verification.
+
+\paragraph{Layer execution.} For each layer, the GPU performs attention and router computation and constructs the exact selected expert set. Expert subsets are processed concurrently on the GPU, local Arm CPU and remote CPU. A layer may progress only after all required gated partial sums are returned and combined. Sending activations and receiving partial sums, rather than streaming remote weights for every cache miss, is the primary heterogeneous design; weight offloading remains an explicit control.
+
+For layer $\ell$ with assignment $X$, a useful first-order critical-path model is
+\begin{equation}
+\small
+\begin{split}
+T_\ell(X) \simeq\;& T_{\mathrm{attn},\ell} + \\
+&\max\{T_{G,\ell},T_{A,\ell},T_{R,\ell}+T_{\mathrm{net},\ell}\}\\
+&+T_{\mathrm{combine},\ell}.
+\end{split}
+\label{eq:critical}
+\end{equation}
+The model must additionally enforce a coupled lower bound on GPU/Arm shared-memory traffic,
+\begin{equation}
+\small
+T_\ell(X)\geq \frac{B_{G,\ell}(X)+B_{A,\ell}(X)}{\widehat{\mathrm{BW}}_{\mathrm{shared}}},
+\end{equation}
+where bandwidth and other costs are measured under representative contention, not assumed equal to hardware peak.
+
+\paragraph{Dynamic placement.} Epoch-level plans are generated from observed router traces, per-expert quantization sensitivities and hardware cost tables. Within an epoch the scheduler uses exact routing decisions; it does not choose experts based on their popularity. Migration or tier-specific repacking is performed \emph{off the verification critical path}. Prepacked weight replicas enable low-cost selection among formats, at an explicit memory cost. Quantization formats and placement may differ between large-batch cold prefill and batch-one speculative verification.
+
+\section{Joint Optimization Objective}
+Let $e$ index experts in layer $\ell$, $p\in\{G,A,R\}$ the processor and $q\in\mathcal Q_p$ a supported packed quantization format. A binary variable $x_{\ell epq}$ assigns each retained expert to a tier and quantization. With pruning variable $z_{\ell e}\in\{0,1\}$,
+\begin{equation}
+\sum_{p,q}x_{\ell epq}=z_{\ell e},\quad
+\sum_{\ell,e,p\in\{G,A\},q}s_{\ell eq}x_{\ell epq}+M_{\mathrm{fixed}}\leq128\,\mathrm{GB}.
+\end{equation}
+The remote CPU store has a separate approximate 230~GB capacity constraint. The fixed Spark term includes dense weights, KV and recurrent states, activations, kernel scratch and operating-system headroom; usable memory must be verified in situ.
+
+A quality-aware latency objective is
+\begin{equation}
+\small
+\begin{split}
+\min_{X,z,\theta}\quad &\alpha\widehat T_{\mathrm{decode}}+
+\beta\widehat T_{\mathrm{prefill}}+\gamma\widehat T_{\mathrm{cached}}\\
+&+\lambda\widehat{\Delta Q}(\theta,X,z)+\mu C_{\mathrm{migration}},
+\end{split}
+\label{eq:joint}
+\end{equation}
+subject to memory, network, CPU resource and \emph{measured} task-quality constraints. The proxy $\widehat{\Delta Q}$ is not assumed to equal KL divergence. A trace-driven simulator is used to filter candidate schedules before expensive kernel experiments, with explicit model/measurement uncertainty.
+
+\section{Model Transformation and Recovery}
+\paragraph{Routing surgery.} The original GLM router uses sigmoid gates, correction biases, and normalized top-$k$ selection. We distinguish the number $k_a$ of activated experts from the normalization reference set $S_{k_r}$:
+\begin{equation}
+\small
+\widetilde{y}_{\ell}(h)=\gamma_{\ell}\sum_{e\in S_{k_a}(h)}\frac{p_{\ell e}(h)}{\sum_{j\in S_{k_r}(h)}p_{\ell j}(h)}E_{\ell e}(h).
+\end{equation}
+We test $k_a\in\{8,6,4,3,2\}$ and $k_r\in\{k_a,8,12,16\}$, with a correction-bias-preserving selection rule. The expression is an \emph{experimental modification}, not a guaranteed drop-in approximation to the original model.
+
+\paragraph{Expert selection.} We compare frequency-only pruning, REAP importance from router weights and activation norms \cite{reap}, and interaction-aware pruning \cite{hope}, allowing a distinct retained expert budget for each layer. Pruning reduces resident capacity; changing activated $k$ reduces active computation, and the two effects must be reported separately.
+
+\paragraph{Recovery.} Initially freeze attention and expert weights, train router parameters by intermediate-output reconstruction and teacher distribution alignment, then selectively adapt retained expert down projections with low-rank weights if needed. The combined loss may include
+\begin{equation}
+\small
+\begin{split}
+\mathcal L=\;&\lambda_{KL}T^2D_{KL}(P_T^T\Vert P_S^T) + \lambda_{CE}\mathcal L_{CE}\\
+&+\lambda_H\mathcal L_{\mathrm{hidden}}+\lambda_C\widehat T.
+\end{split}
+\end{equation}
+The teacher is the highest-quality practical reference; a 4-bit teacher must be separately compared against the official FP8 model. We do not equate small KL with unchanged behavior.
+
+\paragraph{Causal quantization.} Quantization calibration follows the outputs of already-quantized preceding layers; expert down projections are calibrated using the quantized gate/up activations. NVIDIA's GLM-5.3-Flash analysis suggests down projections merit extra precision relative to gate/up matrices \cite{nvidia-quant}. Candidate GPU and CPU formats are accepted based on \emph{actual kernel throughput and quality}, not nominal bits per weight. Runtime migrations select already-prepacked formats; they do not re-quantize thousands of experts on each decode step.
+
+\section{Reproducible Evaluation}
+\paragraph{Study systems.} $T$ denotes the highest-quality available teacher on the temporary research GPUs; $S_0$ the untouched compressed baseline on Spark; $S_1$ the compressed all-Spark GPU student; $S_2$ identical weights with heterogeneous execution; and $S_3$ identical model with dynamic placement and tier-specific formats. Comparing $S_1$ versus $S_2$ isolates heterogeneity rather than conflating model and hardware changes.
+
+\paragraph{Timing endpoint.} Primary tests are single-user prose generation at both greedy and sampled settings, cold 45,000 input tokens to the \emph{first streamed token}, and a verified cached 45,000-token prefix plus exactly 32 new tokens to first streamed token. We report other suffix lengths separately. Output rate counts committed model tokens, never draft proposals, and distinguishes internal reasoning from visible prose. All three targets must hold on the same chosen configuration, not separately optimized configurations.
+
+\paragraph{Quality.} Held-out prompts cover writing, multilingual knowledge, reasoning, coding, instruction/tool use, and long-context tasks. We compute teacher-forced full-vocabulary $D_{KL}(P_T\Vert P_S)$ on identical token prefixes, task accuracy and failure rates; prompt-level clustering prevents treating correlated tokens as independent observations. Long-form on-policy generation detects trajectory drift.
+
+\paragraph{Statistical testing.} Final quality testing uses matched prompt pairs. The primary analysis is a paired, prompt-clustered bootstrap for task accuracy differences and one-sided noninferiority confidence bounds with predeclared practical margins. The initial 2-percentage-point aggregate noninferiority margin is provisional and must be justified before a frozen holdout run. Domain-specific and correctness-critical thresholds are separately predeclared; multiplicity is controlled. For performance, randomized cross-run order and prompt/restart-block resampling yield confidence intervals on p95 TTFT and sustained output rate. A pilot determines independent sample size; multiple repetitions of a single prompt are not substitutes for diversity.
+
+\paragraph{Ablations.} We include original-vs-calibrated routing, pruning criteria, KD recovery, quantization format/bit allocation, identical-weight all-Spark-vs-hybrid execution, local-Arm-only, remote-CPU-only, dynamic-vs-static placement, migration enabled/disabled, network impairment, and prefill/decode schedule specialization. The compiler/runtime and kernel signatures are version-pinned. A no-network remote-tier failure test assesses progress and correctness under delayed or missing CPU results.
+
+\section{Preliminary Status and Limitations}
+At the time of writing, \textbf{there are no results supporting the three SLAs on the target machine}. The repository accompanying this draft contains a deterministic synthetic placement baseline and basic validation tests; its cost estimates are explicitly uncalibrated and cannot be cited as achieved throughput. Hecate's published performance is on another processor topology and model. Major risks include GB10's shared memory contention, per-layer remote-message round trips, quality loss from routing reduction, biased KL from an imperfect teacher, and long-context cache-state correctness. Hardware and network probes and measured kernels are the immediate next steps.
+
+\section{Conclusion and Release Plan}
+We formulate a falsifiable co-design study linking expert sparsity, precision, and critical-path execution across asymmetric GPU and CPU tiers. The final paper will include measured benchmark tables, quality--latency Pareto curves, confidence intervals, ablations and negative results, as well as a public implementation and hardware profiles when licensing and privacy permit. We will not assert a successful 125~tok/s deployment without such measurements.
+
+\begin{thebibliography}{9}\small
+\bibitem{nvidia-glm-doc} NVIDIA NeMo AutoModel. \emph{GLM-5.3-Flash Model Architecture}. 2026. \url{https://docs.nvidia.com/nemo/automodel/latest/model-coverage/vision-language-models/thudm/GLM-5.3-Flash}
+\bibitem{nvidia-spark} NVIDIA. \emph{DGX Spark Hardware Overview}. 2026. \url{https://docs.nvidia.com/dgx/dgx-spark/hardware.html}
+\bibitem{reap} M. Lasby et al. \emph{REAP the Experts: Why Pruning Prevails for One-Shot MoE Compression}. ICLR, 2026. \url{https://arxiv.org/abs/2510.13999}
+\bibitem{hope} A. M. Tseng et al. \emph{Higher-order Pruning of Experts in Mixture-of-Experts Language Models}. arXiv:2609.18916, 2026.
+\bibitem{prescope} E. Yu et al. \emph{PreScope: Unleashing the Power of Prefetching for Resource-Constrained MoE Inference}. arXiv:2509.23638, 2025.
+\bibitem{hetroute} X. Yuan et al. \emph{HetRoute: Heterogeneous and Cost-aware Collaborative Routing Framework for Distributed Edge MoE Inference}. arXiv:2608.00577, 2026.
+\bibitem{spice} Y. Lyu et al. \emph{SPICE: Speculative Prefetching with Low-Rank Expert Surrogates and Heterogeneous Orchestration for MoE Inference Acceleration}. arXiv:2608.21240, 2026.
+\bibitem{hecate} third-party. \emph{Hecate: Hybrid Inference and Quantization for DGX Station}. GitHub, 2026. \url{https://github.com/third-party/hecate}
+\bibitem{nvidia-quant} NVIDIA Model Optimizer Team. \emph{GLM-5.3-Flash at 2--3 Bits per Expert Weight}. October 28, 2026. \url{https://nvidia.github.io/Model-Optimizer/announcements/20261028-glm53-flash-iq2.html}
+\end{thebibliography}
+\end{document}
