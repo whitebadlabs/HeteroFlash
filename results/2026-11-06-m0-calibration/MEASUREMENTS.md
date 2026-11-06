@@ -133,3 +133,17 @@ Dynamic per-token u8 activation quantization, int4 weights with an fp32 scale pe
 
 - Planner input: **~73.5 us per distinct cold expert per layer** (complete FFN, 32 cores); about 1.4x the bare int4 dot product (52 us). The remaining overhead is per-group scale/correction work (next optimization: apply scales per 2 groups, vectorize corrections across rows).
 - Thread scaling is roughly linear in cores, so CPU-tier capacity is set by how many workstation cores research jobs leave free.
+
+## Spark Arm expert kernel and GPU contention (`bench/moe_arm_neon.c`, `bench/gpu_stream_load.py`)
+NEON SDOT kernel (int8, and int4 as unsigned nibbles with zero-point fold), 4-row blocking; dot kernels verified exact vs scalar. Built with `-march=armv8.4-a+dotprod` (GCC 13 `-mcpu=native` does not enable dotprod here). Pool of 48 experts, 8 experts per layer, threads pinned to cores.
+
+| Condition | int8 us/expert (GB/s) | int4 us/expert (GB/s) |
+|---|---|---|
+| Arm alone, 20 threads | 162.3 (155) | 86.7 (145) |
+| Arm alone, 10 threads | 297.5 (85) | 156.2 (81) |
+| Arm, 20 threads, **while the GPU streams memory** | 1498.6 (**17**) | 663.1 (**19**) |
+| GPU read bandwidth during the same window | 243 GB/s, unchanged from GPU alone (242-243) | |
+
+- GB10 memory arbitration strongly favours the GPU. Under full GPU streaming, Arm cores get ~8x less bandwidth while the GPU loses nothing.
+- **Implication:** a concurrent Spark-Arm expert tier is ineffective during bandwidth-bound decode (the GPU is streaming nearly the whole step). It might help only in phases where the GPU is compute-bound (prefill GEMMs) or idle (network waits). Treat it as a hypothesis to test, not a planned tier.
+- The earlier Arm STREAM figure (~100 GB/s) was measured with a co-resident model loaded. Arm-alone weight streaming reaches 145-155 GB/s.
