@@ -102,3 +102,16 @@ The proxy covers routed-expert traffic only. It leaves out attention, KDA/MLA pr
 2. Tuned int4 CPU kernel (kt-kernel AVX-512 RAWINT4) on the workstation.
 3. RTT with CPU idle states disabled; then 10G and CX7/RoCE links once cabled (`ib_write_lat`).
 4. Spark Arm expert kernel (NEON int8) while measuring contention against GPU traffic.
+
+## Link latency with deep CPU idle states disabled on both machines (`ops/*-heteroflash.sh`, temporary)
+| | Default idle states | Deep idle states off |
+|---|---|---|
+| ICMP ping avg | 1.195 ms | **0.347 ms** (min 0.339, mdev 0.009) |
+| TCP 64 B median | 0.477 ms | **0.211 ms** (p90 0.308) |
+| TCP 8 KB median | 0.538 ms | 0.522 ms (p90 0.538) |
+| TCP 16 KB median | 0.607 ms | 0.607 ms |
+| TCP 64 KB median | 1.441 ms | 1.372 ms |
+
+- Idle-state exit latency was most of the small-message RTT. Activation-sized messages (8-16 KB) are now dominated by 1 GbE serialization through the switch (~0.13 ms per hop each way), so the next step is a 10G/ConnectX link.
+- RDMA tools installed on both machines; `ibv_devinfo` finds no RDMA devices on either.
+- Spark ConnectX-7: the mlx5 drivers are loaded, but no ConnectX PCI function is present on the bus. The kernel log shows all four functions (0000:01:00.0/.1, 0002:01:00.0/.1) unloading on 2026-10-18 21:46 and never coming back. The QSFP ports are unusable until this is fixed (PCI rescan / reboot / firmware check).

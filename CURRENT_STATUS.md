@@ -54,3 +54,8 @@ This project has started at the reproducible analysis/software-scaffolding phase
   - `ops/maxq-heteroflash.sh` / `ops/spark-heteroflash.sh`: one sudo script per machine (temporary CPU idle-state disable for link-latency tests, RDMA tools, ConnectX diagnosis on the Spark; trace container start + hook self-check on MaxQ), each with an `-off.sh` undo script.
   - `src/run_trace_client.py`: sequential, resumable request driver.
 - Not yet run: the trace capture itself (waiting for the owner to run the MaxQ sudo script), and the RDMA/idle-state latency test.
+
+## 2026-11-06 22:48-23:00Z: setup scripts run by the owner
+- MaxQ: trace container healthy in about 3 min; the hook matched `GateLinear` output (has `e_score_correction_bias`), 42 MoE layers per forward -> PASS. M1 trace run started 22:52Z: 364 prompts, sequential, ~25 s per 256-token prompt in eager mode (~10 tok/s; capture overhead not separated).
+- Link: deep idle states off -> ping 0.347 ms, TCP 64 B 0.211 ms; 8 KB unchanged at 0.52 ms (1 GbE serialization). The Spark's ConnectX-7 functions are missing from the PCI bus since 2026-10-18.
+- Forgejo whitebadlabs/HeteroFlash created; main pushed (9f0d63a); GitHub push mirror synced 22:54Z after clean gitleaks + identity scans.
