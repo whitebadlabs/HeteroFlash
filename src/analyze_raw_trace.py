@@ -217,6 +217,16 @@ def main():
                                                   "p10": round(float(np.percentile(tm, 10)), 4),
                                                   "p90": round(float(np.percentile(tm, 90)), 4)}
     json.dump(summary, open(a.summary, "w"), indent=1)
+    # per-request decode routing sequences for trace-driven simulation: [T, L, K] int16
+    seqs, meta = {}, []
+    for j, lay in dec_ids.items():
+        if len(lay) != L:
+            continue
+        T = min(v.shape[0] for v in lay.values())
+        seqs[f"r{j}"] = np.stack([lay[li][:T] for li in range(L)], axis=1).astype(np.int16)
+        meta.append({"key": f"r{j}", "prompt_id": reqs[j]["prompt_id"], "domain": reqs[j]["domain"], "split": reqs[j]["split"], "T": int(T)})
+    np.savez_compressed(os.path.splitext(a.summary)[0] + "_decode_ids.npz", **seqs)
+    json.dump(meta, open(os.path.splitext(a.summary)[0] + "_decode_ids.json", "w"))
     np.savez_compressed(os.path.splitext(a.summary)[0] + "_counts.npz", decode=dec, prefill=counts["prefill"],
                         **{f"domain_{k}": v for k, v in dom_counts.items()})
     print(json.dumps({k: summary[k] for k in ("requests", "tokens", "coverage_decode", "p_all8_hot_decode",
