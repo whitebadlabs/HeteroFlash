@@ -107,6 +107,8 @@ services:
       - "{\"video\":0}"
       - "--no-enable-flashinfer-autotune"
       - "--enforce-eager"
+      - "--max-logprobs"
+      - "64"
       - "--no-enable-prefix-caching"
       - "--compilation-config"
       - "__COMPILATION_CONFIG__"
