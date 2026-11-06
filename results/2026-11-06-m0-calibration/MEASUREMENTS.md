@@ -147,3 +147,22 @@ NEON SDOT kernel (int8, and int4 as unsigned nibbles with zero-point fold), 4-ro
 - GB10 memory arbitration strongly favours the GPU. Under full GPU streaming, Arm cores get ~8x less bandwidth while the GPU loses nothing.
 - **Implication:** a concurrent Spark-Arm expert tier is ineffective during bandwidth-bound decode (the GPU is streaming nearly the whole step). It might help only in phases where the GPU is compute-bound (prefill GEMMs) or idle (network waits). Treat it as a hypothesis to test, not a planned tier.
 - The earlier Arm STREAM figure (~100 GB/s) was measured with a co-resident model loaded. Arm-alone weight streaming reaches 145-155 GB/s.
+
+## Served checkpoint byte breakdown (`src/checkpoint_bytes.py`, safetensors headers; EXL3 TR3 3.5bpw mixed)
+| Category | GB | Read every decode step? |
+|---|---|---|
+| routed experts (EXL3 K3/K4) | 133.62 | only the selected ones |
+| attention projections (KDA + MLA, native BF16) | 11.95 | yes |
+| MTP layer | 3.55 | per draft step, if MTP is used |
+| shared experts | 2.11 | yes |
+| lm_head | 1.27 | yes |
+| embeddings | 1.27 | no (row gather) |
+| vision tower | 1.13 | no (text-only) |
+| dense MLP (layers 0-2) | 0.91 | yes |
+| DSA indexer | 0.16 | yes |
+| router | 0.10 | yes |
+| norms / hyper-connections | 0.07 | yes |
+| **total** | **156.15** | |
+
+- **Fixed bytes per decode step at served precision: ~16.6 GB** (attention + shared + lm_head + dense + indexer + router + norms). At the measured 222 GB/s Spark expert-streaming rate that is **~75 ms per step before any routed expert**. This replaces the earlier 9-10 GB estimate.
+- The same fixed weights at FP8 would be ~8.3 GB (~37 ms) and at NVFP4 (~4.5 bpw) ~4.7 GB (~21 ms). Fixed-weight precision is therefore the largest single decode lever on the Spark, ahead of expert placement. Its quality cost must be measured (M5).
