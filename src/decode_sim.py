@@ -43,7 +43,10 @@ def hot_sets(meta, seqs, frac, E):
     return hot
 
 
-def simulate(meta, seqs, hot, w, p):
+def simulate(meta, seqs, hot, w, p, k_active=8, deferral=False):
+    """deferral=False: per-layer barrier, t_layer = max(t_gpu, t_cpu).
+    deferral=True: cold-expert results are consumed one layer late (CPU and GPU pipelines overlap):
+    step = max(sum t_gpu, sum t_cpu) + max single-layer time (pipeline fill). Quality impact NOT modelled."""
     L = hot.shape[0]
     steps = []
     for m in meta:
@@ -51,9 +54,10 @@ def simulate(meta, seqs, hot, w, p):
             continue
         s = seqs[m["key"]]
         for t0 in range(0, s.shape[0] - w + 1, w):
-            win = s[t0:t0 + w]                       # [w, L, K]
+            win = s[t0:t0 + w, :, :k_active]         # [w, L, k]; ids are ordered by router preference
             tot = p["overhead_ms"] / 1e3
             cold_layers = 0
+            sg = sc = mx = 0.0
             for li in range(L):
                 u = np.unique(win[:, li, :])
                 h = hot[li, u]
@@ -63,7 +67,10 @@ def simulate(meta, seqs, hot, w, p):
                 if uc:
                     cold_layers += 1
                     tc = uc * p["cpu_us"] / 1e6 + p["rtt_ms"] / 1e3 + 2 * w * p["act_KB"] / 1e6 / p["link_GBps"]
+                sg += tg; sc += tc; mx = max(mx, tg, tc)
                 tot += max(tg, tc)
+            if deferral:
+                tot = p["overhead_ms"] / 1e3 + max(sg, sc) + mx
             steps.append((tot, cold_layers / L))
     st = np.array([x[0] for x in steps])
     return {"step_ms_mean": round(float(st.mean()) * 1e3, 2), "step_ms_p95": round(float(np.percentile(st, 95)) * 1e3, 2),
@@ -85,21 +92,23 @@ def main():
     ap.add_argument("--link-gbps", type=float, default=0.125, help="GB/s (1 GbE = 0.125)")
     ap.add_argument("--act-kb", type=float, default=8.0)
     ap.add_argument("--overhead-ms", type=float, default=2.0)
+    ap.add_argument("--k-active", type=int, nargs="*", default=[8, 6, 4])
+    ap.add_argument("--deferral", type=int, nargs="*", default=[0, 1])
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     meta, seqs = load(a.prefix)
     rows = []
     for frac in a.hot_frac:
         hot = hot_sets(meta, seqs, frac, a.experts)
-        for fixed, w, rtt in itertools.product(a.fixed_gb, a.windows, a.rtt_ms):
+        for fixed, w, rtt, ka, dfr in itertools.product(a.fixed_gb, a.windows, a.rtt_ms, a.k_active, a.deferral):
             p = dict(fixed_GB=fixed, expert_GB_gpu=a.expert_gb_gpu, gpu_GBps=a.gpu_gbps, cpu_us=a.cpu_us, rtt_ms=rtt,
                      link_GBps=a.link_gbps if rtt > 0.1 else 1.25, act_KB=a.act_kb, overhead_ms=a.overhead_ms)
-            r = simulate(meta, seqs, hot, w, p)
+            r = simulate(meta, seqs, hot, w, p, ka, bool(dfr))
             spark_gb = frac * a.experts * 42 * a.expert_gb_gpu + fixed
             for tau in a.tau:
                 if tau > w:
                     continue
-                rows.append({"hot_frac": frac, "spark_resident_GB": round(spark_gb, 1), "fits_spark": spark_gb <= 105, "fixed_GB": fixed, "window": w,
+                rows.append({"hot_frac": frac, "spark_resident_GB": round(spark_gb, 1), "fits_spark": spark_gb <= 105, "fixed_GB": fixed, "window": w, "k_active": ka, "deferral": bool(dfr),
                              "rtt_ms": rtt, "tau": tau, **r, "tok_s": round(tau / (r["step_ms_mean"] / 1e3), 1)})
     json.dump({"status": "SIMULATION on measured component costs + real routing traces (not an end-to-end measurement)",
                "params": vars(a), "rows": rows}, open(a.out, "w"), indent=1)
