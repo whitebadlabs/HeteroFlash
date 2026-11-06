@@ -54,9 +54,4 @@ This project has started at the reproducible analysis/software-scaffolding phase
   - `ops/maxq-heteroflash.sh` / `ops/spark-heteroflash.sh`: one sudo script per machine (temporary CPU idle-state disable for link-latency tests, RDMA tools, ConnectX diagnosis on the Spark; trace container start + hook self-check on MaxQ), each with an `-off.sh` undo script.
   - `src/run_trace_client.py`: sequential, resumable request driver.
 - Not yet run: the trace capture itself (waiting for the owner to run the MaxQ sudo script), and the RDMA/idle-state latency test.
-
-## 2026-11-06 22:48-23:00Z: setup scripts run by the owner
-- MaxQ: trace container healthy in about 3 min; the hook matched `GateLinear` output (has `e_score_correction_bias`), 42 MoE layers per forward -> PASS. M1 trace run started 22:52Z: 364 prompts, sequential, ~25 s per 256-token prompt in eager mode (~10 tok/s; capture overhead not separated).
-- Link: deep idle states off -> ping 0.347 ms, TCP 64 B 0.211 ms; 8 KB unchanged at 0.52 ms (1 GbE serialization). The Spark's ConnectX-7 functions are missing from the PCI bus since 2026-10-18.
-- Forgejo whitebadlabs/HeteroFlash created; main pushed (9f0d63a); GitHub push mirror synced 22:54Z after clean gitleaks + identity scans.
-- Complete CPU expert FFN kernel (v3, int4 g128 + dynamic activation quant + SiLU): 73.5 us per expert layer-batched at 193 GB/s, verified (rel. L2 2e-5). This replaces the bare-dot 52 us as the CPU-tier cost.
+- End-to-end TTFT harness added (`src/ttft_bench.py`, `docs/TTFT_PROTOCOL.md`): exact 45,000-token cold prompts with per-trial nonce, cached 45K + 16/32/64/128/256 suffixes, server-side cache-state verification per trial, interleaved trials, p50/p95/p99 + bootstrap CIs, SLA judged on the p95 upper CI. Tests 20/20. Not yet run on a valid target (needs the Spark S0 deployment or the original serving config; the trace server is eager/no-prefix-cache by design).
