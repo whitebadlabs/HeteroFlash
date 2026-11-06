@@ -1,0 +1,17 @@
+{
+  "note": "Measured 2026-11-06 bandwidth inputs (workstation int8 expert kernel ~206-217 GB/s, Spark Arm CPU read ~100 GB/s, Spark GPU 170 GB/s assumed effective); TCP RTT 0.54 ms measured over the current 1 GbE path. Routing is still the SYNTHETIC Zipf trace.",
+  "seed": 17,
+  "layers": 42,
+  "experts_per_layer": 288,
+  "parameters_per_expert": 25170000,
+  "selected_top_k": 8,
+  "zipf_exponent": 0.85,
+  "spark_total_gb": 128,
+  "spark_reserved_gb": 48,
+  "gpu_share_of_expert_budget": 0.9,
+  "remote_available_gb": 230,
+  "assumed_spark_bw_GBps": 170,
+  "assumed_arm_bw_GBps": 100,
+  "assumed_remote_cpu_bw_GBps": 200,
+  "assumed_remote_roundtrip_ms": 0.54
+}

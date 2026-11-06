@@ -30,3 +30,12 @@
 
 ## Integrity statement
 This project has started at the reproducible analysis/software-scaffolding phase. The hard SLAs remain experimental targets, not achieved performance claims.
+
+# Hardware session: 2026-11-06 (M0, partial)
+
+- Ran `src/hardware_probe.sh` on both machines and microbenchmarks in `bench/`. Results are in `results/2026-11-06-m0-calibration/MEASUREMENTS.md`.
+- Measured: workstation DRAM read 246-251 GB/s; int8 VNNI expert kernel 206-217 GB/s (~0.12 ms per expert-token); Spark Arm read ~100 GB/s; Spark<->workstation TCP RTT 0.54 ms at 8 KB over 1 GbE.
+- Found: both machines link at 1 Gb/s; the Spark's CX7 QSFP interfaces are not visible; no RDMA tooling is installed.
+- Reran the placement simulator with the measured bandwidths: 38.8 -> 29.1 ms/pass (measured TCP RTT) and 21.1 ms/pass (assumed RDMA RTT). Expert traffic only; routing still synthetic.
+- Unit tests: 10/10 pass.
+- Still missing for M0: Spark GPU bandwidth/GEMM, tuned int4 CPU kernel, tuned/RDMA link latency, Spark Arm kernel under contention, model baselines S0/T.
