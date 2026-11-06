@@ -109,7 +109,8 @@ def main():
                 if tau > w:
                     continue
                 rows.append({"hot_frac": frac, "spark_resident_GB": round(spark_gb, 1), "fits_spark": spark_gb <= 105, "fixed_GB": fixed, "window": w, "k_active": ka, "deferral": bool(dfr),
-                             "rtt_ms": rtt, "tau": tau, **r, "tok_s": round(tau / (r["step_ms_mean"] / 1e3), 1)})
+                             "rtt_ms": rtt, "tau": tau, **r, "tok_s": round(tau / (r["step_ms_mean"] / 1e3), 1),
+                             "tau_needed_for_125": round(125 * r["step_ms_mean"] / 1e3, 2)})
     json.dump({"status": "SIMULATION on measured component costs + real routing traces (not an end-to-end measurement)",
                "params": vars(a), "rows": rows}, open(a.out, "w"), indent=1)
     best = sorted(rows, key=lambda r: -r["tok_s"])[:12]

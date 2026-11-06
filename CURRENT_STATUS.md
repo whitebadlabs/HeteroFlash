@@ -55,5 +55,10 @@ This project has started at the reproducible analysis/software-scaffolding phase
   - `src/run_trace_client.py`: sequential, resumable request driver.
 - Not yet run: the trace capture itself (waiting for the owner to run the MaxQ sudo script), and the RDMA/idle-state latency test.
 - End-to-end TTFT harness added (`src/ttft_bench.py`, `docs/TTFT_PROTOCOL.md`): exact 45,000-token cold prompts with per-trial nonce, cached 45K + 16/32/64/128/256 suffixes, server-side cache-state verification per trial, interleaved trials, p50/p95/p99 + bootstrap CIs, SLA judged on the p95 upper CI. Tests 20/20. Not yet run on a valid target (needs the Spark S0 deployment or the original serving config; the trace server is eager/no-prefix-cache by design).
-- Spark Arm tier measured: NEON SDOT expert kernel 87 us/expert int4 alone (145 GB/s), but only ~18 GB/s (663 us/expert) while the GPU streams memory; GPU bandwidth unaffected (243 GB/s). The Arm tier is demoted to an optional prefill/idle-phase tier (negative control result for the paper).
-- Measured checkpoint byte breakdown: fixed per-step weights ~16.6 GB at served BF16 (attention 11.95 GB) -> ~75 ms/step on the Spark before experts. Attention/shared-expert precision becomes the top decode lever (FP8 ~37 ms, NVFP4 ~21 ms).
+
+## Re-prioritised plan after external review (2026-11-07)
+The verify step must be measured together with committed tokens per cycle; tok/s = committed/step (e.g. 49 ms needs ~6.1 committed tokens for 125 tok/s). Priority order:
+1. **Baseline TTFT + TPOT + ITL + MTP acceptance** on the original serving config (`ops/maxq-baseline-window.sh`, one sudo run): cold 45K, cached 45K+{16,32,64,128,256}, prose and mixed-domain decode with spec-decode counters from /metrics. `src/ttft_bench.py decode` adds TPOT, per-chunk ITL p50/p95/p99, committed tokens per verify, implied verify-step time and committed tokens needed for 125 tok/s (21 tests).
+2. **Top-k quality sweep** (M2, hook v2/v3 + `src/m2_router_surgery.py`).
+3. **Dense/fixed-weight precision sensitivity:** hook v3 applies simulated FP8 (128x128 blocks) or NVFP4 (16-blocks, e4m3 scales) to attention, shared-expert, dense-MLP and lm_head weights in place, live from the control file; originals kept on CPU, restore verified bit-exact; module inventory dumped. Included in the M2 grid (fixed_fp8, fixed_nvfp4, k4_fixed_nvfp4).
+4. **Heterogeneous placement** on full multi-domain traces (`src/decode_sim.py`, now reporting tau needed for 125 tok/s per configuration).

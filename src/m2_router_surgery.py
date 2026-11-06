@@ -34,7 +34,7 @@ def post(path, body, timeout=1800):
 
 
 def set_control(ctl_path, **kw):
-    cur = {"capture": False, "k_active": 8, "k_ref": "active", "routed_class": None, "diag": False}
+    cur = {"capture": False, "k_active": 8, "k_ref": "active", "routed_class": None, "diag": False, "fixed_quant": None}
     cur.update(kw)
     tmp = ctl_path + ".tmp"
     with open(tmp, "w") as f:
@@ -155,7 +155,9 @@ def main():
     ap.add_argument("--configs", default=json.dumps([
         {"name": "k8_ref", "k_active": 8}, {"name": "k8_repeat", "k_active": 8},
         {"name": "k6_active", "k_active": 6}, {"name": "k4_active", "k_active": 4},
-        {"name": "k3_active", "k_active": 3}, {"name": "k2_active", "k_active": 2}]))
+        {"name": "k3_active", "k_active": 3}, {"name": "k2_active", "k_active": 2},
+        {"name": "fixed_fp8", "fixed_quant": {"fmt": "fp8"}}, {"name": "fixed_nvfp4", "fixed_quant": {"fmt": "nvfp4"}},
+        {"name": "k4_fixed_nvfp4", "k_active": 4, "fixed_quant": {"fmt": "nvfp4"}}]))
     ap.add_argument("--reference", default="k8_ref")
     ap.add_argument("-k", type=int, default=64)
     ap.add_argument("--out")

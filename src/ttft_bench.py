@@ -31,16 +31,20 @@ def http_json(base, path, body, timeout=600):
         return json.load(r)
 
 
-def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900):
-    """Return dict(t_first, t_done, prompt_tokens, cached_tokens, n_chunks); times relative to send."""
-    body = {"model": model, "prompt": prompt_ids, "max_tokens": max_tokens, "temperature": 0, "stream": True,
-            "stream_options": {"include_usage": True}}
+def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900, temperature=0.0, keep_times=False,
+                      ignore_eos=False):
+    """Return dict(t_first, t_done, prompt_tokens, cached_tokens, completion_tokens, n_chunks[, chunk_times]);
+    times are seconds relative to sending the request. With speculative decoding one SSE chunk can carry
+    several tokens, so per-chunk gaps are inter-chunk latencies; per-token TPOT comes from token counts."""
+    body = {"model": model, "prompt": prompt_ids, "max_tokens": max_tokens, "temperature": temperature, "stream": True,
+            "stream_options": {"include_usage": True, "continuous_usage_stats": keep_times}, "ignore_eos": ignore_eos}
     req = urllib.request.Request(base + "/v1/completions", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     t0 = time.perf_counter()
     t_first = None
     usage = {}
     chunks = 0
+    times = []          # (t, cumulative completion tokens) per text chunk
     with urllib.request.urlopen(req, timeout=timeout) as r:
         for raw in r:
             line = raw.decode().strip()
@@ -53,15 +57,64 @@ def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900):
             if ev.get("usage"):
                 usage = ev["usage"]
             for ch in ev.get("choices", []):
-                if ch.get("text") and t_first is None:
-                    t_first = time.perf_counter() - t0
+                if ch.get("text"):
+                    now = time.perf_counter() - t0
+                    if t_first is None:
+                        t_first = now
                     chunks += 1
-                elif ch.get("text"):
-                    chunks += 1
+                    if keep_times:
+                        times.append((now, (ev.get("usage") or {}).get("completion_tokens")))
     t_done = time.perf_counter() - t0
     details = usage.get("prompt_tokens_details") or {}
-    return {"t_first": t_first, "t_done": t_done, "prompt_tokens": usage.get("prompt_tokens"),
-            "cached_tokens": details.get("cached_tokens", 0), "n_chunks": chunks}
+    out = {"t_first": t_first, "t_done": t_done, "prompt_tokens": usage.get("prompt_tokens"),
+           "cached_tokens": details.get("cached_tokens", 0), "completion_tokens": usage.get("completion_tokens"),
+           "n_chunks": chunks}
+    if keep_times:
+        out["chunk_times"] = times
+    return out
+
+
+SPEC_KEYS = ("vllm:spec_decode_num_drafts", "vllm:spec_decode_num_draft_tokens", "vllm:spec_decode_num_accepted_tokens")
+
+
+def scrape_spec(base):
+    """Sum vLLM speculative-decoding Prometheus counters (all label sets). Missing -> {}."""
+    try:
+        with urllib.request.urlopen(base + "/metrics", timeout=30) as r:
+            text = r.read().decode()
+    except Exception:  # noqa: BLE001
+        return {}
+    out = {}
+    for line in text.splitlines():
+        if line.startswith("#"):
+            continue
+        for k in SPEC_KEYS:
+            if line.startswith(k + "_total") or line.startswith(k + "{") or line.startswith(k + " "):
+                try:
+                    out[k] = out.get(k, 0.0) + float(line.rsplit(" ", 1)[1])
+                except ValueError:
+                    pass
+    return out
+
+
+def decode_metrics(r):
+    """TPOT and ITL from one streamed request with keep_times=True."""
+    ct = r.get("chunk_times") or []
+    n = r.get("completion_tokens") or 0
+    res = {"completion_tokens": n, "ttft": r["t_first"]}
+    if n >= 2 and r["t_first"] is not None:
+        res["tpot"] = (r["t_done"] - r["t_first"]) / (n - 1)        # seconds per output token after the first
+        res["decode_tok_s"] = 1.0 / res["tpot"]
+    gaps = [b[0] - a[0] for a, b in zip(ct, ct[1:])]
+    if gaps:
+        res["itl_chunk_p50"] = pct(gaps, .5)
+        res["itl_chunk_p95"] = pct(gaps, .95)
+        res["itl_chunk_p99"] = pct(gaps, .99)
+        res["itl_chunk_max"] = max(gaps)
+        toks = [t for _, t in ct if t is not None]
+        if len(toks) == len(ct) and toks:
+            res["tokens_per_chunk_mean"] = toks[-1] / len(ct)
+    return res
 
 
 def corpus_tokens(base, model, corpus_path, need):
@@ -108,7 +161,67 @@ def summarize(trials, sla):
     return out
 
 
+def decode_main(argv=None):
+    """TPOT / ITL / speculative acceptance on prose prompts (chat-templated via /tokenize)."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", default="http://127.0.0.1:8001")
+    ap.add_argument("--model", default="GLM-5.3-Flash")
+    ap.add_argument("--prompts", required=True, help="JSONL with messages (e.g. M1 calibration file)")
+    ap.add_argument("--domains", nargs="*", default=["writing_chat"])
+    ap.add_argument("--split", default="holdout")
+    ap.add_argument("--limit", type=int, default=20)
+    ap.add_argument("--max-tokens", type=int, default=512)
+    ap.add_argument("--temperature", type=float, default=1.0)
+    ap.add_argument("--target-tok-s", type=float, default=125.0)
+    ap.add_argument("--out", required=True)
+    a = ap.parse_args(argv)
+    rows = [json.loads(l) for l in open(a.prompts)]
+    rows = [r for r in rows if r["split"] == a.split and r["domain"] in a.domains][:a.limit]
+    before = scrape_spec(a.base)
+    per = []
+    with open(a.out, "w") as f:
+        f.write(json.dumps({"type": "header", "t": time.time(), "base": a.base, "max_tokens": a.max_tokens,
+                            "temperature": a.temperature, "domains": a.domains, "n": len(rows)}) + "\n")
+        for i, p in enumerate(rows):
+            ids = http_json(a.base, "/tokenize", {"model": a.model, "messages": p["messages"],
+                                                  "add_generation_prompt": True})["tokens"]
+            r = stream_completion(a.base, a.model, ids, max_tokens=a.max_tokens, temperature=a.temperature,
+                                  keep_times=True, ignore_eos=True)
+            m = {"type": "trial", "prompt_id": p["prompt_id"], "domain": p["domain"], "prompt_tokens": r["prompt_tokens"],
+                 **decode_metrics(r)}
+            per.append(m)
+            f.write(json.dumps(m) + "\n")
+            f.flush()
+            print(f"{i + 1}/{len(rows)} tpot={m.get('tpot')} itl95={m.get('itl_chunk_p95')}", flush=True)
+        after = scrape_spec(a.base)
+        spec = {k: after.get(k, 0) - before.get(k, 0) for k in SPEC_KEYS if k in after}
+        if spec.get("vllm:spec_decode_num_drafts"):
+            d = spec["vllm:spec_decode_num_drafts"]
+            spec["mean_accepted_draft_tokens_per_verify"] = spec.get("vllm:spec_decode_num_accepted_tokens", 0) / d
+            spec["committed_tokens_per_verify"] = spec["mean_accepted_draft_tokens_per_verify"] + 1
+            spec["draft_acceptance_rate"] = (spec.get("vllm:spec_decode_num_accepted_tokens", 0)
+                                             / max(spec.get("vllm:spec_decode_num_draft_tokens", 1), 1))
+        tp = [m["tpot"] for m in per if m.get("tpot")]
+        summ = {"type": "summary", "n": len(per),
+                "tpot_ms_p50": round(pct(tp, .5) * 1e3, 3) if tp else None,
+                "tpot_ms_p95": round(pct(tp, .95) * 1e3, 3) if tp else None,
+                "decode_tok_s_mean": round(statistics.fmean(1 / x for x in tp), 2) if tp else None,
+                "itl_chunk_ms_p95_median_over_requests": round(pct([m["itl_chunk_p95"] for m in per if "itl_chunk_p95" in m], .5) * 1e3, 3)
+                if any("itl_chunk_p95" in m for m in per) else None,
+                "spec": spec}
+        if tp and spec.get("committed_tokens_per_verify"):
+            tau = spec["committed_tokens_per_verify"]
+            step = pct(tp, .5) * tau
+            summ["implied_verify_step_ms_p50"] = round(step * 1e3, 2)
+            summ["committed_tokens_needed_at_this_step_for_target"] = round(a.target_tok_s * step, 2)
+        f.write(json.dumps(summ) + "\n")
+    print(json.dumps(summ, indent=1))
+
+
 def main():
+    import sys as _sys
+    if len(_sys.argv) > 1 and _sys.argv[1] == "decode":
+        return decode_main(_sys.argv[2:])
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8001")
     ap.add_argument("--model", default="GLM-5.3-Flash")

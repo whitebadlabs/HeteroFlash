@@ -9,7 +9,13 @@ at most once per second, so experiments switch without restarting the server:
    "k_ref": "active",          # "active": renormalise over the kept experts (router default)
                                # int (e.g. 8): weights normalised over the original top-k_ref
    "routed_class": null,       # module class whose OUTPUT is the routed-expert sum (needed for int k_ref)
-   "diag": false}              # dump the module call sequence of the next forward to diag_calls_<pid>.json
+   "diag": false,              # dump the module call sequence of the next forward to diag_calls_<pid>.json
+   "fixed_quant": null}        # simulated quantization of fixed (non-routed) weights, applied in place:
+                               # {"fmt": "fp8" | "nvfp4", "include": regex, "exclude": regex}; null restores BF16.
+                               # fp8: e4m3 with one scale per 128x128 block; nvfp4: E2M1 values, e4m3 scale per
+                               # 16 inputs under a per-tensor fp32 scale. Only 2-D bf16/fp16 .weight tensors are
+                               # touched (EXL3-packed routed experts are skipped by dtype). Originals are kept on CPU.
+A module inventory (name, class, weight dtype/shape) is written once to modules_<pid>.json.
 
 Surgery mechanics (exact, no kernel changes): the gate's logits for experts
 outside the kept set are set to -1e4, so sigmoid(score) ~ 0. The router still
@@ -42,7 +48,8 @@ if _DIR:
     _st = {"fwd": -1, "layer": 0, "cls": None, "rows": 0, "chunk": 0, "buf": [], "diag": None,
            "first_fwd_counts": None, "ratio": {}, "calls": None}
     _ctl = {"capture": True, "k_active": TOPK, "k_ref": "active", "routed_class": None, "diag": False,
-            "_t": 0.0, "_mtime": None}
+            "fixed_quant": None, "_t": 0.0, "_mtime": None}
+    _fq = {"applied": None, "orig": {}, "inventory_done": False, "report": None}
     _lock = threading.Lock()
     _TOP = ("ForCausalLM", "ForConditionalGeneration")
 
@@ -56,7 +63,7 @@ if _DIR:
             if mt != _ctl["_mtime"]:
                 with open(CTRL) as f:
                     new = json.load(f)
-                for k in ("capture", "k_active", "k_ref", "routed_class", "diag"):
+                for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant"):
                     if k in new:
                         _ctl[k] = new[k]
                 _ctl["_mtime"] = mt
@@ -65,6 +72,79 @@ if _DIR:
         except Exception:  # noqa: BLE001  (half-written file: keep previous settings)
             pass
         return _ctl
+
+    _E2M1 = None
+
+    def _fake_fp8_block(w, blk=128):
+        o, i = w.shape
+        po, pi = (-o) % blk, (-i) % blk
+        x = torch.nn.functional.pad(w.float(), (0, pi, 0, po)).view((o + po) // blk, blk, (i + pi) // blk, blk)
+        sc = x.abs().amax(dim=(1, 3), keepdim=True).clamp_min(1e-12) / 448.0
+        q = (x / sc).to(torch.float8_e4m3fn).float() * sc
+        return q.view(o + po, i + pi)[:o, :i].to(w.dtype)
+
+    def _fake_nvfp4(w, blk=16):
+        global _E2M1
+        if _E2M1 is None or _E2M1.device != w.device:
+            _E2M1 = torch.tensor([0, .5, 1, 1.5, 2, 3, 4, 6], device=w.device)
+        o, i = w.shape
+        pi = (-i) % blk
+        x = torch.nn.functional.pad(w.float(), (0, pi)).view(o, (i + pi) // blk, blk)
+        g = x.abs().amax().clamp_min(1e-12) / (448.0 * 6.0)
+        bs = (x.abs().amax(-1, keepdim=True) / (6.0 * g)).to(torch.float8_e4m3fn).float().clamp_min(1e-12) * g
+        y = (x / bs).clamp(-6, 6)
+        idx = (y.abs().unsqueeze(-1) - _E2M1).abs().argmin(-1)
+        q = _E2M1[idx] * y.sign() * bs
+        return q.view(o, i + pi)[:, :i].to(w.dtype)
+
+    def _apply_fixed_quant(model, spec):
+        import re
+        # restore originals first
+        for name, (param, cpu) in _fq["orig"].items():
+            for r in range(0, cpu.shape[0], 1024):
+                param.data[r:r + 1024].copy_(cpu[r:r + 1024].to(param.device))
+        if not spec:
+            _fq["applied"] = None
+            return
+        inc = re.compile(spec.get("include", r"(attn|attention|shared_expert|lm_head|mlp\.(gate_up_proj|down_proj))"))
+        exc = re.compile(spec.get("exclude", r"(experts\.|\.gate$|indexer|norm|embed|visual|vision|mtp)"))
+        fn = {"fp8": _fake_fp8_block, "nvfp4": _fake_nvfp4}[spec["fmt"]]
+        n, nbytes, err = 0, 0, 0.0
+        with torch.no_grad():
+            for mname, mod in model.named_modules():
+                w = getattr(mod, "weight", None)
+                if (w is None or not torch.is_tensor(w) or w.dim() != 2 or w.dtype not in (torch.bfloat16, torch.float16)
+                        or not inc.search(mname) or exc.search(mname)):
+                    continue
+                if mname not in _fq["orig"]:
+                    _fq["orig"][mname] = (w, w.detach().to("cpu", copy=True))
+                cpu = _fq["orig"][mname][1]
+                rows = 128 if spec["fmt"] == "fp8" else 256       # small GPU temporaries (server holds ~98% of VRAM)
+                num = den = 0.0
+                for r in range(0, cpu.shape[0], rows):
+                    o = cpu[r:r + rows].to(w.device)
+                    q = fn(o)
+                    num += float(((q.float() - o.float()) ** 2).sum())
+                    den += float((o.float() ** 2).sum())
+                    w.data[r:r + rows].copy_(q)
+                    del o, q
+                err += num / max(den, 1e-30)
+                n += 1
+                nbytes += w.numel() * w.element_size()
+        _fq["applied"] = json.dumps(spec, sort_keys=True)
+        _fq["report"] = {"spec": spec, "modules": n, "GB_bf16": round(nbytes / 1e9, 3),
+                         "mean_rel_sq_err": round(err / max(n, 1), 6), "pid": os.getpid(), "time": time.time()}
+        with open(os.path.join(_DIR, f"fixed_quant_{os.getpid()}.json"), "w") as f:
+            json.dump(_fq["report"], f)
+
+    def _inventory(model):
+        inv = []
+        for mname, mod in model.named_modules():
+            w = getattr(mod, "weight", None)
+            inv.append([mname, type(mod).__name__, str(w.dtype) if torch.is_tensor(w) else None,
+                        list(w.shape) if torch.is_tensor(w) else None])
+        with open(os.path.join(_DIR, f"modules_{os.getpid()}.json"), "w") as f:
+            json.dump(inv, f)
 
     def _rank0():
         try:
@@ -98,6 +178,15 @@ if _DIR:
         name = type(mod).__name__
         if name.endswith(_TOP):
             c = _control()
+            if not _fq["inventory_done"]:
+                _fq["inventory_done"] = True
+                try:
+                    _inventory(mod)
+                except Exception:  # noqa: BLE001
+                    pass
+            want = json.dumps(c["fixed_quant"], sort_keys=True) if c["fixed_quant"] else None
+            if want != _fq["applied"]:
+                _apply_fixed_quant(mod, c["fixed_quant"])
             with _lock:
                 if _st["fwd"] >= 0 and _st["first_fwd_counts"] is None and _st["cls"]:
                     _st["first_fwd_counts"] = _st["layer"]
