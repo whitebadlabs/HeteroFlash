@@ -167,22 +167,84 @@ def tier_work_proxy(experts: list[Expert], placements: list[Placement], config: 
             "warning":"Synthetic, uncalibrated cost proxy. Do NOT use as measured throughput or publication evidence."}
 
 
+CALIBRATION_KEYS = {  # calibration measurement name -> config key it overrides
+    "spark_gpu_effective_bw_GBps": "assumed_spark_bw_GBps",
+    "spark_arm_bw_GBps": "assumed_arm_bw_GBps",
+    "remote_cpu_expert_bw_GBps": "assumed_remote_cpu_bw_GBps",
+    "remote_roundtrip_ms": "assumed_remote_roundtrip_ms",
+}
+STATUSES = ("measured", "published", "assumed")
+
+
+def apply_calibration(config: dict, calibration: dict) -> dict:
+    """Override assumed_* config values with a calibration file and return provenance.
+
+    Calibration schema (configs/calibration/*.json):
+    {"schema": "heteroflash-calibration-v1", "measurements": {name: {"value": float,
+     "status": "measured"|"published"|"assumed", "source": str}}}
+    """
+    if calibration.get("schema") != "heteroflash-calibration-v1":
+        raise ValueError("unknown calibration schema")
+    provenance = {}
+    for name, key in CALIBRATION_KEYS.items():
+        m = calibration["measurements"].get(name)
+        if m is None:
+            provenance[key] = {"value": config[key], "status": "assumed", "source": "config default"}
+            continue
+        if m.get("status") not in STATUSES:
+            raise ValueError(f"{name}: status must be one of {STATUSES}")
+        config[key] = float(m["value"])
+        provenance[key] = {"value": config[key], "status": m["status"], "source": m.get("source", "")}
+    return provenance
+
+
+def experts_from_trace(trace_path: str, parameters_per_expert: int, phase: str | None = "decode"):
+    """Build Expert records from a real router trace (router_trace.py format).
+
+    Sensitivity is NOT available from routing alone; it is set to 1.0 and flagged
+    so bit allocation does not pretend to use quality data.
+    """
+    from router_trace import read_trace, selection_counts, empirical_probabilities
+    meta, recs = read_trace(trace_path)
+    probs = empirical_probabilities(selection_counts(meta, recs, phase=phase))
+    experts = [Expert(l, e, p, 1.0, parameters_per_expert)
+               for l in sorted(probs) for e, p in enumerate(probs[l])]
+    return experts, meta
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--trace", help="real router trace (.jsonl.gz from router_trace.py) replacing synthetic Zipf")
+    ap.add_argument("--trace-phase", default="decode", choices=["decode", "prefill", "all"])
+    ap.add_argument("--calibration", help="calibration JSON overriding assumed_* hardware values")
     args = ap.parse_args()
     config = json.loads(Path(args.config).read_text())
-    experts = make_synthetic_trace(config["layers"], config["experts_per_layer"],
-                                   config["parameters_per_expert"], config["zipf_exponent"], config["seed"])
+    provenance = {k: {"value": config[k], "status": "assumed", "source": "config"} for k in CALIBRATION_KEYS.values()}
+    if args.calibration:
+        provenance = apply_calibration(config, json.loads(Path(args.calibration).read_text()))
+    if args.trace:
+        experts, meta = experts_from_trace(args.trace, config["parameters_per_expert"],
+                                           None if args.trace_phase == "all" else args.trace_phase)
+        routing = {"status": "trace:" + meta.source, "model_revision": meta.model_revision,
+                   "engine": meta.engine, "sensitivity": "unmeasured (1.0 placeholder)"}
+        config["layers"] = len({e.layer for e in experts})
+    else:
+        experts = make_synthetic_trace(config["layers"], config["experts_per_layer"],
+                                       config["parameters_per_expert"], config["zipf_exponent"], config["seed"])
+        routing = {"status": "synthetic_zipf", "sensitivity": "synthetic"}
     placements = allocations(experts, config)
     memory = validate(experts, placements, config)
     proxy = tier_work_proxy(experts, placements, config)
-    data = {"status":"SYNTHETIC_ONLY_NOT_MEASURED", "config":config, "memory":memory,
-            "proxy":proxy, "placements":[asdict(x) for x in placements]}
+    all_measured = routing["status"] == "trace:real" and all(v["status"] == "measured" for v in provenance.values())
+    data = {"status": "MEASURED_INPUTS_PROXY_ONLY" if all_measured else "SYNTHETIC_OR_PARTIAL_INPUTS_NOT_A_MEASUREMENT",
+            "routing": routing, "hardware_provenance": provenance,
+            "config": config, "memory": memory, "proxy": proxy,
+            "placements": [asdict(x) for x in placements]}
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(json.dumps(data,indent=2)+"\n")
-    print(json.dumps({k:v for k,v in data.items() if k!="placements"},indent=2))
+    Path(args.out).write_text(json.dumps(data, indent=2) + "\n")
+    print(json.dumps({k: v for k, v in data.items() if k != "placements"}, indent=2))
 
 if __name__ == "__main__":
     main()

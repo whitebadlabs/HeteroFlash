@@ -38,4 +38,9 @@ This project has started at the reproducible analysis/software-scaffolding phase
 - Found: both machines link at 1 Gb/s; the Spark's CX7 QSFP interfaces are not visible; no RDMA tooling is installed.
 - Reran the placement simulator with the measured bandwidths: 38.8 -> 29.1 ms/pass (measured TCP RTT) and 21.1 ms/pass (assumed RDMA RTT). Expert traffic only; routing still synthetic.
 - Unit tests: 10/10 pass.
-- Still missing for M0: Spark GPU bandwidth/GEMM, tuned int4 CPU kernel, tuned/RDMA link latency, Spark Arm kernel under contention, model baselines S0/T.
+- Tuned int4 CPU kernel v2: 52-61 us per expert-token (237-241 GB/s, DRAM-bound), verified exact vs scalar reference; 1.87x over v1. Activation quantization, scales and SiLU are not yet included.
+- Added `src/router_trace.py`: trace schema v1 (gzip JSONL; meta + per-layer route records with ids, gate weights and optional top-N candidates), validated writer and reader, statistics (selection counts, coverage vs resident fraction, all-hot probability, speculative-window expert union), and an optional HF `*TopkRouter` forward-hook adapter (upstream transformers fd3cf01).
+- `src/placement_sim.py` now accepts `--trace` (real routing replaces synthetic Zipf; sensitivity is flagged as unmeasured) and `--calibration` (`configs/calibration/2026-11-06.json`, every value labelled measured/published/assumed). The output status reads MEASURED only when every input is measured.
+- Tests: 17/17 pass (7 new).
+- Added `AGENTS.md`, `docs/CONVERSATION_CONTEXT.md` and `docs/CODEX_KICKOFF.md` (handoff from the planning conversation).
+- Still missing for M0: Spark GPU bandwidth/GEMM, CPU kernel with activation quant/scales/SiLU, tuned/RDMA link latency, Spark Arm kernel under contention, model baselines S0/T.

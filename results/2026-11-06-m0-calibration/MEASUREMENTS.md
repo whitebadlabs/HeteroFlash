@@ -37,6 +37,25 @@ The Arm and GPU share one memory interface, so their bandwidth figures must not 
 - The naive int4 kernel is compute/unpack-bound and only ~13% faster than int8. A tuned int4 kernel (for example kt-kernel RAWINT4) is the next thing to measure.
 - With 16 threads every number is ~1.7x slower. Reserving cores for research jobs directly costs CPU-tier speed.
 
+## Tuned CPU expert kernel v2 (`bench/moe_cpu_vnni_v2.c`; verified exact vs scalar reference by `bench/check_v2.c`)
+4-row register blocking; int4 as unsigned nibbles with the zero point folded into one per-row correction.
+
+| Format | Experts x tokens (distinct) | Threads | ms per layer | us per expert | Weight GB/s |
+|---|---|---|---|---|---|
+| int8 | 1 x 1 | 32 | 0.110 | 110.4 | 228 |
+| int8 | 8 x 1 | 32 | 0.842 | 105.2 | 239 |
+| int8 | 3 x 4 (12) | 32 | 1.221 | 101.8 | 247 |
+| int8 | 24 x 1 | 32 | 2.428 | 101.2 | 249 |
+| int4 | 1 x 1 | 32 | 0.061 | 60.6 | 208 |
+| int4 | 8 x 1 | 32 | 0.425 | 53.1 | 237 |
+| int4 | 3 x 4 (12) | 32 | 0.631 | 52.6 | 239 |
+| int4 | 24 x 1 | 32 | 1.254 | 52.3 | 241 |
+| int4 | 8 x 1 | 16 | 0.822 | 102.8 | 122 |
+| int8 | 8 x 1 | 16 | 1.605 | 200.7 | 125 |
+
+- int4 v2 is 1.87x faster than v1 (0.425 vs 0.795 ms for 8 experts) and is now DRAM-bound: about 52-61 us per distinct expert, ~96% of the measured 251 GB/s read bandwidth.
+- Not yet included: dynamic activation quantization (bf16 -> u8 + scale), per-group weight scales, SiLU(gate)*up and the down-projection input requantization. These need measuring before the per-expert cost goes into the planner.
+
 ## Spark <-> workstation link (`bench/tcp_pingpong.py`, current 1 GbE switched path)
 | Payload each way | Median RTT | p90 |
 |---|---|---|
