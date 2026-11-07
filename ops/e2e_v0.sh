@@ -29,7 +29,7 @@ ssh -n maxq "mkdir -p /srv/cache/heteroflash/llama-rpc-cache; LLAMA_CACHE=/srv/c
 echo "$(t) stop Qwen (qfn) on the Spark"
 ssh spark 'docker stop qfn >/dev/null && echo qfn stopped; sleep 10; free -g | head -2'
 echo "$(t) start llama-server (all layers on CUDA0 via --tensor-split 0,1; routed experts of layers 24-44 -> RPC0)"
-ssh -n spark "cd $LB; LD_LIBRARY_PATH=$LB setsid nohup ./llama-server -m $SP --rpc $WS_IP:50052 -ngl 999 --tensor-split 0,1 -ot '$REMOTE_LAYERS' -c 49152 --host 127.0.0.1 --port 8090 --jinja -t 20 --metrics --cache-reuse 256 ${LLAMA_EXTRA:-} > $OUT/llama-server.log 2>&1 < /dev/null & echo \$! > $OUT/llama-server.pid"
+ssh -n spark "cd $LB; LD_LIBRARY_PATH=$LB setsid nohup ${E2E_NSYS:+nsys launch --session-new=hfprof --trace=cuda,osrt,nvtx --cuda-memory-usage=false} ./llama-server -m $SP --rpc $WS_IP:50052 -ngl 999 --tensor-split 0,1 -ot '$REMOTE_LAYERS' -c 49152 --host 127.0.0.1 --port 8090 --jinja -t 20 --metrics --cache-reuse 256 ${LLAMA_EXTRA:-} > $OUT/llama-server.log 2>&1 < /dev/null & echo \$! > $OUT/llama-server.pid"
 for i in $(seq 120); do
   sleep 30
   ssh spark 'pgrep -x llama-server >/dev/null' || { echo "llama-server exited"; ssh spark "tail -40 $OUT/llama-server.log"; exit 1; }
@@ -54,6 +54,14 @@ prof() {  # prof <delay_s> <window_s> <tag>: sample GPU util, link MB/s, rpc-ser
   rm -f /tmp/hf_prof_gpu.$$ /tmp/hf_prof_net.$$ /tmp/hf_prof_cpu.$$ ) &
 PROF_PID=$!
 }
+if [ -n "${E2E_NSYS:-}" ]; then
+  echo "$(t) nsys capture: one cold 4K prefill + one 64-token decode"
+  ssh spark "nsys start --session=hfprof --output=$OUT/prefill4k --force-overwrite=true"
+  ssh spark "$B --engine llamacpp --base http://127.0.0.1:8090 --model x --corpus data/longctx_corpus.txt --n 4000 --suffixes 32 --repeats 1 --block-size 256 --out $OUT/ttft_nsys.jsonl 2>&1 | tail -3"
+  ssh spark "nsys stop --session=hfprof"
+  ssh spark "cd $OUT && nsys stats --force-export=true --report cuda_gpu_kern_sum,cuda_api_sum,osrt_sum --format csv --output prefill4k prefill4k.nsys-rep >/dev/null 2>&1; ls prefill4k*"
+  echo "$(t) E2E_V0_DONE"; exit 0
+fi
 if [ -z "${E2E_SKIP_DECODE:-}" ]; then
 echo "$(t) decode (prose holdout, 256 tokens, temperature 1) + live profile"
 prof 40 20 decode
@@ -62,6 +70,8 @@ wait $PROF_PID 2>/dev/null; cat /tmp/hf_prof_summary_decode.$$ 2>/dev/null; rm -
 fi
 prof 60 60 prefill
 echo "$(t) TTFT cold 45K / cached 45K + 32, 128"
-ssh spark "$B --engine llamacpp --base http://127.0.0.1:8090 --model x --corpus data/longctx_corpus.txt --n 45000 --suffixes 32 128 --repeats ${E2E_REPEATS:-3} --block-size 256 --out $OUT/ttft.jsonl 2>&1 | tail -30"
+for N in ${E2E_TTFT_N:-45000}; do
+ssh spark "$B --engine llamacpp --base http://127.0.0.1:8090 --model x --corpus data/longctx_corpus.txt --n $N --suffixes 32 128 --repeats ${E2E_REPEATS:-3} --block-size 256 --out $OUT/ttft_$N.jsonl 2>&1 | tail -30"
+done
 wait $PROF_PID 2>/dev/null; cat /tmp/hf_prof_summary_prefill.$$ 2>/dev/null; rm -f /tmp/hf_prof_summary_prefill.$$
 echo "$(t) E2E_V0_DONE"
