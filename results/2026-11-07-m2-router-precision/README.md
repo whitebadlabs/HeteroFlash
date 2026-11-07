@@ -40,3 +40,18 @@ Top-k surgery renormalises over the kept experts (router default). Fixed-weight 
 | k4 + NVFP4 fixed (needs recovery) | 40.7 ms (w4) | 60 | 98 | 5.1 |
 
 The remaining gap is now mostly committed tokens per verify (drafter quality on the modified model) and step time; the quality data show which reductions need recovery training.
+
+## Round 2: component-wise precision incl. shared experts
+| Config | NLL increase | top-1 | KL lower bound | KL p95 |
+|---|---|---|---|---|
+| nvfp4_lmhead_only | 0.0024 | 0.9893 | 0.0019 | 0.011 |
+| nvfp4_attn_only | 0.0302 | 0.9567 | 0.0368 | 0.192 |
+| nvfp4_all_incl_shared | 0.0400 | 0.9486 | 0.0432 | 0.230 |
+| nvfp4_all_keep_kvb | 0.0400 | 0.9486 | 0.0432 | 0.230 |
+| fp8_all_incl_shared | 0.0063 | 0.9765 | 0.0109 | 0.054 |
+| k6_nvfp4_all_incl_shared | 0.0956 | 0.9235 | 0.0921 | 0.513 |
+
+- FP8 on all fixed weights including shared experts (305 modules, 8.24 GB/rank BF16) costs 0.0063 nats: fixed reads 16.6 -> ~8.3 GB per step with no training.
+- The NVFP4 cost comes almost entirely from attention (0.030 of 0.040); lm_head NVFP4 costs 0.0024 and shared experts add ~0.008. Candidate mixed recipe: FP8 attention + NVFP4 shared/dense/lm_head (~7 GB). Attention at NVFP4 needs QAD (G2).
+- Costs add roughly linearly: k6 + NVFP4-all = 0.096 vs 0.063 + 0.040.
+- **Caveat:** `nvfp4_all_keep_kvb` is numerically identical to `nvfp4_all_incl_shared`. vLLM's MLA absorbs `kv_b_proj` into separate matrices at load time, so in-place quantization of the original `kv_b_proj.weight` has no runtime effect. kv_b precision is therefore **untested**; it needs quantization before weight processing or of the absorbed tensors.
