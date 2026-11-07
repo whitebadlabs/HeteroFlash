@@ -1,95 +1,86 @@
 # Path to the hard targets without new hardware (2026-11-07)
 
-This plan has three inputs:
+**Evidence key.** Every number is tagged:
 
-- **Deep research:** 5 search angles; 102 agents fetched sources and checked claims with three adversarial votes each.
-- **Locality oracle:** run on the M1 decode traces.
-- **E2E measurements:** decode, prefill and kernel rooflines from 2026-11-07.
+- **[M]** measured by us on this hardware;
+- **[L]** reported in the literature (deep research, 3-vote verified), not reproduced here;
+- **[P]** a modeled projection from bandwidth arithmetic, not measured.
 
-The hardware is fixed: one DGX Spark, the workstation's CPU and RAM, and the existing 10 GbE direct link. Max-Q GPUs are used only for offline training and evaluation.
+The targets are unchanged: 120-130 tok/s prose decode, cold 45K TTFT <= 10.8 s, cached 45K+32 <= 0.2 s, and non-inferior general-purpose quality.
 
-## What the literature says (verified claims)
+Hardware is fixed: one DGX Spark, the workstation CPU/RAM, and the existing 10 GbE direct link. Max-Q GPUs may be used only for offline training and evaluation.
+
+**Approval scope (Carmen, 2026-11-07).**
+
+- Approved: bounded pilots only (a QAT feasibility pilot and the pre-checks below).
+- Not approved: multi-day training on both Max-Q GPUs. That waits for a go/no-go after the pilots.
+
+## Measured so far [M]
+
+| item | result |
+|---|---|
+| E2E-v1, llama.cpp RPC (Spark GPU + CPU experts, layers 24-44) | 10.5 tok/s; MTP 17.0 tok/s at ~2.8 committed per verify; cold 45K 223 s; cached +32 0.68 s |
+| bytes per token (GGUF tensor table) | fixed 9.2 GB at Q8_0 (attention 6.6 GB); routed experts 4.8 GB at Q4_K |
+| GB10 fused MoE (vLLM, FP8) | 6.1-39 TFLOPS for 512-4096-token chunks; dense FP8 GEMM 188 TFLOPS; ~216 GB/s weight streaming |
+| workstation CPU int8 GEMM (torch, 32 threads) | 12-19 TOPS (llama.cpp RPC path ~3 TOPS) |
+| direct-link round trip, busy-poll | 8 KB: 50 us p50 (default sockets 317 us); 64 KB: 151 us p50 |
+| verify-window expert union (M1 traces) | 18.6 experts/layer for 4 tokens, 26.4 for 7 tokens (20-file subset); 22.9 for 4 tokens on the full set |
+| locality oracle (no training) | union -20% costs 5-9% of routing mass moved |
+| Q1: PTQ IQ3_XXS experts vs Q4_K | +0.068 nats, KLD 0.138, same top token 87% (**fails**) |
+| M2 router/precision (Max-Q rig) | FP8 fixed +0.006 nats; NVFP4 fixed +0.040, of which attention +0.030; top-6 with original top-8 normalisation +0.060 |
+
+## What the literature says [L]
 
 | Technique | Best verified result | Quality | Fit here |
 |---|---|---|---|
-| EcoSpec (cost-aware draft-tree selection) | Unique experts per step 23.7 -> 20.5 (-13.5%) on Qwen3-235B | lossless | yes, drops into the verifier |
-| MoE-Spec (per-layer expert budget at verify) | +10-30% over EAGLE-3 | lossy when aggressive (Mixtral 78% quality at max) | moderate budgets only |
-| DraftExpert (self-speculation with a resident draft expert) | 1.45x end to end, acceptance 84-87% per token | lossless | 16B-class evidence only |
-| DFlash block-diffusion drafter | tau 6.5-7.9 on math/code; **tau 4.2-4.4 on MT-Bench prose** | lossless | needs training on GLM hidden states; MoE speedup per accepted token is ~0.4 vs 0.64 on dense models |
-| NVFP4 quantization-aware distillation (QAD) | Near-BF16 on Nemotron hybrids with 0.3-6B tokens | ~lossless for MoE/Mamba weights | **attention was kept BF16 in every hybrid model; NVFP4 attention is unproven** |
-| INT4 QAT of routed experts | Production (Kimi K2 Thinking, g32) | vendor says lossless | yes |
-| ~3-bit trellis quantization (QTIP / EXL3) | +0.044 nats on Llama 2 70B | small but measurable | yes (Q1 tests the PTQ version) |
-| Aggressive MoE compression (pruning + ~2 bit) | DeepSeek-V3 at 130 GB roughly matches Q2_K_L at 230 GB | no BF16 comparison | no (non-inferiority not shown) |
+| EcoSpec (cost-aware draft-tree selection) | unique experts per step 23.7 -> 20.5 (-13.5%) on Qwen3-235B | lossless | drops into the verifier |
+| MoE-Spec (per-layer expert budget at verify) | +10-30% over EAGLE-3 | lossy when aggressive | moderate budgets only |
+| DraftExpert (self-speculation) | 1.45x end to end | lossless | 16B-class evidence only |
+| DFlash block-diffusion drafter | tau 6.5-7.9 on math/code; tau 4.2-4.4 on MT-Bench prose | lossless | MoE speedup per accepted token ~0.4 vs 0.64 on dense models |
+| NVFP4 quantization-aware distillation (QAD) | near-BF16 on Nemotron hybrids with 0.3-6B tokens | ~lossless for MoE/Mamba weights | attention was kept BF16 in every hybrid model |
+| INT4 QAT of routed experts | production (Kimi K2 Thinking, g32) | vendor claims lossless | yes |
+| ~3-bit trellis quantization (QTIP / EXL3) | +0.044 nats on Llama 2 70B | small but measurable | pending a Spark kernel |
 
-No source reaches 7-12 accepted tokens on general prose. No published DGX Spark result exists for a 300B-class MoE.
+No source shows 7-12 accepted tokens on general prose. No published DGX Spark result exists for a 300B-class MoE.
 
-## Locality oracle (M1 decode traces, no training)
+## Decode projection for the full stack [P]
 
-The test lets a token swap one of its experts for one already used in the same verify window, but only when the replacement scores within delta of the original.
+These figures are modeled, not measured.
 
-| window | baseline union | delta 0.05 | delta 0.1 |
-|---|---|---|---|
-| 4 tokens | 18.6 | 16.9 (4.2% routing mass moved) | 15.5 (7.9%) |
-| 7 tokens | 26.4 | 23.3 (5.0%) | 21.0 (9.3%) |
-
-Routing is sharp, so after-the-fact locality is not a free lever. A locality-regularised router distillation would have to beat this oracle substantially to matter, and that remains a research bet.
-
-## Decode model for the full stack
-
-The model is: t_step = max(Spark bytes / 241 GB/s, CPU bytes / 182 GB/s), with the Spark/CPU expert split chosen to balance the two, plus a sync term.
+The model is t_step = max(Spark bytes / 241 GB/s, CPU bytes / 182 GB/s) + sync, with the Spark/CPU expert split chosen to balance the two terms. The bandwidth inputs are measured [M]; every other input is an assumption until its gate passes.
 
 Inputs:
 
-- **Fixed weights:** NVFP4 after QAD, 4.6 GB.
-- **Experts:** 3-bit at 9.4 MB each, or 4-bit at 12.6 MB each.
-- **Verify window:** 7 tokens, with an EcoSpec-controlled union of about 23 experts per layer.
-- **Drafter:** tau 4.5, about the measured DFlash prose level.
+- **Fixed weights:** NVFP4 after QAD, 4.6 GB. *Assumption: gate 2.*
+- **Experts:** 3-bit at 9.4 MB or 4-bit at 12.6 MB. *3-bit is an assumption: gate 1 plus pre-check A.*
+- **Verify window:** 7 tokens, with an EcoSpec union of ~23 experts per layer. *Assumption: gate 4.*
+- **Drafter:** tau 4.5. *Assumption [L-level]: gate 4 plus pre-check D.*
 
-| experts | sync per step | step | tok/s |
+| experts | sync per step | step [P] | tok/s [P] |
 |---|---|---|---|
-| 4-bit | 8 ms (42 x RTT, kernel TCP) | 47.7 ms | 94 |
+| 4-bit | 8 ms (kernel TCP) | 47.7 ms | 94 |
 | 4-bit | 3 ms (busy-poll, overlapped) | 42.7 ms | 105 |
 | 3-bit | 8 ms | 40.4 ms | 111 |
-| 3-bit | 3 ms | 35.4 ms | **127** |
+| 3-bit | 3 ms | 35.4 ms | 127 |
 
-The sum of the bets reaches the target band only if all of these pay off together:
+The 127 tok/s figure is a modeled upper bound. It requires all six bets plus kernels at the bandwidth roofline.
 
-1. NVFP4 attention survives QAD at non-inferior quality.
-2. ~3-bit experts pass, through PTQ (Q1) or QAT.
-3. A trained prose drafter reaches tau >= 4.5 at window 7.
-4. EcoSpec keeps the union at about 23 experts per layer.
-5. A custom runtime overlaps Spark and CPU expert reads, with <= 3 ms of sync per step.
-6. Kernels run near the bandwidth roofline: 241 GB/s on the Spark, and the CPU kernel reaches ~180 GB/s on scattered experts.
+If gates 1-2 fail, the projected non-inferior ceiling is ~60-80 tok/s [P].
 
-## Cold 45K TTFT and cached turn under the same stack
+## Cold 45K TTFT and cached turn [P]
 
-- **Cold 45K.** With ~3-bit experts, 37 MoE layers stay on the Spark: about 100 GB of experts plus 4.6 GB of fixed weights plus about 3 GB of KV/state. The other 5 layers run on the workstation CPU with int8 GEMM (about 1.0-1.2 s per layer per 45K tokens, overlapped). The GPU runs large-chunk NVFP4 MoE prefill (about 5 s). Estimate: 7-9 s, within the <= 10.8 s target.
-- **Cached 45K + 32.** A 32-token step touches about 120 experts per layer, about 0.15-0.2 s. That is borderline against the 0.2 s target.
+- **Cold 45K.** 37 MoE layers stay on the Spark at ~3-bit and 5 layers run on the workstation CPU with int8 GEMM. Projection: ~7-9 s. The inputs are the measured CPU and GPU MoE rooflines plus an unvalidated 3-bit kernel and memory budget (pre-checks A and B).
+- **Cached 45K + 32.** Projection: ~0.15-0.2 s.
 
-## Experiment order (risk first; all on existing hardware)
+## Gates (status)
 
-1. **Q1, PTQ 3-bit: FAILED (2026-11-07).** Routed experts were quantized to IQ3_XXS (~3.06 bpw, imatrix from the calibration split), against the Q4_K-expert reference on the 6-domain holdout (20 x 2048 tokens).
-
-   | metric | IQ3_XXS vs Q4_K |
-   |---|---|
-   | dNLL | +0.068 +/- 0.004 nats |
-   | mean KLD | 0.138 (median 0.031, p99 1.69) |
-   | same top token | 87.0% |
-
-   - That is about 10x the FP8 budget, so post-training 3-bit quantization is not non-inferior.
-   - Bet 1 now requires quantization-aware training of the experts (QAT/QAD on the Max-Q rig).
-   - The IQ3_S (3.44 bpw) and IQ2_S (2.5 bpw) curve points are queued.
-2. **NVFP4 QAD of attention and shared experts** on the Max-Q rig. This is the largest quality risk. Gate on KLD and the M2 nats margin.
-3. **Link latency: PASSED (2026-11-07).** `runtime/link_pingpong.c` was run Spark <-> workstation over the 10G direct link with TCP_NODELAY, no sudo, and the workstation at load 32.
-
-   | message (each way) | default sockets, p50 | SO_BUSY_POLL + spin recv, p50 | busy p99 |
-   |---|---|---|---|
-   | 8 KB | 317 us | 50 us | 57 us |
-   | 64 KB | 425 us | 151 us | 498 us |
-
-   - Single-token decode sync over 42 layers falls to about 2 ms per token.
-   - A 7-token verify exchange costs about 0.1-0.15 ms per layer, which per-layer overlap with Spark-side work can hide.
-4. **Prose drafter.** Train a DFlash-style block drafter on GLM-5.3-Flash hidden states using the Max-Q rig. Measure prose tau and the expert union with EcoSpec selection.
-5. **Runtime.** Extend the HeteroFlash expert server: a per-layer split of the expert set between Spark and CPU, one message per layer, batched int8/int4 GEMM for prefill, overlapped with GPU work.
-
-Decision rule: each gate is measured, and failures are reported as negative results. If gates 1-2 fail, the decode ceiling at non-inferior quality falls back to about 60-80 tok/s.
+1. **3-bit experts.**
+   - PTQ: **failed [M]** (see above).
+   - Next: pre-check A (Spark 3-bit kernel), then a bounded QAT pilot on representative layers with a fixed compute budget. Go/no-go before training all 42 layers.
+2. **NVFP4 attention.**
+   - Pre-check C: FP8 vs NVFP4 quality from M2 [M], plus kernel performance on GB10.
+   - QAD comes only after a go decision.
+3. **Link latency: passed [M].** 50 us round trip for 8 KB (busy-poll); about 2 ms sync per decoded token [P].
+4. **Drafter.** Pre-check D: evaluate the existing GLM-5.3-Flash DFlash2 checkpoint before any drafter training.
+5. **Runtime.** Parallel Spark/CPU expert execution. This proceeds independently of the training gates.
+6. **Memory.** Pre-check B: full Spark budget, covering weights, KV/state caches, drafter, CUDA context, runtime buffers and OS.
