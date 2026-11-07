@@ -140,6 +140,12 @@ def cmd_measure(a):
         json.dump({"records": out, "summary_mean": summ}, open(a.out, "w"), indent=1)
 
 
+def pack8(q, s):
+    r, c = q.shape
+    sw = q.reshape(r, c // G, G).astype(np.int32).sum(-1)
+    return q.astype(np.int8).view(np.uint8), s, (s * 128.0 * sw).astype(np.float32)
+
+
 def cmd_export(a):
     ck = Checkpoint(a.model)
     os.makedirs(a.out, exist_ok=True)
@@ -148,11 +154,11 @@ def cmd_export(a):
         path = os.path.join(a.out, f"layer{layer}.hfx")
         t0 = time.time()
         with open(path + ".tmp", "wb") as f:
-            f.write(b"HFQ1" + struct.pack("<II", layer, len(ids)) + struct.pack(f"<{len(ids)}I", *ids))
+            f.write((b"HFQ8" if a.bits == 8 else b"HFQ1") + struct.pack("<II", layer, len(ids)) + struct.pack(f"<{len(ids)}I", *ids))
             for e in ids:
                 gate, up, down = ck.expert(layer, e)
                 for w in (np.concatenate([gate, up], 0), down):
-                    p, s, c = pack(*quant_int4_g128(w))
+                    p, s, c = pack8(*quant_int8_g128(w)) if a.bits == 8 else pack(*QUANT[a.int4_method](w))
                     f.write(p.tobytes()); f.write(s.tobytes()); f.write(c.tobytes())
         os.replace(path + ".tmp", path)
         print(f"layer {layer}: {len(ids)} experts, {os.path.getsize(path) / 1e9:.2f} GB, {time.time() - t0:.0f}s", flush=True)
@@ -165,6 +171,8 @@ def main():
     ap.add_argument("--layers", type=int, nargs="+", required=True)
     ap.add_argument("--experts", type=int, nargs="*", default=[])
     ap.add_argument("--methods", nargs="*", default=["int4_rtn", "int4_mse", "int8"])
+    ap.add_argument("--bits", type=int, default=4, choices=[4, 8])
+    ap.add_argument("--int4-method", default="int4_rtn", choices=["int4_rtn", "int4_mse"])
     ap.add_argument("--out")
     a = ap.parse_args()
     {"measure": cmd_measure, "export": cmd_export}[a.cmd](a)

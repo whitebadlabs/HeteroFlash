@@ -22,3 +22,15 @@
 - The serving path is correct. Its own extra error (2.5-3.1%) comes from per-token u8 activation quantization (absmax over 4096 inputs and over the post-SiLU hidden vector) plus bf16 output rounding. Next: per-128-group activation scales.
 - Total error is dominated by int4 RTN weights. That motivates clip-search/GPTQ int4 or int8 for the CPU tier (see table above), decided by model-level KL in G2.
 - First request 5.6 ms (cold pages), then 0.27 ms for 2 experts x 3 tokens.
+
+## int8 CPU tier (expert server `HFQ8` files)
+The int8 kernel path (signed int8 weights, per-128 scales, the +128 activation offset folded into one constant per group) is selftest-verified: the same integer weights stored as int8 reproduce the int4 path to 1.1e-6. Real layers 20 and 44, exported in int8 (7.70 GB per layer, ~28 s each) and served over the socket:
+
+| Request | server vs original BF16 (int8) | (int4 for comparison) |
+|---|---|---|
+| layer 20, experts 0/57/144/287, 3 tokens | **1.95%** | 21.2% |
+| layer 44, experts 3/99, 3 tokens | **2.15%** | 22.1% |
+
+- int8 cold experts are ~10x more accurate end to end; the remaining ~2% is per-group activation quantization plus bf16 I/O.
+- All 42 layers in int8 would need 323 GB, more than the ~230 GB of workstation RAM, so the CPU tier is mixed int8/int4 by measured sensitivity and usage. The placement planner should allocate it.
+- The int4 export of all 42 layers (160 GB, int4 RTN g128) is complete.

@@ -38,13 +38,13 @@
 #define MAXTOK 16
 #define MAXPAIR (MAXTOK * 8)
 
-typedef struct { uint8_t *q; float *s; float *c; int rows, cols; } QMat;
+typedef struct { uint8_t *q; float *s; float *c; int rows, cols, bits; } QMat;   // bits 4 (packed nibbles) or 8 (int8)
 typedef struct { QMat gu, dn; } Expert;
 static Expert **table;          // table[layer][expert] or NULL if not resident
 static int NL, NE;
 
 static void qmat_init(QMat *m, int rows, int cols, unsigned seed, int8_t *keep) {
-    m->rows = rows; m->cols = cols;
+    m->rows = rows; m->cols = cols; m->bits = 4;
     m->q = aligned_alloc(64, (size_t)rows * cols / 2);
     m->s = aligned_alloc(64, (size_t)rows * (cols / G) * 4);
     m->c = aligned_alloc(64, (size_t)rows * (cols / G) * 4);
@@ -103,6 +103,38 @@ static inline void rows4_multi(const QMat *m, int r0, int nt, uint8_t *const *xu
     for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) out[t * 4 + r] = _mm512_reduce_add_ps(acc[t][r]) - corr[t][r];
 }
 
+// int8 weights: per row and 128-group, 128 signed bytes; c = s * 128 * sum(w) removes the +128 activation offset.
+static inline void rows4_multi_i8(const QMat *m, int r0, int nt, uint8_t *const *xu, int32_t *const *sxq,
+                                  float *const *sx, float *out) {
+    const int ng = m->cols / G;
+    __m512 acc[MAXTOK][4]; float corr[MAXTOK][4];
+    for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) { acc[t][r] = _mm512_setzero_ps(); corr[t][r] = 0; }
+    for (int g = 0; g < ng; g++) {
+        __m512i w0[4], w1[4]; float sw[4], cc[4];
+        for (int r = 0; r < 4; r++) {
+            const uint8_t *wp = m->q + (size_t)(r0 + r) * m->cols + g * G;
+            w0[r] = _mm512_loadu_si512(wp); w1[r] = _mm512_loadu_si512(wp + 64);
+            sw[r] = m->s[(r0 + r) * ng + g]; cc[r] = m->c[(r0 + r) * ng + g];
+        }
+        for (int t = 0; t < nt; t++) {
+            __m512i xl = _mm512_loadu_si512(xu[t] + g * G), xh = _mm512_loadu_si512(xu[t] + g * G + 64);
+            float sxg = sx[t][g];
+            for (int r = 0; r < 4; r++) {
+                __m512i d = _mm512_dpbusd_epi32(_mm512_setzero_si512(), xl, w0[r]);
+                d = _mm512_dpbusd_epi32(d, xh, w1[r]);
+                acc[t][r] = _mm512_fmadd_ps(_mm512_cvtepi32_ps(d), _mm512_set1_ps(sw[r] * sxg), acc[t][r]);
+                corr[t][r] += sxg * cc[r];
+            }
+        }
+    }
+    (void)sxq;
+    for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) out[t * 4 + r] = _mm512_reduce_add_ps(acc[t][r]) - corr[t][r];
+}
+
+static inline void rows4_any(const QMat *m, int r0, int nt, uint8_t *const *xu, int32_t *const *sxq, float *const *sx, float *out) {
+    if (m->bits == 8) rows4_multi_i8(m, r0, nt, xu, sxq, sx, out); else rows4_multi(m, r0, nt, xu, sxq, sx, out);
+}
+
 typedef struct { uint16_t tok, expert; float w; } Pair;
 
 // Computes y[ntok][H] (fp32) = sum over pairs of w * Expert(x[tok]).  Returns 0 or 1 (missing expert).
@@ -128,7 +160,7 @@ static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair
         for (int e = 0; e < ne; e++) for (int r = 0; r < 2 * I; r += 4) {
             uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float *sv[MAXTOK], o[MAXTOK * 4];
             for (int k = 0; k < ent[e]; k++) { xp[k] = xu[etok[e][k]]; sp[k] = sxq[etok[e][k]]; sv[k] = sx[etok[e][k]]; }
-            rows4_multi(&table[layer][eid[e]].gu, r, ent[e], xp, sp, sv, o);
+            rows4_any(&table[layer][eid[e]].gu, r, ent[e], xp, sp, sv, o);
             for (int k = 0; k < ent[e]; k++) for (int j = 0; j < 4; j++) gu[e][k][r + j] = o[k * 4 + j];
         }
         #pragma omp for schedule(static) collapse(2)
@@ -143,7 +175,7 @@ static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair
             for (int e = 0; e < ne; e++) {
                 uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float *sv[MAXTOK], o[MAXTOK * 4];
                 for (int k = 0; k < ent[e]; k++) { xp[k] = hu[e][k]; sp[k] = shq[e][k]; sv[k] = sh[e][k]; }
-                rows4_multi(&table[layer][eid[e]].dn, r, ent[e], xp, sp, sv, o);
+                rows4_any(&table[layer][eid[e]].dn, r, ent[e], xp, sp, sv, o);
                 for (int k = 0; k < ent[e]; k++) for (int j = 0; j < 4; j++) y[(size_t)etok[e][k] * H + r + j] += ew[e][k] * o[k * 4 + j];
             }
         }
@@ -179,21 +211,22 @@ static int load_weights(const char *dir, int layers, int experts) {
         char path[1024]; snprintf(path, sizeof path, "%s/layer%d.hfx", dir, l + FIRST_MOE);
         FILE *f = fopen(path, "rb"); if (!f) continue;
         char magic[4]; uint32_t hl, n;
-        if (fread(magic, 1, 4, f) != 4 || memcmp(magic, "HFQ1", 4) || fread(&hl, 4, 1, f) != 1 || fread(&n, 4, 1, f) != 1) { fclose(f); return -1; }
+        if (fread(magic, 1, 4, f) != 4 || (memcmp(magic, "HFQ1", 4) && memcmp(magic, "HFQ8", 4)) || fread(&hl, 4, 1, f) != 1 || fread(&n, 4, 1, f) != 1) { fclose(f); return -1; }
+        int bits = memcmp(magic, "HFQ8", 4) ? 4 : 8;
         uint32_t *ids = malloc(4 * n); if (fread(ids, 4, n, f) != n) { fclose(f); return -1; }
         for (uint32_t k = 0; k < n; k++) {
             Expert *e = &table[l][ids[k]];
             QMat *ms[2] = {&e->gu, &e->dn}; int rows[2] = {2 * I, H}, cols[2] = {H, I};
             for (int m = 0; m < 2; m++) {
-                QMat *q = ms[m]; q->rows = rows[m]; q->cols = cols[m];
-                size_t nq = (size_t)rows[m] * cols[m] / 2, ns = (size_t)rows[m] * (cols[m] / G);
+                QMat *q = ms[m]; q->rows = rows[m]; q->cols = cols[m]; q->bits = bits;
+                size_t nq = (size_t)rows[m] * cols[m] * bits / 8, ns = (size_t)rows[m] * (cols[m] / G);
                 q->q = aligned_alloc(64, nq); q->s = aligned_alloc(64, ns * 4); q->c = aligned_alloc(64, ns * 4);
                 if (fread(q->q, 1, nq, f) != nq || fread(q->s, 4, ns, f) != ns || fread(q->c, 4, ns, f) != ns) { fclose(f); return -1; }
                 bytes += nq + ns * 8;
             }
         }
         free(ids); fclose(f); files++;
-        fprintf(stderr, "loaded layer %u: %u experts\n", hl, n);
+        fprintf(stderr, "loaded layer %u: %u experts (int%d)\n", hl, n, bits);
     }
     fprintf(stderr, "loaded %d layer files, %.1f GB\n", files, bytes / 1e9);
     return files;
@@ -225,8 +258,25 @@ static int selftest(void) {
         for (int r = 0; r < H; r++) { double d = y[t * H + r] - ref[r]; err += d * d; ref2 += (double)ref[r] * ref[r]; }
     }
     double rel = sqrt(err / ref2);
-    printf("selftest multi-token batched vs scalar reference: rel L2 = %.3e %s\n", rel, rel < 1e-4 ? "SELFTEST OK" : "SELFTEST FAILED");
-    return rel < 1e-4 ? 0 : 1;
+    printf("selftest int4 multi-token batched vs scalar reference: rel L2 = %.3e %s\n", rel, rel < 1e-4 ? "SELFTEST OK" : "SELFTEST FAILED");
+    // int8 path: same integer weights stored as int8 must reproduce the int4 result
+    for (int e = 0; e < 2; e++) {
+        QMat *ms[2] = {&table[0][e].gu, &table[0][e].dn}; int8_t *ks[2] = {kg[e], kd[e]};
+        for (int k = 0; k < 2; k++) {
+            QMat *q = ms[k]; size_t n = (size_t)q->rows * q->cols; uint8_t *q8 = aligned_alloc(64, n);
+            memcpy(q8, ks[k], n); q->q = q8; q->bits = 8;
+            for (int r = 0; r < q->rows; r++) for (int g = 0; g < q->cols / G; g++) {
+                int sw = 0; for (int j = 0; j < G; j++) sw += ks[k][(size_t)r * q->cols + g * G + j];
+                q->c[r * (q->cols / G) + g] = q->s[r * (q->cols / G) + g] * 128.0f * sw;
+            }
+        }
+    }
+    float *y8 = malloc(sizeof(float) * ntok * H);
+    run_layer(0, ntok, x, 5, pairs, y8);
+    double e8 = 0, n8 = 0; for (int i = 0; i < ntok * H; i++) { double d = y8[i] - y[i]; e8 += d * d; n8 += (double)y[i] * y[i]; }
+    double rel8 = sqrt(e8 / n8);
+    printf("selftest int8 path vs int4 path (same integer weights): rel L2 = %.3e %s\n", rel8, rel8 < 1e-5 ? "SELFTEST OK" : "SELFTEST FAILED");
+    return (rel < 1e-4 && rel8 < 1e-5) ? 0 : 1;
 }
 
 int main(int argc, char **argv) {
