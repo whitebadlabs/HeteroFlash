@@ -69,3 +69,5 @@ The verify step must be measured together with committed tokens per cycle; tok/s
 - All other work so far fits the framing: Control routing traces (M1) and the baseline window measure the original model on the Max-Q rig; the surgery/precision hooks act on that model; the hardware calibration and simulator target the deployment.
 
 - M1 complete: 364 prompts, 0 errors, 6.4 GB raw logits. Curated results in `results/2026-11-07-m1-routing/` (coverage, all-8-resident probability, window unions, domain overlap, gate mass, holdout transfer, decode simulation). Raw traces stay on the workstation (not committed).
+
+- 2026-11-07: owner approved surgery/requantization from the official BF16 weights (zai-org/GLM-5.3-Flash-BF16 rev f9fed3bbc822, downloading to the workstation). Checkpoint strategy written (`docs/CHECKPOINT_STRATEGY.md`). Control baseline window started by the owner.
