@@ -69,3 +69,17 @@ Freeze implementation/checkpoints before final test. Publish preregistered endpo
 
 ## Potential paper contribution (to establish by experiments)
 A topology-aware mathematical placement formulation coupling expert usage, quality sensitivity, memory footprint, processor kernel efficiency, interconnect delays, and critical-path overlap; a GLM-5.3-Flash router/compression protocol; an open-source benchmark and ablation study on one GB10 plus CPU-only auxiliary memory. Claim novelty only after a formal related-work comparison with HetRoute, Hecate, REAP, HOPE, MoE-Infinity, PreScope and SPICE.
+
+## Gate plan adopted 2026-11-07 (owner + external review)
+One trained model, two execution schedules: **prefill** Spark-GPU-centric (grouped low-precision GEMMs, layer-wise staging of remote expert weights over a high-bandwidth link); **decode** Spark GPU + concurrent workstation-CPU experts with compact fixed layers, routing-aware placement and speculative verification. Both must produce identical cached state.
+
+| Gate | Experiment | Progress criterion |
+|---|---|---|
+| G1 | M2 top-k + fixed-weight precision quality sweep vs Control | quality-preserving reductions in active compute and fixed-weight traffic identified |
+| G2 | router recovery + mixed-bit weights from the BF16 original | first HeteroFlash checkpoint with acceptable KL and task accuracy |
+| G3 | CPU experts at 4-8 verify tokens with real network synchronization | measured remote critical-path cost (first result: `results/2026-11-07-g3-remote-experts`) |
+| G4 | GPU-heavy cold prefill with layer-wise expert staging | trajectory toward 4,167 input tok/s, stalls identified |
+| G5 | new drafter trained on the final model; integrated benchmark | all three SLAs on final hardware with general-purpose non-inferiority |
+
+Decode cycle budget (research target): ~40 ms for ~5 committed tokens = ~22 ms fixed GPU weight path + ~11 ms residual GPU/CPU expert work (CPU overlapped) + ~7 ms draft and overhead.
+Training objective adds hardware-aware routing terms to the quality loss: lambda1 E[k] + lambda2 E[|U_verify|] + lambda3 E[T_remote] (AcceptMoE-style commitment-aware selection as a baseline). No expert deletion unless it beats keeping the expert in remote RAM. Report a Pareto frontier (quality loss, cold TTFT, TPOT, cached TTFT, GPU residency, remote CPU use) at equal quality, not equal bit width.

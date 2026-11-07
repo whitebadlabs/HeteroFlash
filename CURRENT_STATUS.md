@@ -74,3 +74,4 @@ The verify step must be measured together with committed tokens per cycle; tok/s
 
 - Control baseline measured (`results/2026-11-07-control-baseline/`): cold 45K TTFT p50 11.10 s / p95 11.30 s; cached 45K+32 p95 161 ms; prose TPOT p50 6.70 ms (~151 tok/s), 2.43 committed tokens/verify (47.6% draft acceptance), implied verify step ~16.3 ms; mixed 167 tok/s, 2.73 committed/verify.
 - M2 launched 03:15Z. A first launch attempt never ran: the duplicate-run check matched its own command line. The workstation's 1 GbE link is saturated by the BF16 download, which causes intermittent SSH timeouts.
+- G3 first result: remote expert server (activation-only TCP, multi-token batched int4 kernel, verified) measured from the Spark over 1 GbE. Network dominates verify windows (1.0-1.5 ms/layer at 4-8 tokens), so a 10G or ConnectX link is required. Remote union must be <= ~3-4 experts/layer at 6 tokens. BF16 official weights downloaded (599 GB, rev f9fed3b).
