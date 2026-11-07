@@ -55,3 +55,29 @@ The remaining gap is now mostly committed tokens per verify (drafter quality on 
 - The NVFP4 cost comes almost entirely from attention (0.030 of 0.040); lm_head NVFP4 costs 0.0024 and shared experts add ~0.008. Candidate mixed recipe: FP8 attention + NVFP4 shared/dense/lm_head (~7 GB). Attention at NVFP4 needs QAD (G2).
 - Costs add roughly linearly: k6 + NVFP4-all = 0.096 vs 0.063 + 0.040.
 - **Caveat:** `nvfp4_all_keep_kvb` is numerically identical to `nvfp4_all_incl_shared`. vLLM's MLA absorbs `kv_b_proj` into separate matrices at load time, so in-place quantization of the original `kv_b_proj.weight` has no runtime effect. kv_b precision is therefore **untested**; it needs quantization before weight processing or of the absorbed tensors.
+
+## Round 3: original-top-8 normalisation (k_ref = 8) at model level
+Hook v5 applies k_ref = 8 exactly: y' = r*y + (1 - r)*shared, where r = (sum of kept sigmoid scores) / (sum over the original top-8), and the shared-expert output is TP-reduced inside the hook. **Correctness check on the real TP2 model:** masking all experts (`chk_k0_maskall`) and forcing r = 0 (`chk_r0_override`) give identical logprobs (NLL +4.4612 both). The first round-3 run of the ref8 configs was invalid: the harness did not reset `ratio_override` between configs, so every config inherited r = 0. They were rerun as `*_v2` after the fix.
+
+| Config | NLL increase | top-1 | KL lower bound | KL p95 |
+|---|---|---|---|---|
+| k6_active | 0.0633 | 0.9401 | 0.0641 | 0.341 |
+| k6_ref8_v2 | 0.0595 | 0.9467 | 0.0471 | 0.254 |
+| k5_ref8_v2 | 0.1174 | 0.9239 | 0.0911 | 0.470 |
+| k4_active | 0.2570 | 0.8719 | 0.2318 | 1.230 |
+| k4_ref8_v2 | 0.2045 | 0.8913 | 0.1650 | 0.852 |
+| k3_ref8_v2 | 0.3981 | 0.8361 | 0.3371 | 1.603 |
+| k5_ref8_fp8all_v2 | 0.1201 | 0.9221 | 0.0914 | 0.482 |
+| k4_ref8_fp8all_v2 | 0.2058 | 0.8895 | 0.1659 | 0.858 |
+
+| By domain | writing_chat | knowledge_qa | math | code | multilingual | instruction_following |
+|---|---|---|---|---|---|---|
+| k4_active | 0.3389 | 0.1969 | 0.0839 | 0.0249 | 0.3438 | 0.2973 |
+| k4_ref8_v2 | 0.2672 | 0.1424 | 0.0975 | 0.0251 | 0.2539 | 0.2515 |
+| k5_ref8_v2 | 0.1602 | 0.0820 | 0.0543 | 0.0153 | 0.1431 | 0.1400 |
+| k6_ref8_v2 | 0.0801 | 0.0483 | 0.0306 | 0.0089 | 0.0679 | 0.0711 |
+
+- k_ref = 8 is a training-free improvement at every k: k4 NLL 0.257 -> 0.205 (-20%), KL 0.232 -> 0.165 (-29%), top-1 87.2% -> 89.1%; k6 KL 0.064 -> 0.047. It becomes the default for reduced-k candidates.
+- The model-level gain is smaller than the layer-level gain (-39% routed-output error) because errors interact across layers.
+- FP8 on all fixed weights stacks almost for free (+0.001-0.003 nats).
+- k <= 5 still costs >= 0.12 nats overall and ~0.16-0.27 on prose/multilingual/instruction following, so router training plus dropped-expert compensation (G2) is required before those budgets are viable.
