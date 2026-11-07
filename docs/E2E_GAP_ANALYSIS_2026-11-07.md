@@ -102,3 +102,43 @@ What this means for the levers:
 2. **CPU expert GEMM.** A batched int8 VNNI GEMM in the HeteroFlash expert server is worth up to ~5-10x on the CPU half.
 3. **Overlap.** Running GPU-local experts concurrently with the remote experts of the same layer, instead of serially, removes the 55% wait.
 4. **Remote layers.** With levers 1-3 at about 50% of peak, cold 45K is GPU ~6.5 s against CPU ~24 s for 21 remote layers. Meeting 10.8 s therefore still needs <= ~8 remote layers, which is the capacity problem described above.
+
+## Kernel rooflines (measured 2026-11-07)
+
+### GB10, vLLM v0.32.0 fused_experts on one GLM MoE layer
+
+The layer has 288 experts, H=4096, I=2048, top-8. Results are in `results/2026-11-07-moe-kernel/gb10_fused_moe.json`.
+
+| tokens per chunk | BF16 | FP8 w8a8 |
+|---|---|---|
+| 512 | 67.7 ms (3.0 TF) | 33.6 ms (6.1 TF) |
+| 1024 | 71.1 ms (5.8 TF) | 34.8 ms (11.8 TF) |
+| 2048 | 73.5 ms (11.2 TF) | 37.1 ms (22.2 TF) |
+| 4096 | 80.9 ms (20.4 TF) | 42.2 ms (39.1 TF) |
+
+Dense GEMM peak is 188 TF in FP8 and 97 TF in BF16.
+
+- **Weight reads dominate.** Time is nearly flat in tokens, because every chunk re-reads all 288 experts (7.3 GB in FP8 at ~216 GB/s).
+- **llama.cpp is not unusually slow.** Its ~7 TF at 512-token ubatches is the same weight-read bound, not a bad kernel.
+- **The lever is chunk size.** 8-16K-token chunks plus NVFP4 experts would take the MoE part of a cold 45K prefill to about 5-8 s, if all experts were resident.
+
+### Workstation CPU (Zen5, 32 threads), torch, one expert FFN
+
+int8 `_int_mm` reaches:
+
+- 5.3 TOPS at M=16 tokens/expert;
+- 14.5 TOPS at M=64;
+- 19.1 TOPS at M=128;
+- 12.1 TOPS at M=2048.
+
+BF16 reaches about 7 TF.
+
+llama.cpp's RPC CPU path measured about 3 TOPS, so a proper int8 expert GEMM is worth about 4-6x.
+
+### Cold 45K TTFT plan implied by these rooflines
+
+- **CPU share.** At about 15 TOPS sustained, each remote layer costs about 0.9 s of CPU time per 45K prefill. So <= ~8 remote layers are needed to stay under about 7 s on the CPU, overlapped with the GPU.
+- **Spark share.** The Spark must then hold the routed experts of about 34 layers, plus fixed weights and KV, in about 121 GB.
+  - That is 34 x 288 experts in about 100 GB, roughly 3.2 bits/weight on average. NVFP4 is 4.5 bpw.
+  - So it needs popularity-tiered bits, for example hot experts at 4-bit and cold at 2-3-bit.
+  - Quality at those bits is unmeasured. That is the next experiment, run on the Max-Q rig.
