@@ -34,7 +34,9 @@ def post(path, body, timeout=1800):
 
 
 def set_control(ctl_path, **kw):
-    cur = {"capture": False, "k_active": 8, "k_ref": "active", "routed_class": None, "diag": False, "fixed_quant": None}
+    # every control key the hook knows, reset on every call (keys left out would keep their previous values)
+    cur = {"capture": False, "k_active": 8, "k_ref": "active", "routed_class": None, "diag": False, "fixed_quant": None,
+           "capture_inputs": None, "dump_source": None, "shared_class": "Glm5NextMLP", "ratio_override": None}
     cur.update(kw)
     tmp = ctl_path + ".tmp"
     with open(tmp, "w") as f:
