@@ -41,6 +41,7 @@ It assumes an ideal bandwidth-bound run with zero network latency and everything
 | configuration | F (fixed) | E (experts/token) | c | floor ms | tok/s ceiling | quality cost (M2, nats) |
 |---|---|---|---|---|---|---|
 | FP8-class fixed, top-8 int4 | 9.2 GB | 4.8 GB | 2.8 | 33.6 | 30 | +0.006 |
+| same, workstation CPU reads half the expert bytes in parallel (quality-safe heterogeneous, perfect overlap) | 9.2 GB | 2.4 GB on Spark | 2.8 | 23.6 | 42 | +0.006 |
 | + NVFP4 fixed | 4.9 GB | 4.8 GB | 2.8 | 27.2 | 37 | +0.040 |
 | + top-6 ref8 | 4.9 GB | 3.6 GB | 2.8 | 22.2 | 45 | ~+0.10 |
 | + int3 experts | 4.9 GB | 2.7 GB | 2.8 | 18.5 | 54 | unmeasured |
@@ -65,7 +66,7 @@ With the FP8-class fixed weights that keep quality, the bandwidth ceiling is abo
 
 Two conditions follow:
 
-- **Placement:** cold 45K TTFT is feasible only if few layers stay remote (about 6-8 at most) and the GPU, CPU and link are fully overlapped.
+- **Placement:** cold 45K TTFT is feasible only if few layers stay remote (about 5-6 at most) and the GPU, CPU and link are fully overlapped.
 - **Capacity:** the Spark has about 121 GB usable, while all experts at 4.5 bpw take 171 GB. Fitting them needs expert pruning, or an average of about 2.7 bpw using popularity-tiered bits.
 
 ## Cached 45K + 32 (target 0.2 s)
@@ -137,8 +138,8 @@ llama.cpp's RPC CPU path measured about 3 TOPS, so a proper int8 expert GEMM is 
 
 ### Cold 45K TTFT plan implied by these rooflines
 
-- **CPU share.** At about 15 TOPS sustained, each remote layer costs about 0.9 s of CPU time per 45K prefill. So <= ~8 remote layers are needed to stay under about 7 s on the CPU, overlapped with the GPU.
-- **Spark share.** The Spark must then hold the routed experts of about 34 layers, plus fixed weights and KV, in about 121 GB.
-  - That is 34 x 288 experts in about 100 GB, roughly 3.2 bits/weight on average. NVFP4 is 4.5 bpw.
+- **CPU share.** One remote layer is 45,000 x 8 x 3 x 4096 x 2048 x 2 = 1.81e13 operations per 45K prefill. At about 15 TOPS sustained that is about 1.2 s per layer. Leaving room for the GPU share and the activation transfer (about 0.6 s per layer in bf16 unless fully overlapped) gives a budget of <= ~5-6 remote layers.
+- **Spark share.** The Spark must then hold the routed experts of about 36-37 layers, plus fixed weights and KV, in about 121 GB.
+  - That is about 36.5 x 288 experts in about 100 GB, roughly 3.0 bits/weight on average. NVFP4 is 4.5 bpw.
   - So it needs popularity-tiered bits, for example hot experts at 4-bit and cold at 2-3-bit.
   - Quality at those bits is unmeasured. That is the next experiment, run on the Max-Q rig.
