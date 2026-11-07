@@ -2,6 +2,9 @@
 
 **Status (2026-11-06):** Initial research scaffold and synthetic placement prototype only. No model training, Spark profiling, or real-world throughput measurements have been performed here. The three SLAs remain **unverified**.
 
+## Framing
+Control = original GLM-5.3-Flash on the dual-Max-Q rig. Treatments = modified versions of the original model, trained and evaluated on that rig. Deployment = one DGX Spark + permitted CPU/RAM, with the Max-Q GPUs free. Published Spark checkpoints are background only. See `docs/RESEARCH_CHARTER.md`.
+
 ## Fixed constraints
 - Final inference GPU: one NVIDIA DGX Spark (GB10, 128 GB unified LPDDR5X, 273 GB/s rated memory bandwidth).
 - Auxiliary execution: Spark's own Arm CPU + the CPU(s) and approximately 230 GB available DDR5 RAM in a separate workstation. The workstation's two RTX PRO 6000 Max-Q GPUs are **NOT AVAILABLE FOR INFERENCE**.

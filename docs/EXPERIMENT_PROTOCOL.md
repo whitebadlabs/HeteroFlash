@@ -1,6 +1,8 @@
 # Preregistered-style experimental protocol (draft, lock before final testing)
 
 ## Systems and comparisons
+> Governing framing: see `docs/RESEARCH_CHARTER.md`. **T below is the Control** (original GLM-5.3-Flash on the dual-Max-Q rig, owner's serving configuration). S0 is redefined as an *internal runtime diagnostic* (unmodified model on the HeteroFlash Spark runtime), not as a baseline taken from published Spark checkpoints.
+
 - **T:** highest-quality feasible GLM-5.3-Flash teacher, temporarily served on dual Max-Q research GPUs; reference against official FP8 where feasible. Training/eval GPUs never serve inference in the final deployment.
 - **S0:** full GLM-5.3-Flash ~2-bit baseline on the SAME Spark, with unchanged model semantics if supported; original model quality need not match T.
 - **S1:** surgery+mixed-precision student on Spark, GPU-only, same serving/client conditions as S0.

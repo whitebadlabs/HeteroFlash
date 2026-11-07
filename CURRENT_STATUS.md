@@ -62,3 +62,8 @@ The verify step must be measured together with committed tokens per cycle; tok/s
 2. **Top-k quality sweep** (M2, hook v2/v3 + `src/m2_router_surgery.py`).
 3. **Dense/fixed-weight precision sensitivity:** hook v3 applies simulated FP8 (128x128 blocks) or NVFP4 (16-blocks, e4m3 scales) to attention, shared-expert, dense-MLP and lm_head weights in place, live from the control file; originals kept on CPU, restore verified bit-exact; module inventory dumped. Included in the M2 grid (fixed_fp8, fixed_nvfp4, k4_fixed_nvfp4).
 4. **Heterogeneous placement** on full multi-domain traces (`src/decode_sim.py`, now reporting tau needed for 125 tok/s per configuration).
+
+## 2026-11-07: framing correction
+- The owner restated the design (`docs/RESEARCH_CHARTER.md`): Control = original GLM-5.3-Flash on the dual-Max-Q rig; treatments = modified versions of the original model; deployment = one Spark + CPU/RAM. Published Spark checkpoints are background only.
+- Aborted an attempt to stand up a community single-Spark checkpoint/recipe as "S0". Partial downloads and the recipe clone were deleted; nothing from it was used or committed.
+- All other work so far fits the framing: Control routing traces (M1) and the baseline window measure the original model on the Max-Q rig; the surgery/precision hooks act on that model; the hardware calibration and simulator target the deployment.
