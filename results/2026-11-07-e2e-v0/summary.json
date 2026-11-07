@@ -1,0 +1,66 @@
+{
+ "ttft": {
+  "type": "summary",
+  "cached_45000+128": {
+   "n": 3,
+   "p50": 5.5949,
+   "p95": 6.0462,
+   "p99": 6.0863,
+   "mean": 5.7561,
+   "p50_ci95": [
+    5.577,
+    6.0964
+   ],
+   "p95_ci95": [
+    5.577,
+    6.0964
+   ],
+   "violations_excluded": 0
+  },
+  "cached_45000+32": {
+   "n": 3,
+   "p50": 3.0955,
+   "p95": 3.1168,
+   "p99": 3.1187,
+   "mean": 3.0863,
+   "p50_ci95": [
+    3.0443,
+    3.1192
+   ],
+   "p95_ci95": [
+    3.0443,
+    3.1192
+   ],
+   "violations_excluded": 0,
+   "sla_s": 0.2,
+   "pass_p95_upper_ci": false
+  },
+  "cold_45000": {
+   "n": 3,
+   "p50": 838.3613,
+   "p95": 839.8503,
+   "p99": 839.9826,
+   "mean": 836.3092,
+   "p50_ci95": [
+    830.5505,
+    840.0157
+   ],
+   "p95_ci95": [
+    830.5505,
+    840.0157
+   ],
+   "violations_excluded": 0,
+   "sla_s": 10.8,
+   "pass_p95_upper_ci": false
+  }
+ },
+ "decode_prose": {
+  "type": "summary",
+  "n": 10,
+  "tpot_ms_p50": 156.436,
+  "tpot_ms_p95": 165.729,
+  "decode_tok_s_mean": 6.46,
+  "itl_chunk_ms_p95_median_over_requests": 172.739,
+  "spec": {}
+ }
+}

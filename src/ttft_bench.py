@@ -25,6 +25,22 @@ import time
 import urllib.request
 
 
+ENGINE = {"name": "vllm"}   # "vllm" or "llamacpp" (llama-server): tokenization / templating / cache-accounting differ
+
+
+def tokenize_text(base, model, text):
+    if ENGINE["name"] == "llamacpp":
+        return http_json(base, "/tokenize", {"content": text, "add_special": False, "parse_special": True})["tokens"]
+    return http_json(base, "/tokenize", {"model": model, "prompt": text, "add_special_tokens": False})["tokens"]
+
+
+def tokenize_chat(base, model, messages):
+    if ENGINE["name"] == "llamacpp":
+        prompt = http_json(base, "/apply-template", {"messages": messages})["prompt"]
+        return tokenize_text(base, model, prompt)
+    return http_json(base, "/tokenize", {"model": model, "messages": messages, "add_generation_prompt": True})["tokens"]
+
+
 def http_json(base, path, body, timeout=600):
     req = urllib.request.Request(base + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -56,6 +72,11 @@ def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900, temper
             ev = json.loads(data)
             if ev.get("usage"):
                 usage = ev["usage"]
+            if ev.get("timings"):                              # llama-server: cache_n = prompt tokens reused from cache
+                usage.setdefault("prompt_tokens_details", {})
+                usage["prompt_tokens_details"] = {"cached_tokens": ev["timings"].get("cache_n", 0)}
+                if "prompt_tokens" not in usage and "prompt_n" in ev["timings"]:
+                    usage["prompt_tokens"] = ev["timings"]["prompt_n"] + ev["timings"].get("cache_n", 0)
             for ch in ev.get("choices", []):
                 if ch.get("text"):
                     now = time.perf_counter() - t0
@@ -121,8 +142,7 @@ def corpus_tokens(base, model, corpus_path, need):
     text = open(corpus_path, encoding="utf-8").read()
     toks = []
     for start in range(0, len(text), 200000):
-        toks += http_json(base, "/tokenize", {"model": model, "prompt": text[start:start + 200000],
-                                                "add_special_tokens": False})["tokens"]
+        toks += tokenize_text(base, model, text[start:start + 200000])
         if len(toks) >= need:
             break
     if len(toks) < need:
@@ -173,8 +193,10 @@ def decode_main(argv=None):
     ap.add_argument("--max-tokens", type=int, default=512)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--target-tok-s", type=float, default=125.0)
+    ap.add_argument("--engine", default="vllm", choices=["vllm", "llamacpp"])
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
+    ENGINE["name"] = a.engine
     rows = [json.loads(l) for l in open(a.prompts)]
     rows = [r for r in rows if r["split"] == a.split and r["domain"] in a.domains][:a.limit]
     before = scrape_spec(a.base)
@@ -183,8 +205,7 @@ def decode_main(argv=None):
         f.write(json.dumps({"type": "header", "t": time.time(), "base": a.base, "max_tokens": a.max_tokens,
                             "temperature": a.temperature, "domains": a.domains, "n": len(rows)}) + "\n")
         for i, p in enumerate(rows):
-            ids = http_json(a.base, "/tokenize", {"model": a.model, "messages": p["messages"],
-                                                  "add_generation_prompt": True})["tokens"]
+            ids = tokenize_chat(a.base, a.model, p["messages"])
             r = stream_completion(a.base, a.model, ids, max_tokens=a.max_tokens, temperature=a.temperature,
                                   keep_times=True, ignore_eos=True)
             m = {"type": "trial", "prompt_id": p["prompt_id"], "domain": p["domain"], "prompt_tokens": r["prompt_tokens"],
@@ -234,7 +255,9 @@ def main():
     ap.add_argument("--cached-sla", type=float, default=0.2)
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--engine", default="vllm", choices=["vllm", "llamacpp"])
     a = ap.parse_args()
+    ENGINE["name"] = a.engine
     rng = random.Random(a.seed)
     toks = corpus_tokens(a.base, a.model, a.corpus, a.n + max(a.suffixes) + 64)
     prefix = toks[:a.n]

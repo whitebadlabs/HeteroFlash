@@ -1,0 +1,135 @@
+{
+ "control_serving": {
+  "N1_prose": {
+   "tpot_ms_p50": 8.077,
+   "committed": 1.751,
+   "acceptance": 0.751,
+   "cycle_ms": 14.14,
+   "tok_s": 124.1
+  },
+  "N1_mixed": {
+   "tpot_ms_p50": 8.015,
+   "committed": 1.788,
+   "acceptance": 0.788,
+   "cycle_ms": 14.33,
+   "tok_s": 125.49
+  },
+  "N3_prose": {
+   "tpot_ms_p50": 6.619,
+   "committed": 2.429,
+   "acceptance": 0.476,
+   "cycle_ms": 16.07,
+   "tok_s": 154.88
+  },
+  "N3_mixed": {
+   "tpot_ms_p50": 6.297,
+   "committed": 2.618,
+   "acceptance": 0.539,
+   "cycle_ms": 16.49,
+   "tok_s": 160.56
+  },
+  "N5_prose": {
+   "tpot_ms_p50": 7.677,
+   "committed": 2.589,
+   "acceptance": 0.318,
+   "cycle_ms": 19.87,
+   "tok_s": 140.34
+  },
+  "N5_mixed": {
+   "tpot_ms_p50": 6.547,
+   "committed": 2.913,
+   "acceptance": 0.383,
+   "cycle_ms": 19.07,
+   "tok_s": 151.16
+  },
+  "N7_prose": {
+   "tpot_ms_p50": 8.039,
+   "committed": 2.705,
+   "acceptance": 0.244,
+   "cycle_ms": 21.74,
+   "tok_s": 130.29
+  },
+  "N7_mixed": {
+   "tpot_ms_p50": 7.872,
+   "committed": 2.889,
+   "acceptance": 0.27,
+   "cycle_ms": 22.74,
+   "tok_s": 132.14
+  }
+ },
+ "target_acceptance": {
+  "N1_prose": {
+   "committed": 1.751,
+   "acceptance": 0.751
+  },
+  "N1_mixed": {
+   "committed": 1.792,
+   "acceptance": 0.792
+  },
+  "N3_prose": {
+   "committed": 2.442,
+   "acceptance": 0.481
+  },
+  "N3_mixed": {
+   "committed": 2.619,
+   "acceptance": 0.54
+  },
+  "N5_prose": {
+   "committed": 2.653,
+   "acceptance": 0.331
+  },
+  "N5_mixed": {
+   "committed": 2.93,
+   "acceptance": 0.386
+  },
+  "N7_prose": {
+   "committed": 2.698,
+   "acceptance": 0.243
+  },
+  "N7_mixed": {
+   "committed": 2.959,
+   "acceptance": 0.28
+  }
+ },
+ "spark_projection": {
+  "N1": {
+   "verify_ms": 54.6,
+   "draft_ms_total": 2.03,
+   "cycle_ms": 56.63,
+   "committed_prose": 1.751,
+   "tok_s_prose": 30.9,
+   "committed_needed_for_125": 7.08
+  },
+  "N3": {
+   "verify_ms": 64.77,
+   "draft_ms_total": 6.08,
+   "cycle_ms": 70.85,
+   "committed_prose": 2.442,
+   "tok_s_prose": 34.5,
+   "committed_needed_for_125": 8.86
+  },
+  "N5": {
+   "verify_ms": 73.56,
+   "draft_ms_total": 10.14,
+   "cycle_ms": 83.7,
+   "committed_prose": 2.653,
+   "tok_s_prose": 31.7,
+   "committed_needed_for_125": 10.46
+  },
+  "N7": {
+   "verify_ms": 81.32,
+   "draft_ms_total": 14.19,
+   "cycle_ms": 95.51,
+   "committed_prose": 2.698,
+   "tok_s_prose": 28.2,
+   "committed_needed_for_125": 11.94
+  }
+ },
+ "control_cycle_fit": {
+  "cycle_ms = a + b*N": {
+   "a_ms": 12.64,
+   "b_ms_per_draft_token": 1.33
+  },
+  "note": "Control (2x Max-Q, graphs): a ~ verify, b ~ marginal draft+verify cost per extra draft token"
+ }
+}

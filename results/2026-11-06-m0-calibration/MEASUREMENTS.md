@@ -166,3 +166,8 @@ NEON SDOT kernel (int8, and int4 as unsigned nibbles with zero-point fold), 4-ro
 
 - **Fixed bytes per decode step at served precision: ~16.6 GB** (attention + shared + lm_head + dense + indexer + router + norms). At the measured 222 GB/s Spark expert-streaming rate that is **~75 ms per step before any routed expert**. This replaces the earlier 9-10 GB estimate.
 - The same fixed weights at FP8 would be ~8.3 GB (~37 ms) and at NVFP4 (~4.5 bpw) ~4.7 GB (~21 ms). Fixed-weight precision is therefore the largest single decode lever on the Spark, ahead of expert placement. Its quality cost must be measured (M5).
+
+## Spark ConnectX-7 after reboot (2026-11-07)
+- At boot the kernel enumerates all four functions (15b3:1021 at 0000:01:00.0/.1 and 0002:01:00.0/.1). mlx5_core loads them (firmware 28.45.4028, PCIe Gen5 x4 = 126 Gb/s available), then reports **"Port module event: Cable unplugged"** and "insufficient power on the PCIe slot (27W)". After boot the functions are gone from the PCI bus. The ports power down because **no QSFP cable is connected**; the hardware is not faulty.
+- An RDMA path to the workstation needs a QSFP cable **and** a QSFP NIC in the workstation (its ports are 10GBASE-T RJ45 only), i.e. a purchase (not approved).
+- Free 10 Gb/s option: the Spark's RJ45 is a 10GbE Realtek 8127 (enP7s7, linked at 1G only because of the 1 GbE switch), and the workstation has a spare 10GBASE-T port. A direct Cat6 cable gives 10 Gb/s point-to-point. The Spark's Wi-Fi (wlP9s9) is up and could carry its LAN traffic, or a 10G switch keeps both on the LAN.

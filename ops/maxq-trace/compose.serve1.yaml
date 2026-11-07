@@ -1,0 +1,114 @@
+# HeteroFlash G5 variant serve1: owner's serving config (CUDA graphs) with MTP 1 draft tokens, loopback 8001, no hook.
+# GLM-5.3-Flash EXL3 3.5bpw on vLLM (mratsim/vllm-glm53f-exl3-sm120-turbo r6, commit 7bd2211)
+# Generated from serve_vllm_GLM53f-exl3-35bpw-kv8-mtp3-dcp1-b2048.kk.beta.sh by the agents session on spark.
+# Paths assume the /srv layout; the model dir must be readable by the rootless dockerd user.
+services:
+  glm53-trace:
+    image: localhost/vllm-glm53f-exl3-sm120-turbo:r6
+    container_name: glm53-trace
+    restart: "no"
+    ipc: host
+    ports:
+      - "127.0.0.1:8001:8000"
+    devices:
+      - "nvidia.com/gpu=all"
+    ulimits:
+      memlock: -1
+    volumes:
+      - "/srv/models/GLM-5.3-Flash-EXL3-TR3-3.5bpw:/workspace/local_models/GLM-5.3-Flash-EXL3-TR3-3.5bpw:ro"
+      - "/srv/cache/vllm-glm53f-exl3:/cache:rw"
+      - "/srv/cache/vllm-glm53f-exl3/tmp:/container-tmp:rw"
+      - "./chat_template.multimodal.jinja:/opt/glm53f/chat_template.multimodal.jinja:ro"
+    environment:
+      - "TMPDIR=/container-tmp"
+      - "TRITON_CACHE_DIR=/cache/triton"
+      - "TORCHINDUCTOR_CACHE_DIR=/cache/inductor"
+      - "B12X_COMPILE_CACHE_DIR=/cache/b12x"
+      - "VLLM_ENGINE_READY_TIMEOUT_S=300"
+      - "VLLM_ENGINE_ITERATION_TIMEOUT_S=120"
+      - "OMP_NUM_THREADS=2"
+      - "HF_HUB_OFFLINE=1"
+      - "SAFETENSORS_FAST_GPU=1"
+      - "VLLM_USE_V2_MODEL_RUNNER=1"
+      - "VLLM_ENABLE_PCIE_ALLREDUCE=0"
+      - "NCCL_P2P_DISABLE=1"
+      - "VLLM_EXL3_PREFILL_BLOCK_M=64"
+      - "VLLM_EXL3_PREFILL_TRELLIS=1"
+      - "VLLM_GLM53_MTP_DRAFT_HEAD=bf16"
+      - "CUBLAS_WORKSPACE_CONFIG=:4096:1"
+    entrypoint: ["/bin/bash", "-lc", "unset MAX_NUM_BATCHED_TOKENS MAX_CUDAGRAPH_CAPTURE_SIZE CUDAGRAPH_CAPTURE_SIZES PREFILL_SCHEDULE_INTERVAL FAIRNESS_ENGINE PREFILL_COMPUTE_SHARE VLLM_PCIE_ALLREDUCE_BACKEND VLLM_PCIE_ONESHOT_ALLREDUCE_MAX_SIZE VLLM_PCIE_TWOSHOT_ALLREDUCE_MAX_SIZE\nexec /opt/venv/bin/vllm serve \"$$@\"", "--"]
+    command:
+      - "/workspace/local_models/GLM-5.3-Flash-EXL3-TR3-3.5bpw"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--served-model-name"
+      - "GLM-5.3-Flash"
+      - "--quantization"
+      - "exl3"
+      - "--dtype"
+      - "bfloat16"
+      - "--kv-cache-dtype"
+      - "fp8_ds_mla"
+      - "--block-size"
+      - "256"
+      - "--mamba-ssm-cache-dtype"
+      - "bfloat16"
+      - "--mamba-cache-mode"
+      - "align"
+      - "--tensor-parallel-size"
+      - "2"
+      - "--decode-context-parallel-size"
+      - "1"
+      - "--cp-kv-cache-interleave-size"
+      - "4"
+      - "--gpu-memory-utilization"
+      - "0.98"     # 0.986 ran GPU 0 out of memory on the first request (driver 615)
+      - "--max-model-len"
+      - "-1"
+      - "--max-num-seqs"
+      - "6"
+      - "--max-num-batched-tokens"
+      - "2048"
+      - "--max-cudagraph-capture-size"
+      - "24"
+      - "--compilation-config"
+      - "{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"cudagraph_capture_sizes\":[1,2,4,8,12,16,20,24]}"
+      - "--reasoning-parser"
+      - "glm45"
+      - "--tool-call-parser"
+      - "glm47"
+      - "--enable-auto-tool-choice"
+      - "--chat-template"
+      - "/opt/glm53f/chat_template.multimodal.jinja"
+      - "--default-chat-template-kwargs.reasoning_effort=high"
+      - "--enable-request-id-headers"
+      - "--enable-force-include-usage"
+      - "--enable-per-request-metrics"
+      - "--enable-prompt-tokens-details"
+      - "--attention-backend"
+      - "B12X"
+      - "--moe-backend"
+      - "b12x"
+      - "--linear-backend"
+      - "b12x"
+      - "--disable-custom-all-reduce"
+      - "--prefill-compute-share"
+      - "0.4"
+      - "--prefill-schedule-interval"
+      - "1"
+      - "--mm-encoder-attn-backend"
+      - "TORCH_SDPA"
+      - "--limit-mm-per-prompt"
+      - "{\"video\":0}"
+      - "--no-enable-flashinfer-autotune"
+      - "--speculative-config"
+      - "{\"method\":\"mtp\",\"num_speculative_tokens\":1,\"draft_sample_method\":\"probabilistic\",\"rejection_sample_method\":\"standard\",\"moe_backend\":\"b12x\",\"attention_backend\":\"B12X\"}"
+      - "--override-generation-config"
+      - "{\"temperature\": 1, \"top_p\": 0.95}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      start_period: 300s
+      interval: 30s
+      retries: 3

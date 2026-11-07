@@ -1,0 +1,35 @@
+#!/bin/bash
+# Sudo-less experiment server control on the workstation (lok's rootless Docker; containers run as lok).
+#   hf-run <variant>   start/replace the experiment server: trace | mtp1/3/5/7 | serve1/3/5/7  (loopback :8001)
+#   hf-run stop | logs | status
+set -u
+export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
+OPS=/srv/tools/heteroflash/ops
+WD=/srv/cache/heteroflash/lok-compose
+mkdir -p "$WD"
+cp -f "$OPS/maxq-trace/chat_template.multimodal.jinja" "$WD/"
+dc() { (cd "$WD" && docker compose -p hf -f compose.run.yaml "$@"); }
+case "${1:-}" in
+  stop)   dc down; exit ;;
+  logs)   docker logs --tail "${2:-200}" glm53-trace; exit ;;
+  status) docker ps --format '{{.Names}} {{.Status}}'; curl -s -o /dev/null -w "health %{http_code}\n" http://127.0.0.1:8001/health; exit ;;
+  trace) SRC=compose.yaml ;;
+  mtp1|mtp3|mtp5|mtp7|serve1|serve3|serve5|serve7) SRC=compose.$1.yaml ;;
+  *) echo "usage: hf-run trace|mtp1|mtp3|mtp5|mtp7|serve1|serve3|serve5|serve7|stop|logs|status"; exit 2 ;;
+esac
+python3 -I - "$OPS/maxq-trace/$SRC" "$WD/compose.run.yaml" <<'PY'
+import json, sys
+s = open(sys.argv[1]).read()
+s = s.replace(chr(34) + "__COMPILATION_CONFIG__" + chr(34), json.dumps('{"mode":0,"cudagraph_mode":"NONE"}'))
+s = s.replace("/srv/cache/vllm-glm53f-exl3", "/srv/cache/heteroflash/vllm-cache")   # lok-owned kernel cache
+open(sys.argv[2], "w").write(s)
+PY
+dc down >/dev/null 2>&1
+dc up -d || exit 1
+for i in $(seq 180); do
+  sleep 10
+  st=$(docker inspect -f '{{.State.Status}}' glm53-trace 2>/dev/null)
+  [ "$st" = running ] || { echo "container status: $st"; docker logs --tail 40 glm53-trace; exit 1; }
+  curl -fs -o /dev/null http://127.0.0.1:8001/health && { echo "$(date -u +%H:%M:%SZ) $1 healthy"; exit 0; }
+done
+echo "timed out"; exit 1

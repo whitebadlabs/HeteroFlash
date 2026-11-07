@@ -58,6 +58,8 @@ if _DIR:
     _fq = {"applied": None, "orig": {}, "inventory_done": False, "report": None}
     _lock = threading.Lock()
     _TOP = ("ForCausalLM", "ForConditionalGeneration")
+    import re as _re
+    _DRAFT = _re.compile(r"(MTP|Mtp|NextN|Nextn|Eagle|Draft)")   # speculative draft models: own forward, own layer count
 
     def _control():
         now = time.time()
@@ -183,6 +185,12 @@ if _DIR:
 
     def _pre(mod, args):
         name = type(mod).__name__
+        if not name.endswith(_TOP) and _DRAFT.search(name) and not name.endswith(("Layer", "Head", "Predictor")):
+            with _lock:
+                _st["layer"] = 0
+                _st["ratio"] = {}
+                _st["shared"] = {}
+            return
         if name.endswith(_TOP):
             c = _control()
             if not _fq["inventory_done"]:

@@ -3,7 +3,7 @@
 #   ssh -t maxq sudo bash /srv/tools/heteroflash/ops/maxq-grant-24h.sh
 # What it installs:
 #   /usr/local/lib/heteroflash/ops/          root-owned copy of the ops scripts + trace compose (lok cannot edit)
-#   /usr/local/sbin/hf-trace-restart         restart glm53-trace (current hook in /srv/tools/heteroflash/trace_hook)
+#   /usr/local/sbin/hf-trace-restart [variant] restart glm53-trace; variant in trace|mtp1/3/5/7 (hook+eager+MTP N)|serve1/3/5/7 (serving config, MTP N)
 #   /usr/local/sbin/hf-trace-stop            stop glm53-trace
 #   /usr/local/sbin/hf-baseline-window       Control baseline window (serving config <-> trace server)
 #   /usr/local/sbin/hf-trace-logs            last 200 lines of the glm53-trace container log
@@ -16,7 +16,7 @@ set -eu
 SRC=/srv/tools/heteroflash/ops
 DST=/usr/local/lib/heteroflash/ops
 install -d -o root -g root -m 755 /usr/local/lib/heteroflash "$DST" "$DST/maxq-trace"
-install -o root -g root -m 644 "$SRC/maxq-trace/compose.yaml" "$SRC/maxq-trace/chat_template.multimodal.jinja" "$DST/maxq-trace/"
+install -o root -g root -m 644 "$SRC"/maxq-trace/compose*.yaml "$SRC/maxq-trace/chat_template.multimodal.jinja" "$DST/maxq-trace/"
 for f in maxq-trace-restart.sh maxq-baseline-window.sh; do
   sed "s|^OPS=/srv/tools/heteroflash/ops|OPS=$DST|; s|bash \"\$OPS/maxq-trace-restart.sh\"|bash $DST/maxq-trace-restart.sh|" "$SRC/$f" > "$DST/$f"
   chown root:root "$DST/$f"; chmod 755 "$DST/$f"
@@ -24,7 +24,8 @@ done
 DD='sudo -u dockerd env XDG_RUNTIME_DIR=/run/user/1002 DOCKER_HOST=unix:///run/user/1002/docker.sock'
 cat > /usr/local/sbin/hf-trace-restart <<EOF
 #!/bin/bash
-exec bash $DST/maxq-trace-restart.sh
+# optional variant (validated against a whitelist inside the root-owned script): trace | mtp1/3/5/7 | serve1/3/5/7
+exec bash $DST/maxq-trace-restart.sh "\${1:-trace}"
 EOF
 cat > /usr/local/sbin/hf-trace-stop <<EOF
 #!/bin/bash
@@ -44,13 +45,17 @@ chmod 755 /usr/local/sbin/hf-trace-{restart,stop,logs} /usr/local/sbin/hf-baseli
 T=$(mktemp)
 cat > "$T" <<'EOF'
 # HeteroFlash research grant: expires automatically 24 h after creation (transient timer heteroflash-revoke)
-lok ALL=(root) NOPASSWD: /usr/local/sbin/hf-trace-restart, /usr/local/sbin/hf-trace-stop, /usr/local/sbin/hf-baseline-window, /usr/local/sbin/hf-trace-logs
+lok ALL=(root) NOPASSWD: /usr/local/sbin/hf-trace-restart, /usr/local/sbin/hf-trace-restart *, /usr/local/sbin/hf-trace-stop, /usr/local/sbin/hf-baseline-window, /usr/local/sbin/hf-trace-logs
 EOF
 visudo -cf "$T" >/dev/null || { echo "sudoers validation failed; nothing installed"; rm -f "$T"; exit 1; }
 install -o root -g root -m 440 "$T" /etc/sudoers.d/91-heteroflash-24h; rm -f "$T"
-systemctl stop heteroflash-revoke.timer 2>/dev/null || true
-systemd-run --unit heteroflash-revoke --on-active=24h --timer-property=AccuracySec=1min \
-  /bin/rm -f /etc/sudoers.d/91-heteroflash-24h >/dev/null
+systemctl stop heteroflash-revoke.timer heteroflash-revoke.service 2>/dev/null || true
+systemctl reset-failed heteroflash-revoke.timer heteroflash-revoke.service 2>/dev/null || true
+if ! systemd-run --unit heteroflash-revoke --on-active=24h --timer-property=AccuracySec=1min \
+     /bin/rm -f /etc/sudoers.d/91-heteroflash-24h >/dev/null; then
+  rm -f /etc/sudoers.d/91-heteroflash-24h
+  echo "could not schedule the 24 h revoke timer: grant removed (fail closed)"; exit 1
+fi
 echo "granted until $(date -d '+24 hours' '+%Y-%m-%d %H:%M %Z'):"
 sudo -l -U lok | grep -A2 "NOPASSWD" | grep hf- || true
 systemctl list-timers heteroflash-revoke.timer --no-pager | head -3
