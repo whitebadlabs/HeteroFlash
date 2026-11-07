@@ -71,3 +71,15 @@ Capture v2: 120 calibration prompts (20 per domain, 64 generated tokens), ~12K t
 - In-distribution, a rank-64/128 linear term recovers 20-34% of the dropped-expert error. On unseen prompts/domains it recovers only 1-11%, so the linear term mostly memorises prompt- and domain-specific structure. For a general-purpose model, linear compensation is **not** a robust lever.
 - The earlier first-probe numbers (20-35% on 1.8K tokens) were noise/overfit and are superseded.
 - Next: learned non-linear capacity evaluated on held-out domains (a distilled per-layer "dropped-expert" MLP), and router distillation.
+
+## Non-linear distilled compensation also fails to generalize (negative result)
+`src/nonlinear_compensation.py`: per layer, a 4096 -> h -> 4096 SiLU MLP trained (AdamW, early stopping on a random 10% of the training prompts) to predict the dropped-expert residual for k = 4 (original-top-8 normalisation), on the first 75% of capture-v2 prompts, evaluated on the last 25% (unseen prompts/domains).
+
+| layer | k4_ref8 error | MLP h=256 (2.1M params) recovered | MLP h=1024 (8.4M params) recovered |
+|---|---|---|---|
+| 12 | 0.311 | 4.1% | 3.5% |
+| 20 | 0.369 | 0.8% | 0.2% |
+| 32 | 0.356 | -1.0% | -1.7% |
+
+- At most 4% recovered, and negative in layer 32. With ~8K training tokens per layer, neither linear nor small non-linear compensation can predict what the dropped experts contribute on unseen domains: the information is token-specific.
+- Caveat: distillation at much larger data scale (millions of tokens, full end-to-end KD) is untested and could behave differently.
