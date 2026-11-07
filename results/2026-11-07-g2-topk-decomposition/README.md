@@ -56,3 +56,18 @@ Findings
 - **k5_ref8 (0.268) ~ k6_active (0.263)**: one fewer expert at the same layer error.
 - Strong layer dependence: layer 3 tolerates even k2_ref8 (0.112); layers 17-24 are hardest (k4_ref8 0.39-0.47). Per-layer k is a natural lever.
 - Model-level effect of ref8 is measured in M2 round 3 (hook v5 implements ref8 exactly as y' = r*y + (1-r)*shared with TP-aware reduction of the shared-expert output).
+
+## Linear dropped-expert compensation: does not generalize across domains (negative result)
+Capture v2: 120 calibration prompts (20 per domain, 64 generated tokens), ~12K tokens per layer. `src/compensation_probe.py` fits y_k + X W P (ridge lambda in {1, 1e2, 1e3, 1e4, 1e5}, reduced rank in {8, 16, 32, 64, 128}) to the routed output of the original top-8, for k = 4 and 5 with original-top-8 normalisation. Two held-out splits: **random** tokens (same prompts/domains as training) and **tail** (the last 25% of prompts, i.e. unseen prompts and mostly unseen domains). Values are the best configuration per split, as the fraction of the k_ref8 routed-output error recovered.
+
+| layer | k4 random | k4 tail | k5 random | k5 tail |
+|---|---|---|---|---|
+| 4 | 34% | 5% | 34% | 5% |
+| 12 | 23% | 3% | 22% | 1% |
+| 20 | 21% | 4% | 21% | 3% |
+| 32 | 21% | 2% | 20% | 2% |
+| 44 | 27% | 11% | 27% | 9% |
+
+- In-distribution, a rank-64/128 linear term recovers 20-34% of the dropped-expert error. On unseen prompts/domains it recovers only 1-11%, so the linear term mostly memorises prompt- and domain-specific structure. For a general-purpose model, linear compensation is **not** a robust lever.
+- The earlier first-probe numbers (20-35% on 1.8K tokens) were noise/overfit and are superseded.
+- Next: learned non-linear capacity evaluated on held-out domains (a distilled per-layer "dropped-expert" MLP), and router distillation.
