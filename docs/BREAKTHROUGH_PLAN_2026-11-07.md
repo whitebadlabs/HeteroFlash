@@ -70,7 +70,15 @@ The sum of the bets reaches the target band only if all of these pay off togethe
 
 1. **Q1, running.** KLD of PTQ IQ3_XXS and IQ2_M experts against the Q4_K reference. If they fail, next is 3-bit QAT of the experts on the Max-Q rig.
 2. **NVFP4 QAD of attention and shared experts** on the Max-Q rig. This is the largest quality risk. Gate on KLD and the M2 nats margin.
-3. **Link latency.** Microbenchmark busy-poll sockets and interrupt-coalescing settings on the direct link. Target: <= 0.1 ms per exchange.
+3. **Link latency: PASSED (2026-11-07).** `runtime/link_pingpong.c` was run Spark <-> workstation over the 10G direct link with TCP_NODELAY, no sudo, and the workstation at load 32.
+
+   | message (each way) | default sockets, p50 | SO_BUSY_POLL + spin recv, p50 | busy p99 |
+   |---|---|---|---|
+   | 8 KB | 317 us | 50 us | 57 us |
+   | 64 KB | 425 us | 151 us | 498 us |
+
+   - Single-token decode sync over 42 layers falls to about 2 ms per token.
+   - A 7-token verify exchange costs about 0.1-0.15 ms per layer, which per-layer overlap with Spark-side work can hide.
 4. **Prose drafter.** Train a DFlash-style block drafter on GLM-5.3-Flash hidden states using the Max-Q rig. Measure prose tau and the expert union with EcoSpec selection.
 5. **Runtime.** Extend the HeteroFlash expert server: a per-layer split of the expert set between Spark and CPU, one message per layer, batched int8/int4 GEMM for prefill, overlapped with GPU work.
 
