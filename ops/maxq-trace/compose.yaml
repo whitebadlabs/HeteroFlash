@@ -71,7 +71,7 @@ services:
       - "--cp-kv-cache-interleave-size"
       - "4"
       - "--gpu-memory-utilization"
-      - "0.98"     # 0.986 ran GPU 0 out of memory on the first request (driver 615)
+      - "0.90"   # trace/M2 variant: headroom for prompt_logprobs scratch (0.98 crashed the engine during M2)     # 0.986 ran GPU 0 out of memory on the first request (driver 615)
       - "--max-model-len"
       - "-1"
       - "--max-num-seqs"

@@ -82,6 +82,8 @@ def cmd_grid(a):
             for b in base:
                 if (name, b["prompt_id"]) in done:
                     continue
+                if len(b["prompt_ids"]) + len(b["gen_ids"]) > a.max_len:
+                    continue      # long-context prompts are measured separately (prompt_logprobs memory)
                 r = post("/v1/completions", {"model": MODEL, "prompt": b["prompt_ids"] + b["gen_ids"], "max_tokens": 1,
                                              "temperature": 0, "prompt_logprobs": a.k})
                 pl = r["choices"][0]["prompt_logprobs"][len(b["prompt_ids"]):]
@@ -160,6 +162,7 @@ def main():
         {"name": "k4_fixed_nvfp4", "k_active": 4, "fixed_quant": {"fmt": "nvfp4"}}]))
     ap.add_argument("--reference", default="k8_ref")
     ap.add_argument("-k", type=int, default=64)
+    ap.add_argument("--max-len", type=int, default=4096, help="skip teacher-forcing sequences longer than this")
     ap.add_argument("--out")
     a = ap.parse_args()
     {"diag": cmd_diag, "baseline": cmd_baseline, "grid": cmd_grid, "report": cmd_report}[a.cmd](a)

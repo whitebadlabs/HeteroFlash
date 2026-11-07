@@ -58,27 +58,27 @@ static void qmat_init(QMat *m, int rows, int cols, unsigned seed, int8_t *keep) 
             if (keep) { keep[(size_t)r * cols + g * G + j] = lo; keep[(size_t)r * cols + g * G + 64 + j] = hi; }
         }
         m->s[r * (cols / G) + g] = sc;
-        m->c[r * (cols / G) + g] = sc * (128.0f * sw + 131072.0f);
+        m->c[r * (cols / G) + g] = sc * (128.0f * sw);
     }
 }
 
 static inline float bf16_to_f(uint16_t v) { uint32_t u = (uint32_t)v << 16; float f; memcpy(&f, &u, 4); return f; }
 static inline uint16_t f_to_bf16(float f) { uint32_t u; memcpy(&u, &f, 4); u += 0x7fff + ((u >> 16) & 1); return (uint16_t)(u >> 16); }
 
-static float quant_act(const float *x, int n, uint8_t *xu, int32_t *sxq) {
-    float mx = 1e-12f; for (int i = 0; i < n; i++) mx = fmaxf(mx, fabsf(x[i]));
-    float s = mx / 127.0f, inv = 1.0f / s;
+// Per-128-group activation quantization: u8 = round(x / s_g) + 128, s_g = absmax_g / 127.
+static void quant_act(const float *x, int n, uint8_t *xu, int32_t *sxq, float *sg) {
     for (int g = 0; g < n / G; g++) {
-        int acc = 0;
+        float mx = 1e-12f;
+        for (int i = g * G; i < (g + 1) * G; i++) mx = fmaxf(mx, fabsf(x[i]));
+        float s = mx / 127.0f, inv = 1.0f / s; int acc = 0;
         for (int i = g * G; i < (g + 1) * G; i++) { int q = (int)lrintf(x[i] * inv); acc += q; xu[i] = (uint8_t)(q + 128); }
-        sxq[g] = acc;
+        sxq[g] = acc; sg[g] = s;
     }
-    return s;
 }
 
 // 4 output rows x nt tokens: weights streamed once, dotted with every token
 static inline void rows4_multi(const QMat *m, int r0, int nt, uint8_t *const *xu, int32_t *const *sxq,
-                               const float *sx, float *out /* [nt][4] */) {
+                               float *const *sx /* per token: per-group scales */, float *out /* [nt][4] */) {
     const int ng = m->cols / G; const __m512i mk = _mm512_set1_epi8(0x0f);
     __m512 acc[MAXTOK][4]; float corr[MAXTOK][4];
     for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) { acc[t][r] = _mm512_setzero_ps(); corr[t][r] = 0; }
@@ -92,21 +92,22 @@ static inline void rows4_multi(const QMat *m, int r0, int nt, uint8_t *const *xu
         for (int t = 0; t < nt; t++) {
             __m512i xl = _mm512_loadu_si512(xu[t] + g * G), xh = _mm512_loadu_si512(xu[t] + g * G + 64);
             for (int r = 0; r < 4; r++) {
-                __m512i d = _mm512_dpbusd_epi32(_mm512_setzero_si512(), xl, lo[r]);
-                d = _mm512_dpbusd_epi32(d, xh, hi[r]);
-                acc[t][r] = _mm512_fmadd_ps(_mm512_cvtepi32_ps(d), _mm512_set1_ps(sw[r]), acc[t][r]);
-                corr[t][r] += sw[r] * 8.0f * sxq[t][g] + cc[r];
+                __m512i d = _mm512_dpbusd_epi32(_mm512_set1_epi32(-8192), xl, lo[r]);   // exact removal of the
+                d = _mm512_dpbusd_epi32(d, xh, hi[r]);                                     // 128*8 per-element offset
+                float sxg = sx[t][g];
+                acc[t][r] = _mm512_fmadd_ps(_mm512_cvtepi32_ps(d), _mm512_set1_ps(sw[r] * sxg), acc[t][r]);
+                corr[t][r] += sxg * (sw[r] * 8.0f * sxq[t][g] + cc[r]);
             }
         }
     }
-    for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) out[t * 4 + r] = sx[t] * (_mm512_reduce_add_ps(acc[t][r]) - corr[t][r]);
+    for (int t = 0; t < nt; t++) for (int r = 0; r < 4; r++) out[t * 4 + r] = _mm512_reduce_add_ps(acc[t][r]) - corr[t][r];
 }
 
 typedef struct { uint16_t tok, expert; float w; } Pair;
 
 // Computes y[ntok][H] (fp32) = sum over pairs of w * Expert(x[tok]).  Returns 0 or 1 (missing expert).
 static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair *pairs, float *y) {
-    static uint8_t xu[MAXTOK][H]; static int32_t sxq[MAXTOK][H / G]; static float sx[MAXTOK];
+    static uint8_t xu[MAXTOK][H]; static int32_t sxq[MAXTOK][H / G]; static float sx[MAXTOK][H / G];
     // group pairs by expert
     int ne = 0, eid[MAXPAIR], etok[MAXPAIR][MAXTOK], ent[MAXPAIR]; float ew[MAXPAIR][MAXTOK];
     for (int p = 0; p < npairs; p++) {
@@ -117,15 +118,15 @@ static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair
         if (!table[layer][pairs[p].expert].gu.q) return 1;
     }
     static float gu[MAXPAIR][MAXTOK][2 * I]; static uint8_t hu[MAXPAIR][MAXTOK][I]; static int32_t shq[MAXPAIR][MAXTOK][I / G];
-    static float sh[MAXPAIR][MAXTOK];
+    static float sh[MAXPAIR][MAXTOK][I / G];
     memset(y, 0, sizeof(float) * ntok * H);
     #pragma omp parallel
     {
         #pragma omp for schedule(static)
-        for (int t = 0; t < ntok; t++) sx[t] = quant_act(x + (size_t)t * H, H, xu[t], sxq[t]);
+        for (int t = 0; t < ntok; t++) quant_act(x + (size_t)t * H, H, xu[t], sxq[t], sx[t]);
         #pragma omp for schedule(static) collapse(2)
         for (int e = 0; e < ne; e++) for (int r = 0; r < 2 * I; r += 4) {
-            uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float sv[MAXTOK], o[MAXTOK * 4];
+            uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float *sv[MAXTOK], o[MAXTOK * 4];
             for (int k = 0; k < ent[e]; k++) { xp[k] = xu[etok[e][k]]; sp[k] = sxq[etok[e][k]]; sv[k] = sx[etok[e][k]]; }
             rows4_multi(&table[layer][eid[e]].gu, r, ent[e], xp, sp, sv, o);
             for (int k = 0; k < ent[e]; k++) for (int j = 0; j < 4; j++) gu[e][k][r + j] = o[k * 4 + j];
@@ -135,14 +136,14 @@ static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair
             if (k >= ent[e]) continue;
             float h[I]; const float *g = gu[e][k];
             for (int i = 0; i < I; i++) h[i] = g[i] / (1.0f + expf(-g[i])) * g[I + i];
-            sh[e][k] = quant_act(h, I, hu[e][k], shq[e][k]);
+            quant_act(h, I, hu[e][k], shq[e][k], sh[e][k]);
         }
         #pragma omp for schedule(static)
         for (int r = 0; r < H; r += 4) {
             for (int e = 0; e < ne; e++) {
-                uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float o[MAXTOK * 4];
-                for (int k = 0; k < ent[e]; k++) { xp[k] = hu[e][k]; sp[k] = shq[e][k]; }
-                rows4_multi(&table[layer][eid[e]].dn, r, ent[e], xp, sp, sh[e], o);
+                uint8_t *xp[MAXTOK]; int32_t *sp[MAXTOK]; float *sv[MAXTOK], o[MAXTOK * 4];
+                for (int k = 0; k < ent[e]; k++) { xp[k] = hu[e][k]; sp[k] = shq[e][k]; sv[k] = sh[e][k]; }
+                rows4_multi(&table[layer][eid[e]].dn, r, ent[e], xp, sp, sv, o);
                 for (int k = 0; k < ent[e]; k++) for (int j = 0; j < 4; j++) y[(size_t)etok[e][k] * H + r + j] += ew[e][k] * o[k * 4 + j];
             }
         }
@@ -213,12 +214,12 @@ static int selftest(void) {
     for (int t = 0; t < ntok; t++) {
         float ref[H] = {0};
         for (int p = 0; p < 5; p++) if (pairs[p].tok == t) {
-            int e = pairs[p].expert; uint8_t xu[H]; int32_t sxq[H / G]; float sx = quant_act(x + t * H, H, xu, sxq);
+            int e = pairs[p].expert; uint8_t xu[H]; int32_t sxq[H / G]; float sx[H / G]; quant_act(x + t * H, H, xu, sxq, sx);
             float *g = malloc(2 * I * 4), h[I];
-            for (int r = 0; r < 2 * I; r++) { double a = 0; for (int k = 0; k < H; k++) a += (double)((int)xu[k] - 128) * kg[e][(size_t)r * H + k] * table[0][e].gu.s[r * (H / G) + k / G]; g[r] = (float)(a * sx); }
+            for (int r = 0; r < 2 * I; r++) { double a = 0; for (int k = 0; k < H; k++) a += (double)((int)xu[k] - 128) * sx[k / G] * kg[e][(size_t)r * H + k] * table[0][e].gu.s[r * (H / G) + k / G]; g[r] = (float)a; }
             for (int i = 0; i < I; i++) h[i] = g[i] / (1.0f + expf(-g[i])) * g[I + i];
-            uint8_t hq[I]; int32_t sh2[I / G]; float shs = quant_act(h, I, hq, sh2);
-            for (int r = 0; r < H; r++) { double a = 0; for (int k = 0; k < I; k++) a += (double)((int)hq[k] - 128) * kd[e][(size_t)r * I + k] * table[0][e].dn.s[r * (I / G) + k / G]; ref[r] += pairs[p].w * (float)(a * shs); }
+            uint8_t hq[I]; int32_t sh2[I / G]; float shs[I / G]; quant_act(h, I, hq, sh2, shs);
+            for (int r = 0; r < H; r++) { double a = 0; for (int k = 0; k < I; k++) a += (double)((int)hq[k] - 128) * shs[k / G] * kd[e][(size_t)r * I + k] * table[0][e].dn.s[r * (I / G) + k / G]; ref[r] += pairs[p].w * (float)a; }
             free(g);
         }
         for (int r = 0; r < H; r++) { double d = y[t * H + r] - ref[r]; err += d * d; ref2 += (double)ref[r] * ref[r]; }

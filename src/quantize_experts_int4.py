@@ -4,7 +4,7 @@
 Reads safetensors byte ranges directly (numpy has no bf16). Kernel layout per expert
 (runtime/expert_server.c): gate|up matrix [2*2048 x 4096] and down [4096 x 2048];
 per row and 128-wide group: 64 bytes of nibbles (low = elements 0..63, high = 64..127,
-stored as w+8), fp32 scale s, and folded constant c = s * (128 * sum(w) + 131072).
+stored as w+8), fp32 scale s, and folded constant c = s * 128 * sum(w) (the 128*8 per-element offset is subtracted exactly inside the kernel).
 
   measure  : quantization error report for sampled layers/experts (weights + FFN output on random inputs)
   export   : write layer files <out>/layer<L>.hfx with all (or selected) experts
@@ -102,7 +102,7 @@ def pack(q, s):
     qq = (q.reshape(r, c // G, G) + 8).astype(np.uint8)
     packed = (qq[..., :64] | (qq[..., 64:] << 4)).reshape(r, c // 2)
     sw = q.reshape(r, c // G, G).astype(np.int32).sum(-1)
-    cc = (s * (128.0 * sw + 131072.0)).astype(np.float32)
+    cc = (s * (128.0 * sw)).astype(np.float32)          # the 128*8 per-element offset is removed exactly in-kernel
     return packed, s, cc
 
 
