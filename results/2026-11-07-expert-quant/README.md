@@ -10,3 +10,15 @@
 
 - Error is uniform across layers and experts (std of per-expert values < 0.5 pp), so no layer stands out at the weight level. Activation-aware sensitivity (GPTQ/AWQ with captured expert inputs) is the next measurement.
 - Design implication: workstation RAM is plentiful, so cold experts can be stored in int8 (near-lossless) at ~1.38x CPU time per expert. Placement then trades GPU-resident experts against CPU precision: int8 for all 50%-cold experts needs ~162 GB, which fits in ~230 GB.
+
+## End-to-end through the expert server on real weights
+`runtime/expert_server.c serve-weights` loaded layers 20 and 44 (all 288 experts each, int4 RTN g128, 4.08 GB per layer, exported in ~35 s per layer). `runtime/check_real_weights.py` sent 3-token requests over the socket and compared:
+
+| Request | server vs same int4 weights (numpy) | server vs original BF16 | int4 weights alone vs BF16 |
+|---|---|---|---|
+| layer 20, experts 0/57/144/287 | 2.48% | 21.2% | 21.1% |
+| layer 44, experts 3/99 | 3.09% | 22.1% | 21.8% |
+
+- The serving path is correct. Its own extra error (2.5-3.1%) comes from per-token u8 activation quantization (absmax over 4096 inputs and over the post-SiLU hidden vector) plus bf16 output rounding. Next: per-128-group activation scales.
+- Total error is dominated by int4 RTN weights. That motivates clip-search/GPTQ int4 or int8 for the CPU tier (see table above), decided by model-level KL in G2.
+- First request 5.6 ms (cold pages), then 0.27 ms for 2 experts x 3 tokens.

@@ -166,6 +166,38 @@ static void build_table(int layers, int experts, int resident) {
     }
 }
 
+// Load exported layer files (src/quantize_experts_int4.py export): <dir>/layer<L>.hfx, L = absolute
+// decoder layer (first MoE layer = FIRST_MOE -> table index 0).
+#define FIRST_MOE 3
+static int load_weights(const char *dir, int layers, int experts) {
+    NL = layers; NE = experts;
+    table = calloc(layers, sizeof(Expert *));
+    for (int l = 0; l < layers; l++) table[l] = calloc(experts, sizeof(Expert));
+    int files = 0; size_t bytes = 0;
+    for (int l = 0; l < layers; l++) {
+        char path[1024]; snprintf(path, sizeof path, "%s/layer%d.hfx", dir, l + FIRST_MOE);
+        FILE *f = fopen(path, "rb"); if (!f) continue;
+        char magic[4]; uint32_t hl, n;
+        if (fread(magic, 1, 4, f) != 4 || memcmp(magic, "HFQ1", 4) || fread(&hl, 4, 1, f) != 1 || fread(&n, 4, 1, f) != 1) { fclose(f); return -1; }
+        uint32_t *ids = malloc(4 * n); if (fread(ids, 4, n, f) != n) { fclose(f); return -1; }
+        for (uint32_t k = 0; k < n; k++) {
+            Expert *e = &table[l][ids[k]];
+            QMat *ms[2] = {&e->gu, &e->dn}; int rows[2] = {2 * I, H}, cols[2] = {H, I};
+            for (int m = 0; m < 2; m++) {
+                QMat *q = ms[m]; q->rows = rows[m]; q->cols = cols[m];
+                size_t nq = (size_t)rows[m] * cols[m] / 2, ns = (size_t)rows[m] * (cols[m] / G);
+                q->q = aligned_alloc(64, nq); q->s = aligned_alloc(64, ns * 4); q->c = aligned_alloc(64, ns * 4);
+                if (fread(q->q, 1, nq, f) != nq || fread(q->s, 4, ns, f) != ns || fread(q->c, 4, ns, f) != ns) { fclose(f); return -1; }
+                bytes += nq + ns * 8;
+            }
+        }
+        free(ids); fclose(f); files++;
+        fprintf(stderr, "loaded layer %u: %u experts\n", hl, n);
+    }
+    fprintf(stderr, "loaded %d layer files, %.1f GB\n", files, bytes / 1e9);
+    return files;
+}
+
 static int selftest(void) {
     NL = 1; NE = 4; table = calloc(1, sizeof(Expert *)); table[0] = calloc(4, sizeof(Expert));
     int8_t *kg[2], *kd[2];
@@ -198,12 +230,16 @@ static int selftest(void) {
 
 int main(int argc, char **argv) {
     if (argc > 1 && !strcmp(argv[1], "selftest")) return selftest();
-    if (argc < 3) { fprintf(stderr, "usage: %s serve <port> [layers] [experts] [resident] | selftest\n", argv[0]); return 2; }
+    if (argc < 3) { fprintf(stderr, "usage: %s serve <port> [layers] [experts] [resident] | serve-weights <port> <dir> | selftest\n", argv[0]); return 2; }
     int port = atoi(argv[2]);
-    int layers = argc > 3 ? atoi(argv[3]) : 42, experts = argc > 4 ? atoi(argv[4]) : 288, resident = argc > 5 ? atoi(argv[5]) : 288;
-    fprintf(stderr, "building synthetic table: %d layers x %d resident experts (%.1f GB)\n", layers, resident,
-            layers * (double)resident * (3.0 * H * I / 2 + 3.0 * H * I / G * 8) / 1e9);
-    build_table(layers, experts, resident);
+    if (!strcmp(argv[1], "serve-weights")) {
+        if (argc < 4 || load_weights(argv[3], 42, 288) <= 0) { fprintf(stderr, "no weights loaded\n"); return 1; }
+    } else {
+        int layers = argc > 3 ? atoi(argv[3]) : 42, experts = argc > 4 ? atoi(argv[4]) : 288, resident = argc > 5 ? atoi(argv[5]) : 288;
+        fprintf(stderr, "building synthetic table: %d layers x %d resident experts (%.1f GB)\n", layers, resident,
+                layers * (double)resident * (3.0 * H * I / 2 + 3.0 * H * I / G * 8) / 1e9);
+        build_table(layers, experts, resident);
+    }
     int srv = socket(AF_INET, SOCK_STREAM, 0), one = 1;
     setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
     struct sockaddr_in a = {.sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY};
