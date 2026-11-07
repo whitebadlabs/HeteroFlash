@@ -1,0 +1,39 @@
+{
+ "gpu": "NVIDIA GB10",
+ "E": 288,
+ "H": 4096,
+ "I": 2048,
+ "topk": 8,
+ "rows": [
+  {
+   "tokens": 512,
+   "bf16_ms": 67.71,
+   "bf16_tflops": 3.0,
+   "fp8_ms": 33.59,
+   "fp8_tflops": 6.1
+  },
+  {
+   "tokens": 1024,
+   "bf16_ms": 71.05,
+   "bf16_tflops": 5.8,
+   "fp8_ms": 34.81,
+   "fp8_tflops": 11.8
+  },
+  {
+   "tokens": 2048,
+   "bf16_ms": 73.52,
+   "bf16_tflops": 11.2,
+   "fp8_ms": 37.11,
+   "fp8_tflops": 22.2
+  },
+  {
+   "tokens": 4096,
+   "bf16_ms": 80.86,
+   "bf16_tflops": 20.4,
+   "fp8_ms": 42.23,
+   "fp8_tflops": 39.1
+  }
+ ],
+ "dense_fp8_gemm_tflops": 188.2,
+ "dense_bf16_gemm_tflops": 97.2
+}
