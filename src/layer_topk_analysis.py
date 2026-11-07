@@ -88,7 +88,8 @@ def analyse_layer(ck, layer, X, logits, bias, scale=2.5, max_tokens=512):
 def load_captures(cap_dir, first_moe=3):
     """Group captured inputs by MoE layer index (0..41) -> (hidden, logits)."""
     hid, lgt = {}, {}
-    for f in sorted(glob.glob(os.path.join(cap_dir, "inputs_*.npz"))):
+    pattern = cap_dir if "*" in cap_dir else os.path.join(cap_dir, "inputs_*.npz")   # dir or explicit glob
+    for f in sorted(glob.glob(pattern)):
         with np.load(f) as d:                      # npz re-reads a whole array on every d[key]: load once
             layer, ntok, hidden, logits = d["layer"], d["ntok"], d["hidden"], d["logits"]
         off = np.concatenate([[0], np.cumsum(ntok)])

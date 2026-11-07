@@ -49,8 +49,9 @@ def main():
     ap.add_argument("--captures", required=True)
     ap.add_argument("--layers", type=int, nargs="+", default=[12, 20, 32])
     ap.add_argument("--k", type=int, default=4)
-    ap.add_argument("--ranks", type=int, nargs="+", default=[32, 128, 512])
-    ap.add_argument("--max-tokens", type=int, default=2400)
+    ap.add_argument("--ranks", type=int, nargs="+", default=[8, 16, 32, 64, 128])
+    ap.add_argument("--ridges", type=float, nargs="+", default=[1.0, 100.0, 1e3, 1e4, 1e5])
+    ap.add_argument("--max-tokens", type=int, default=12000)
     ap.add_argument("--ridge", type=float, default=1.0)
     ap.add_argument("--out")
     a = ap.parse_args()
@@ -70,27 +71,31 @@ def main():
         yk = routed(outs, order[:, :a.k], w8[:, :a.k])
         R = y8 - yk
         n = X.shape[0]
-        tr, te = np.arange(n) < int(0.75 * n), np.arange(n) >= int(0.75 * n)
-        Xtr, Rtr = X[tr], R[tr]
-        mu_x, mu_r = Xtr.mean(0), Rtr.mean(0)
-        Xc, Rc = Xtr - mu_x, Rtr - mu_r
-        G = Xc.T @ Xc + a.ridge * np.eye(X.shape[1], dtype=np.float32)
-        W = np.linalg.solve(G, Xc.T @ Rc)                               # full-rank ridge
-        pred_full = (X[te] - mu_x) @ W + mu_r
-        r = {"tokens_train": int(tr.sum()), "tokens_test": int(te.sum()),
-             f"k{a.k}_ref8": rel(yk[te], y8[te]),
-             "full_rank": rel(yk[te] + pred_full, y8[te]),
-             "mean_only": rel(yk[te] + mu_r, y8[te])}
-        # reduced-rank ridge: project the fitted values onto their top singular directions
-        fit = Xc @ W
-        _, _, Vt = np.linalg.svd(fit, full_matrices=False)
-        for rk in a.ranks:
-            P = Vt[:rk].T @ Vt[:rk]
-            pred = (X[te] - mu_x) @ (W @ P) + mu_r
-            r[f"rank{rk}"] = rel(yk[te] + pred, y8[te])
-            r[f"rank{rk}_params_M"] = round(rk * 2 * X.shape[1] / 1e6, 3)
+        r = {f"k{a.k}_ref8_all": rel(yk, y8)}
+        rng = np.random.default_rng(0)
+        splits = {"random": rng.permutation(n) < int(0.75 * n), "tail": np.arange(n) < int(0.75 * n)}
+        for sname, tr in splits.items():
+            te = ~tr
+            Xtr, Rtr = X[tr], R[tr]
+            mu_x, mu_r = Xtr.mean(0), Rtr.mean(0)
+            Xc, Rc = Xtr - mu_x, Rtr - mu_r
+            XtX, XtR = Xc.T @ Xc, Xc.T @ Rc
+            base = rel(yk[te], y8[te])
+            r[f"{sname}:k{a.k}_ref8"] = base
+            best = (base, "none")
+            for lam in a.ridges:
+                W = np.linalg.solve(XtX + lam * np.eye(X.shape[1], dtype=np.float32), XtR)
+                fit = Xc @ W
+                _, _, Vt = np.linalg.svd(fit, full_matrices=False)
+                for rk in a.ranks:
+                    P = Vt[:rk].T @ Vt[:rk]
+                    e = rel(yk[te] + (X[te] - mu_x) @ (W @ P) + mu_r, y8[te])
+                    r[f"{sname}:lam{lam:g}:rank{rk}"] = e
+                    if e < best[0]:
+                        best = (e, f"lam{lam:g}:rank{rk}")
+            r[f"{sname}:best"] = {"err": best[0], "cfg": best[1], "recovered_frac": (base - best[0]) / base}
         res[layer] = r
-        print(layer, json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items()}), flush=True)
+        print(layer, json.dumps({k: v for k, v in r.items() if "best" in k or k.endswith("_ref8") or k.endswith("_all")}), flush=True)
     if a.out:
         json.dump(res, open(a.out, "w"), indent=1)
 
