@@ -67,3 +67,5 @@ The verify step must be measured together with committed tokens per cycle; tok/s
 - The owner restated the design (`docs/RESEARCH_CHARTER.md`): Control = original GLM-5.3-Flash on the dual-Max-Q rig; treatments = modified versions of the original model; deployment = one Spark + CPU/RAM. Published Spark checkpoints are background only.
 - Aborted an attempt to stand up a community single-Spark checkpoint/recipe as "S0". Partial downloads and the recipe clone were deleted; nothing from it was used or committed.
 - All other work so far fits the framing: Control routing traces (M1) and the baseline window measure the original model on the Max-Q rig; the surgery/precision hooks act on that model; the hardware calibration and simulator target the deployment.
+
+- M1 complete: 364 prompts, 0 errors, 6.4 GB raw logits. Curated results in `results/2026-11-07-m1-routing/` (coverage, all-8-resident probability, window unions, domain overlap, gate mass, holdout transfer, decode simulation). Raw traces stay on the workstation (not committed).
