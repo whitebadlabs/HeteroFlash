@@ -68,7 +68,17 @@ The sum of the bets reaches the target band only if all of these pay off togethe
 
 ## Experiment order (risk first; all on existing hardware)
 
-1. **Q1, running.** KLD of PTQ IQ3_XXS and IQ2_M experts against the Q4_K reference. If they fail, next is 3-bit QAT of the experts on the Max-Q rig.
+1. **Q1, PTQ 3-bit: FAILED (2026-11-07).** Routed experts were quantized to IQ3_XXS (~3.06 bpw, imatrix from the calibration split), against the Q4_K-expert reference on the 6-domain holdout (20 x 2048 tokens).
+
+   | metric | IQ3_XXS vs Q4_K |
+   |---|---|
+   | dNLL | +0.068 +/- 0.004 nats |
+   | mean KLD | 0.138 (median 0.031, p99 1.69) |
+   | same top token | 87.0% |
+
+   - That is about 10x the FP8 budget, so post-training 3-bit quantization is not non-inferior.
+   - Bet 1 now requires quantization-aware training of the experts (QAT/QAD on the Max-Q rig).
+   - The IQ3_S (3.44 bpw) and IQ2_S (2.5 bpw) curve points are queued.
 2. **NVFP4 QAD of attention and shared experts** on the Max-Q rig. This is the largest quality risk. Gate on KLD and the M2 nats margin.
 3. **Link latency: PASSED (2026-11-07).** `runtime/link_pingpong.c` was run Spark <-> workstation over the 10G direct link with TCP_NODELAY, no sudo, and the workstation at load 32.
 
