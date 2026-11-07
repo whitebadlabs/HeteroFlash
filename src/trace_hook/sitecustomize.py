@@ -10,6 +10,8 @@ at most once per second, so experiments switch without restarting the server:
                                # int (e.g. 8): weights normalised over the original top-k_ref
    "routed_class": null,       # module class whose OUTPUT is the routed-expert sum (needed for int k_ref)
    "diag": false,              # dump the module call sequence of the next forward to diag_calls_<pid>.json
+   "capture_inputs": null,     # {"max_rows": N}: also save the MoE gate's INPUT hidden states (fp16) with the logits
+   "dump_source": null,        # ["MoERunner", ...]: write inspect.getsource(cls.forward) of these classes once
    "fixed_quant": null}        # simulated quantization of fixed (non-routed) weights, applied in place:
                                # {"fmt": "fp8" | "nvfp4", "include": regex, "exclude": regex}; null restores BF16.
                                # fp8: e4m3 with one scale per 128x128 block; nvfp4: E2M1 values, e4m3 scale per
@@ -48,7 +50,8 @@ if _DIR:
     _st = {"fwd": -1, "layer": 0, "cls": None, "rows": 0, "chunk": 0, "buf": [], "diag": None,
            "first_fwd_counts": None, "ratio": {}, "calls": None}
     _ctl = {"capture": True, "k_active": TOPK, "k_ref": "active", "routed_class": None, "diag": False,
-            "fixed_quant": None, "_t": 0.0, "_mtime": None}
+            "fixed_quant": None, "capture_inputs": None, "dump_source": None, "_t": 0.0, "_mtime": None}
+    _cap = {"rows": 0, "buf": [], "chunk": 0, "dumped": set()}
     _fq = {"applied": None, "orig": {}, "inventory_done": False, "report": None}
     _lock = threading.Lock()
     _TOP = ("ForCausalLM", "ForConditionalGeneration")
@@ -63,7 +66,7 @@ if _DIR:
             if mt != _ctl["_mtime"]:
                 with open(CTRL) as f:
                     new = json.load(f)
-                for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant"):
+                for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant", "capture_inputs", "dump_source"):
                     if k in new:
                         _ctl[k] = new[k]
                 _ctl["_mtime"] = mt
@@ -200,6 +203,32 @@ if _DIR:
                 _st["layer"] = 0
                 _st["ratio"] = {}
 
+    def _maybe_dump_source(mod):
+        names = _ctl.get("dump_source") or []
+        cls = type(mod)
+        if cls.__name__ in names and cls.__name__ not in _cap["dumped"] and _rank0():
+            _cap["dumped"].add(cls.__name__)
+            import inspect
+            try:
+                src = {"class": cls.__name__, "module": cls.__module__, "file": inspect.getsourcefile(cls),
+                       "forward": inspect.getsource(cls.forward)}
+            except Exception as e:  # noqa: BLE001
+                src = {"class": cls.__name__, "error": repr(e)}
+            with open(os.path.join(_DIR, f"source_{cls.__name__}.json"), "w") as f:
+                json.dump(src, f)
+
+    def _flush_inputs():
+        if not _cap["buf"]:
+            return
+        b = _cap["buf"]
+        path = os.path.join(_DIR, f"inputs_{os.getpid()}_{_cap['chunk']:05d}.npz")
+        np.savez(path + ".tmp.npz", fwd=np.array([x[0] for x in b], np.int64), layer=np.array([x[1] for x in b], np.int16),
+                 ntok=np.array([x[2] for x in b], np.int32), hidden=np.concatenate([x[3] for x in b], 0),
+                 logits=np.concatenate([x[4] for x in b], 0))
+        os.replace(path + ".tmp.npz", path)
+        _cap["chunk"] += 1
+        _cap["buf"] = []
+
     def _record_call(mod, out):
         cs = _st["calls"]
         if cs is not None and cs["started"] and not cs["done"] and len(cs["seq"]) < 4000:
@@ -210,6 +239,8 @@ if _DIR:
         if torch.cuda.is_available() and torch.cuda.is_current_stream_capturing():
             return None
         _record_call(mod, out)
+        if _ctl.get("dump_source"):
+            _maybe_dump_source(mod)
         cls = type(mod).__name__
         c = _ctl
         # routed-output rescale for integer k_ref
@@ -256,6 +287,15 @@ if _DIR:
                     json.dump(_st["diag"], f)
             if _st["rows"] >= FLUSH:
                 _flush()
+            ci = c.get("capture_inputs")
+            if ci and where == "output" and _rank0() and _cap["rows"] < int(ci.get("max_rows", 200000)):
+                hid = next((t for t in _flat(args) if torch.is_tensor(t) and t.dim() == 2 and t.shape[0] == x.shape[0]), None)
+                if hid is not None:
+                    _cap["buf"].append((_st["fwd"], li, int(x.shape[0]), hid.detach().to(torch.float16).cpu().numpy(),
+                                        x.detach().to(torch.float16).cpu().numpy()))
+                    _cap["rows"] += int(x.shape[0])
+                    if sum(t[3].shape[0] for t in _cap["buf"]) >= 50000:
+                        _flush_inputs()
         if ka < TOPK and where == "output":
             bias = getattr(mod, "e_score_correction_bias", None)
             with torch.no_grad():
@@ -283,7 +323,9 @@ if _DIR:
             time.sleep(30)
             with _lock:
                 _flush()
+                _flush_inputs()
     threading.Thread(target=_periodic, daemon=True).start()
 
     import atexit
     atexit.register(_flush)
+    atexit.register(_flush_inputs)
