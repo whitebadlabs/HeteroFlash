@@ -3,6 +3,6 @@ __pycache__/
 *.pyc
 ops/cstate-backup*.txt
 ops/maxq-trace/compose.run.yaml
-results/e2e-v0-raw/
+results/e2e-*-raw/
 data/
 ops/local.env

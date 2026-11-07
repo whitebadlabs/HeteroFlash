@@ -77,6 +77,9 @@ def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900, temper
                 usage["prompt_tokens_details"] = {"cached_tokens": ev["timings"].get("cache_n", 0)}
                 if "prompt_tokens" not in usage and "prompt_n" in ev["timings"]:
                     usage["prompt_tokens"] = ev["timings"]["prompt_n"] + ev["timings"].get("cache_n", 0)
+                for k in ("draft_n", "draft_n_accepted"):              # llama-server speculative counters
+                    if k in ev["timings"]:
+                        usage[k] = ev["timings"][k]
             for ch in ev.get("choices", []):
                 if ch.get("text"):
                     now = time.perf_counter() - t0
@@ -89,7 +92,7 @@ def stream_completion(base, model, prompt_ids, max_tokens=4, timeout=900, temper
     details = usage.get("prompt_tokens_details") or {}
     out = {"t_first": t_first, "t_done": t_done, "prompt_tokens": usage.get("prompt_tokens"),
            "cached_tokens": details.get("cached_tokens", 0), "completion_tokens": usage.get("completion_tokens"),
-           "n_chunks": chunks}
+           "n_chunks": chunks, "draft_n": usage.get("draft_n"), "draft_n_accepted": usage.get("draft_n_accepted")}
     if keep_times:
         out["chunk_times"] = times
     return out
@@ -210,6 +213,9 @@ def decode_main(argv=None):
                                   keep_times=True, ignore_eos=True)
             m = {"type": "trial", "prompt_id": p["prompt_id"], "domain": p["domain"], "prompt_tokens": r["prompt_tokens"],
                  **decode_metrics(r)}
+            if r.get("draft_n") is not None:
+                m["draft_n"], m["draft_n_accepted"] = r["draft_n"], r["draft_n_accepted"]
+                m["completion_tokens"] = r["completion_tokens"]
             per.append(m)
             f.write(json.dumps(m) + "\n")
             f.flush()
@@ -222,6 +228,12 @@ def decode_main(argv=None):
             spec["committed_tokens_per_verify"] = spec["mean_accepted_draft_tokens_per_verify"] + 1
             spec["draft_acceptance_rate"] = (spec.get("vllm:spec_decode_num_accepted_tokens", 0)
                                              / max(spec.get("vllm:spec_decode_num_draft_tokens", 1), 1))
+        dr = [m for m in per if m.get("draft_n")]
+        if dr and not spec:                                      # llama.cpp: steps = generated - accepted drafts
+            gen = sum(m["completion_tokens"] or 0 for m in dr); acc = sum(m["draft_n_accepted"] for m in dr)
+            spec = {"draft_tokens": sum(m["draft_n"] for m in dr), "accepted_draft_tokens": acc,
+                    "draft_acceptance_rate": acc / max(sum(m["draft_n"] for m in dr), 1),
+                    "committed_tokens_per_verify": gen / max(gen - acc, 1)}
         tp = [m["tpot"] for m in per if m.get("tpot")]
         summ = {"type": "summary", "n": len(per),
                 "tpot_ms_p50": round(pct(tp, .5) * 1e3, 3) if tp else None,
