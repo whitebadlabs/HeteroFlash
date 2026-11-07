@@ -71,3 +71,6 @@ The verify step must be measured together with committed tokens per cycle; tok/s
 - M1 complete: 364 prompts, 0 errors, 6.4 GB raw logits. Curated results in `results/2026-11-07-m1-routing/` (coverage, all-8-resident probability, window unions, domain overlap, gate mass, holdout transfer, decode simulation). Raw traces stay on the workstation (not committed).
 
 - 2026-11-07: owner approved surgery/requantization from the official BF16 weights (zai-org/GLM-5.3-Flash-BF16 rev f9fed3bbc822, downloading to the workstation). Checkpoint strategy written (`docs/CHECKPOINT_STRATEGY.md`). Control baseline window started by the owner.
+
+- Control baseline measured (`results/2026-11-07-control-baseline/`): cold 45K TTFT p50 11.10 s / p95 11.30 s; cached 45K+32 p95 161 ms; prose TPOT p50 6.70 ms (~151 tok/s), 2.43 committed tokens/verify (47.6% draft acceptance), implied verify step ~16.3 ms; mixed 167 tok/s, 2.73 committed/verify.
+- M2 launched 03:15Z. A first launch attempt never ran: the duplicate-run check matched its own command line. The workstation's 1 GbE link is saturated by the BF16 download, which causes intermittent SSH timeouts.
