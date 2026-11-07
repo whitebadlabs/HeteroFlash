@@ -53,7 +53,8 @@ def analyse_layer(ck, layer, X, logits, bias, scale=2.5, max_tokens=512):
     s = 1 / (1 + np.exp(-lg))
     order = np.argsort(-(s + bias), axis=1)
     outs, nexp = expert_outputs(ck, layer, X, order[:, :8])
-    errs = {k: [] for k in ("k4_active", "k4_ref8", "k4_oracle_ls", "k4_contrib", "k6_active")}
+    errs = {k: [] for k in ("k4_active", "k4_ref8", "k4_oracle_ls", "k4_contrib", "k6_active",
+                            "k4_contrib_ref8", "k6_ref8", "k5_ref8", "k3_ref8", "k2_ref8")}
     for t in range(X.shape[0]):
         o = outs[t]
         ids8 = order[t, :8]
@@ -77,6 +78,10 @@ def analyse_layer(ck, layer, X, logits, bias, scale=2.5, max_tokens=512):
         ids6 = ids8[:6]
         w6 = s[t, ids6] / s[t, ids6].sum() * scale
         errs["k6_active"].append(np.linalg.norm(comb(ids6, w6) - ref) / nref)
+        top_c = np.argsort(-contrib)[:4]
+        errs["k4_contrib_ref8"].append(np.linalg.norm(comb(ids8[top_c], w8[top_c]) - ref) / nref)
+        for k in (6, 5, 3, 2):
+            errs[f"k{k}_ref8"].append(np.linalg.norm(comb(ids8[:k], w8[:k]) - ref) / nref)
     return {k: float(np.mean(v)) for k, v in errs.items()}, nexp
 
 
@@ -84,12 +89,14 @@ def load_captures(cap_dir, first_moe=3):
     """Group captured inputs by MoE layer index (0..41) -> (hidden, logits)."""
     hid, lgt = {}, {}
     for f in sorted(glob.glob(os.path.join(cap_dir, "inputs_*.npz"))):
-        d = np.load(f)
-        off = np.concatenate([[0], np.cumsum(d["ntok"])])
-        for i in range(len(d["layer"])):
-            li = int(d["layer"][i])
-            hid.setdefault(li, []).append(d["hidden"][off[i]:off[i + 1]])
-            lgt.setdefault(li, []).append(d["logits"][off[i]:off[i + 1]])
+        with np.load(f) as d:                      # npz re-reads a whole array on every d[key]: load once
+            layer, ntok, hidden, logits = d["layer"], d["ntok"], d["hidden"], d["logits"]
+        off = np.concatenate([[0], np.cumsum(ntok)])
+        for i in range(len(layer)):
+            li = int(layer[i])
+            hid.setdefault(li, []).append(hidden[off[i]:off[i + 1]].copy())
+            lgt.setdefault(li, []).append(logits[off[i]:off[i + 1]].copy())
+        del hidden, logits
     return {li: (np.concatenate(hid[li]), np.concatenate(lgt[li])) for li in hid}
 
 
@@ -99,12 +106,15 @@ def main():
     ap.add_argument("--captures", help="dir with inputs_*.npz (hook v4); omit with --synthetic")
     ap.add_argument("--synthetic", action="store_true", help="random inputs + real router weights (pipeline test only)")
     ap.add_argument("--layers", type=int, nargs="+", default=[3, 12, 20, 32, 44])
+    ap.add_argument("--all-layers", action="store_true", help="analyse all 42 MoE layers (3..44)")
     ap.add_argument("--max-tokens", type=int, default=256)
     ap.add_argument("--out")
     a = ap.parse_args()
     ck = qe.Checkpoint(a.model)
     caps = None if a.synthetic else load_captures(a.captures)
     res = {}
+    if a.all_layers:
+        a.layers = list(range(3, 45))
     for layer in a.layers:
         name = f"model.language_model.layers.{layer}.mlp.gate.e_score_correction_bias"
         fn = ck.map[name]

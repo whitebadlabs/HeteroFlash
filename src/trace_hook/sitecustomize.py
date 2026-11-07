@@ -8,7 +8,9 @@ at most once per second, so experiments switch without restarting the server:
    "k_active": 8,              # routing surgery: keep only the top-k_active experts (by s + bias)
    "k_ref": "active",          # "active": renormalise over the kept experts (router default)
                                # int (e.g. 8): weights normalised over the original top-k_ref
-   "routed_class": null,       # module class whose OUTPUT is the routed-expert sum (needed for int k_ref)
+   "routed_class": null,       # module class whose OUTPUT is shared + routed (vLLM: "MoERunner"); needed for int k_ref
+   "shared_class": "Glm5NextMLP",  # module class of the shared-expert MLP inside each MoE layer
+   "ratio_override": null,     # debug: force r for every token (r=0 must equal routing all experts away)
    "diag": false,              # dump the module call sequence of the next forward to diag_calls_<pid>.json
    "capture_inputs": null,     # {"max_rows": N}: also save the MoE gate's INPUT hidden states (fp16) with the logits
    "dump_source": null,        # ["MoERunner", ...]: write inspect.getsource(cls.forward) of these classes once
@@ -50,7 +52,8 @@ if _DIR:
     _st = {"fwd": -1, "layer": 0, "cls": None, "rows": 0, "chunk": 0, "buf": [], "diag": None,
            "first_fwd_counts": None, "ratio": {}, "calls": None}
     _ctl = {"capture": True, "k_active": TOPK, "k_ref": "active", "routed_class": None, "diag": False,
-            "fixed_quant": None, "capture_inputs": None, "dump_source": None, "_t": 0.0, "_mtime": None}
+            "fixed_quant": None, "capture_inputs": None, "dump_source": None, "shared_class": "Glm5NextMLP",
+            "ratio_override": None, "_t": 0.0, "_mtime": None}
     _cap = {"rows": 0, "buf": [], "chunk": 0, "dumped": set()}
     _fq = {"applied": None, "orig": {}, "inventory_done": False, "report": None}
     _lock = threading.Lock()
@@ -66,7 +69,8 @@ if _DIR:
             if mt != _ctl["_mtime"]:
                 with open(CTRL) as f:
                     new = json.load(f)
-                for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant", "capture_inputs", "dump_source"):
+                for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant", "capture_inputs", "dump_source",
+                          "shared_class", "ratio_override"):
                     if k in new:
                         _ctl[k] = new[k]
                 _ctl["_mtime"] = mt
@@ -202,6 +206,7 @@ if _DIR:
                 _st["fwd"] += 1
                 _st["layer"] = 0
                 _st["ratio"] = {}
+                _st["shared"] = {}
 
     def _maybe_dump_source(mod):
         names = _ctl.get("dump_source") or []
@@ -243,20 +248,41 @@ if _DIR:
             _maybe_dump_source(mod)
         cls = type(mod).__name__
         c = _ctl
-        # routed-output rescale for integer k_ref
-        if c["routed_class"] and cls == c["routed_class"] and isinstance(c["k_ref"], int):
-            li = _st["layer"] - 1
-            r = _st["ratio"].get(li)
-            if r is not None:
-                outs = _flat(out)
-                idx, y = _find(outs, outs[0].shape[-1] if torch.is_tensor(outs[0]) else -1)
-                if y is not None and y.shape[0] == r.shape[0]:
-                    y2 = y * r.to(y.dtype).unsqueeze(1)
-                    if isinstance(out, (tuple, list)):
-                        outs[idx] = y2
-                        return type(out)(outs)
-                    return y2
+        # shared-expert output of the current MoE layer (after its gate): keep the FULL (TP-reduced) tensor
+        if c.get("shared_class") and cls == c["shared_class"] and _st["layer"] > 0 and \
+                (isinstance(c["k_ref"], int) or c.get("ratio_override") is not None):
+            y = out[0] if isinstance(out, (tuple, list)) else out
+            if torch.is_tensor(y):
+                sh = y.detach().clone()
+                dp = getattr(mod, "down_proj", None)
+                try:
+                    import torch.distributed as dist
+                    if dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1 and \
+                            not getattr(dp, "reduce_results", True):
+                        dist.all_reduce(sh)
+                except Exception:  # noqa: BLE001
+                    pass
+                _st.setdefault("shared", {})[_st["layer"] - 1] = sh
             return None
+        # exact k_ref (or debug ratio) on the shared+routed output: y' = r*y + (1-r)*shared
+        if c["routed_class"] and cls == c["routed_class"] and (isinstance(c["k_ref"], int) or c.get("ratio_override") is not None):
+            li = _st["layer"] - 1
+            sh = _st.get("shared", {}).get(li)
+            y = out[0] if isinstance(out, (tuple, list)) else out
+            if sh is None or not torch.is_tensor(y) or sh.shape != y.shape:
+                return None
+            if c.get("ratio_override") is not None:
+                r = torch.full((y.shape[0],), float(c["ratio_override"]), device=y.device, dtype=torch.float32)
+            else:
+                r = _st["ratio"].get(li)
+                if r is None:
+                    return None
+            r = r.to(y.dtype).unsqueeze(1)
+            y2 = r * y + (1 - r) * sh
+            if isinstance(out, (tuple, list)):
+                o2 = list(out); o2[0] = y2
+                return type(out)(o2)
+            return y2
         if _st["cls"] is not None and cls != _st["cls"]:
             return None
         outs = _flat(out)
@@ -297,6 +323,9 @@ if _DIR:
                     if sum(t[3].shape[0] for t in _cap["buf"]) >= 50000:
                         _flush_inputs()
         if ka < TOPK and where == "output":
+            if ka <= 0:
+                outs[idx] = torch.full_like(x, -1e4)
+                return type(out)(outs) if isinstance(out, (tuple, list)) else outs[idx]
             bias = getattr(mod, "e_score_correction_bias", None)
             with torch.no_grad():
                 lf = x.float()
