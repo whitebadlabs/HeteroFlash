@@ -90,3 +90,18 @@ Same 6-layer checkpoint and prompt as above.
 
 1. Allocate only resident experts: `n_local` rows plus a global-to-local `weight_loader` remap, so remote experts free VRAM.
 2. Send the remote routes to the CPU expert server, and add the result outside the `moe_forward_shared` op, in a breakable-graph segment.
+
+## Measured: compact resident-only weights are blocked in b12x tuning [M, 2026-11-08]
+
+**Setup.** `HF_ROUTE_MAP=4 HF_RESIDENT=1`:
+
+- the IQ2/Q8_0 params are allocated with 216 rows, so loading drops 1/4 of the experts;
+- the map goes from global id to local slot.
+
+**Result.**
+
+- Load succeeds: 14.19 GiB for the 6-layer model.
+- Engine init fails in b12x `moe.decode` candidate preparation, in `route_pack.py:545`: "W4A16 live routes exceed or differ from the prepared geometry: requested=(16384, 64, 216), prepared=(16384, 64, 288)".
+- **Cause.** The candidates are prepared without a route map. Without a map, the route count falls back to `weight_E` (216), while the prewarmed route-pack launches were compiled with `route_E` (288).
+- **Fix.** Give the tuner's synthetic routes the map, or compile its route-pack launches with `weight_E` when no map is present. This is a b12x patch.
+- **Impact.** It blocks only the VRAM saving. The overlap runtime can proceed with all weights resident plus the identity map, which is exact within noise.

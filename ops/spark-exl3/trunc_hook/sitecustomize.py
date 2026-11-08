@@ -144,10 +144,12 @@ if os.environ.get("HF_ROUTE_MAP"):
     def _install4():
         import sys as _s
         fm = _s.modules.get("b12x.moe.fused_moe")
-        if fm is None or not hasattr(fm, "bind") or not hasattr(fm, "ExecutionCapacity"):
+        if _m4.get("fm_done"):
+            fm = None
+        elif fm is None or not hasattr(fm, "bind") or not hasattr(fm, "ExecutionCapacity"):
             return
         import torch
-        cap_cls, orig_bind = fm.ExecutionCapacity, fm.bind
+        cap_cls, orig_bind = (fm.ExecutionCapacity, fm.bind) if fm is not None else (None, None)
 
         def ExecutionCapacity(*a, **k):
             if not k.get("route_num_experts"):
@@ -158,12 +160,38 @@ if os.environ.get("HF_ROUTE_MAP"):
             dev = k["topk_ids"].device
             m = _m4["maps"].get(dev)
             if m is None:
-                m = torch.arange(288, dtype=torch.int32, device=dev)
-                m = torch.where(m % _k4 == 0, torch.full_like(m, -1), m)
+                g = torch.arange(288, dtype=torch.int32)
+                res = g % _k4 != 0
+                if os.environ.get("HF_RESIDENT"):     # compact weights: global id -> local slot among residents
+                    m = torch.full_like(g, -1); m[res] = torch.arange(int(res.sum()), dtype=torch.int32)
+                else:                                 # all weights resident: identity map with remote = -1
+                    m = torch.where(res, g, torch.full_like(g, -1))
+                m = m.to(dev)
                 _m4["maps"][dev] = m
             k["route_expert_map"] = m
             return orig_bind(plan, **k)
-        fm.ExecutionCapacity, fm.bind = ExecutionCapacity, bind
+        if fm is not None:
+            fm.ExecutionCapacity, fm.bind = ExecutionCapacity, bind
+            _m4["fm_done"] = True
+        if os.environ.get("HF_RESIDENT"):
+            q = _s.modules.get("vllm.model_executor.layers.quantization.modelopt_iq2_xs")
+            if q is None:
+                return
+            meth = q.ModelOptIQ2XSMoEMethod
+            g2l = [-1 if e % _k4 == 0 else e - (e // _k4) - 1 for e in range(288)]
+            n_local = sum(1 for e in range(288) if e % _k4)
+            orig_cw, orig_wl = meth.create_weights, meth.weight_loader
+
+            def create_weights(self, layer, num_experts, *a, **k):
+                return orig_cw(self, layer, n_local if num_experts == 288 else num_experts, *a, **k)
+
+            def weight_loader(self, param, loaded_weight, weight_name, shard_id, expert_id, return_success=False):
+                le = g2l[int(expert_id)] if param.shape[0] == n_local else int(expert_id)
+                if le < 0:
+                    return True if return_success else None      # remote expert: not resident on the GPU
+                return orig_wl(self, param, loaded_weight, weight_name, shard_id, le, return_success)
+            weight_loader.supports_moe_loading = True
+            meth.create_weights, meth.weight_loader = create_weights, weight_loader
         _m4["done"] = True
 
     def _hook4(name, *a, **k):
