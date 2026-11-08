@@ -40,3 +40,26 @@ This note comes from reading the source of `local/hf-spark-native:1`. Claims abo
    - The server's int8 / Q4 CPU kernels compute the remote experts while the GPU runs the resident and shared experts.
 2. In a breakable-graph segment after the op: receive the result and add it before the combine.
 3. Expert-map patch, so remote experts free their VRAM.
+
+## Measured: is `topk_ids = -1` an exact skip? No [M, 2026-11-08]
+
+**Setup.**
+
+- 6-layer checkpoint: layer 3 Q8_0, layer 4 IQ2_XS, layer 5 IQ2_XXS.
+- Prompt logprobs (top 5) of a fixed 512-token prompt, eager mode.
+- The "remote" set is experts with id % 4 == 0.
+- Hook: `HF_REMOTE_MASK` in `ops/spark-exl3/trunc_hook`.
+
+| comparison | positions | same top-1 | max abs logprob diff |
+|---|---|---|---|
+| neg (ids = -1) vs zero (weights = 0) | 511 | 119 | 9.91 |
+| none vs zero (true effect of dropping the remote experts) | 511 | 353 | 4.71 |
+| none vs neg | 511 | 107 | 9.30 |
+
+An exact skip would make "neg" equal "zero". Instead "neg" is further from both than they are from each other, so -1 ids are mishandled on this build's prefill path (Q8_0 and/or IQ2 kernels).
+
+**Decision.**
+
+- Do not use -1 masking.
+- The correct interim mask is weight 0. It is exact, but the remote experts are still resident and computed on the GPU.
+- The memory- and compute-saving path is the `route_expert_map` patch, which needs its own exactness test: map vs zero-weight A/B as above.

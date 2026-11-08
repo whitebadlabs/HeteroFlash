@@ -17,7 +17,7 @@ for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && bre
 echo "$(t) mem before: $(free -g | awk '/^Mem:/{print $3" GiB used"}')"
 docker rm -f hf-exl3 >/dev/null 2>&1
 docker run -d --name hf-exl3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro -v /srv/vllm-research/work/cache/b12x:/cache/b12x \
-  -e B12X_COMPILE_CACHE_DIR=/cache/b12x -e HF_TRUNCATE_LAYERS=1 -e HF_B12X_COMPAT=$COMPAT -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-LBNHC} -e PYTHONPATH=/trunc -v /srv/vllm-research/work/HeteroFlash/ops/spark-exl3/trunc_hook:/trunc:ro -e HF_HUB_OFFLINE=1 -e B12X_LUT_E4M3_SMEM=${LUT_SMEM:-1} -e VLLM_ENGINE_READY_TIMEOUT_S=1800 \
+  -e B12X_COMPILE_CACHE_DIR=/cache/b12x -e HF_TRUNCATE_LAYERS=1 -e HF_B12X_COMPAT=$COMPAT -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-LBNHC} -e PYTHONPATH=/trunc -v /srv/vllm-research/work/HeteroFlash/ops/spark-exl3/trunc_hook:/trunc:ro -e HF_HUB_OFFLINE=1 -e B12X_LUT_E4M3_SMEM=${LUT_SMEM:-1} -e VLLM_ENGINE_READY_TIMEOUT_S=1800 ${DOCKER_EXTRA:-} \
   --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name t \
   --quantization $QUANT --dtype bfloat16 --max-model-len 8192 --max-num-seqs 1 --max-num-batched-tokens 2048 \
   --gpu-memory-utilization 0.85 --enforce-eager --trust-remote-code \
@@ -33,7 +33,7 @@ if ! curl -fs http://127.0.0.1:8095/health >/dev/null; then
 else
   echo "$(t) healthy; mem after load: $(free -g | awk '/^Mem:/{print $3" GiB used"}')"
   grep -iE "EXL3 layer|Model loading took|model weights|KV cache|memory" $LOG | tail -6
-  python3 -I - <<'PY'
+  LP_OUT=${LP_OUT:-} python3 -I - <<'PY'
 import json, time, urllib.request
 def req(body):
     r = urllib.request.Request("http://127.0.0.1:8095/v1/completions", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
@@ -45,6 +45,12 @@ for n in (1, 129):
     print("max_tokens", n, "wall", round(dt, 3), "s")
 o, dt = req({"model": "t", "prompt": [1000 + (i % 5000) for i in range(2000)], "max_tokens": 1, "temperature": 0})
 print("prefill 2000 tokens wall", round(dt, 3), "s")
+import os
+if os.environ.get("LP_OUT"):    # prompt logprobs of a fixed prompt, for exact A/B comparisons between hook modes
+    ids = [1000 + (i * 7919) % 50000 for i in range(512)]
+    o, _ = req({"model": "t", "prompt": ids, "max_tokens": 1, "temperature": 0, "prompt_logprobs": 5})
+    json.dump(o["choices"][0]["prompt_logprobs"], open(os.environ["LP_OUT"], "w"))
+    print("prompt logprobs saved", os.environ["LP_OUT"])
 PY
 fi
 docker rm -f hf-exl3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1

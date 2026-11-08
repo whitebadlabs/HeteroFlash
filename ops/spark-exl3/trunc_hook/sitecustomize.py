@@ -92,3 +92,43 @@ if os.environ.get("HF_B12X_COMPAT"):
                 pass
         return m
     _b.__import__ = _hook2
+
+# Test-only remote-expert mask (HF_REMOTE_MASK=neg|zero, HF_REMOTE_MOD=k): experts with id % k == 0 are "remote".
+#  neg:  their topk_ids slots become -1 (b12x should skip them: no compute, weight unused)
+#  zero: their topk_weights become 0 (computed, contributes nothing) -- the reference for neg.
+# Identical outputs for neg and zero (and different from no mask) show the -1 skip path is exact.
+if os.environ.get("HF_REMOTE_MASK"):
+    import builtins as _b3
+    _imp3 = _b3.__import__
+    _m3 = {"done": False}
+    _mode = os.environ["HF_REMOTE_MASK"]
+    _k = int(os.environ.get("HF_REMOTE_MOD", "4"))
+
+    def _install3():
+        import sys as _s
+        m = _s.modules.get("vllm.model_executor.layers.fused_moe.router.fused_moe_router")
+        c = getattr(m, "FusedMoERouter", None) if m else None
+        if c is None:
+            return
+        orig = c.select_experts
+
+        def select_experts(self, *a, **k):
+            w, ids = orig(self, *a, **k)
+            remote = (ids % _k) == 0
+            if _mode == "neg":
+                ids = ids.masked_fill(remote, -1)
+            elif _mode == "zero":
+                w = w.masked_fill(remote, 0.0)
+            return w, ids
+        c.select_experts = select_experts
+        _m3["done"] = True
+
+    def _hook3(name, *a, **k):
+        mod = _imp3(name, *a, **k)
+        if not _m3["done"] and name.startswith("vllm"):
+            try:
+                _install3()
+            except Exception:  # noqa: BLE001
+                pass
+        return mod
+    _b3.__import__ = _hook3
