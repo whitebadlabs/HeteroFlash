@@ -1,0 +1,94 @@
+"""Test-only: when HF_TRUNCATE_LAYERS is set, drop checkpoint weights for decoder layers >= num_hidden_layers so a
+truncated GLM-5.3-Flash (fewer layers) loads from the full checkpoint. Never used for quality measurements."""
+import os
+import re
+
+if os.environ.get("HF_TRUNCATE_LAYERS"):
+    _pat = re.compile(r"(?:^|\.)layers\.(\d+)\.")
+
+    _state = {"done": False}
+
+    def _install():
+        import sys as _s
+        m = _s.modules.get("vllm.models.glm5next.nvidia.model")     # never import here: only patch once loaded
+        if m is None:
+            return False
+        cls = getattr(m, "Glm5NextModel", None)
+        if cls is None:                      # module still initialising (circular import); try again later
+            return False
+        if getattr(cls, "_hf_trunc", False):
+            return True
+        orig = m.Glm5NextModel.load_weights
+
+        def load_weights(self, weights):
+            n = int(self.config.num_hidden_layers)
+
+            def keep(it):
+                for name, w in it:
+                    mm = _pat.search(name)
+                    if mm and int(mm.group(1)) >= n:
+                        continue
+                    yield name, w
+            return orig(self, keep(weights))
+        m.Glm5NextModel.load_weights = load_weights
+        m.Glm5NextModel._hf_trunc = True
+        _state["done"] = True
+        return True
+
+    import builtins
+    _orig_import = builtins.__import__
+
+    def _hook(name, *a, **k):
+        mod = _orig_import(name, *a, **k)
+        if not _state["done"] and name.startswith("vllm"):
+            try:
+                _install()
+            except Exception:  # noqa: BLE001
+                pass
+        return mod
+    builtins.__import__ = _hook
+
+# Test-only b12x compatibility shim (HF_B12X_COMPAT=1): the Spark vLLM passes recover_speculative_state to b12x KDA
+# Caps; the control image's b12x 1.3.0 Caps lacks it. Drop it when False (no speculative decoding in these tests),
+# fail loudly if it is ever True.
+if os.environ.get("HF_B12X_COMPAT"):
+    import builtins as _b
+    import inspect as _inspect
+    _imp = _b.__import__
+    _done = set()
+
+    def _shim_caps(mod):
+        c = getattr(mod, "Caps", None)
+        if c is None or id(c) in _done:
+            return
+        _done.add(id(c))
+        try:
+            params = _inspect.signature(c.__init__).parameters
+        except (TypeError, ValueError):
+            return
+        if "recover_speculative_state" in params:
+            return
+        orig_init = c.__init__
+
+        def __init__(self, *a, **k):
+            if k.pop("recover_speculative_state", False):
+                raise RuntimeError("b12x 1.3.0 Caps cannot recover speculative state")
+            orig_init(self, *a, **k)
+        c.__init__ = __init__
+
+    def _hook2(name, *a, **k):
+        m = _imp(name, *a, **k)
+        if name.startswith("b12x"):                 # only b12x imports; never scan sys.modules (O(n^2) startup)
+            try:
+                import sys as _sys
+                mm = _sys.modules.get(name)
+                if mm is not None and "Caps" in getattr(mm, "__dict__", {}):
+                    _shim_caps(mm)
+                for sub in (k.get("fromlist") or (a[2] if len(a) > 2 else None) or ()):
+                    sm = _sys.modules.get(f"{name}.{sub}")
+                    if sm is not None and "Caps" in getattr(sm, "__dict__", {}):
+                        _shim_caps(sm)
+            except Exception:  # noqa: BLE001
+                pass
+        return m
+    _b.__import__ = _hook2
