@@ -16,6 +16,8 @@ at most once per second, so experiments switch without restarting the server:
                                # (fp16) with the logits; "layers" restricts capture to those MoE layers (max_rows is the total);
                                # "tag": label in the file name (inputs_<tag>_<pid>_<n>.npz); changing it flushes the buffer
    "dump_source": null,        # ["MoERunner", ...]: write inspect.getsource(cls.forward) of these classes once
+   "capture_logits": null,     # {"min_rows": 2000, "from": 1024, "to": 2047}: save log-softmax (fp16) of rows [from, to)
+                               # of LogitsProcessor outputs with >= min_rows rows (prompt-logprob passes) to logits_<pid>_<n>.npy
    "fixed_quant": null}        # simulated quantization of fixed (non-routed) weights, applied in place:
                                # {"fmt": "fp8" | "nvfp4", "include": regex, "exclude": regex}; null restores BF16.
                                # fp8: e4m3 with one scale per 128x128 block; nvfp4: E2M1 values, e4m3 scale per
@@ -74,7 +76,7 @@ if _DIR:
                 with open(CTRL) as f:
                     new = json.load(f)
                 for k in ("capture", "k_active", "k_ref", "routed_class", "diag", "fixed_quant", "capture_inputs", "dump_source",
-                          "shared_class", "ratio_override"):
+                          "shared_class", "ratio_override", "capture_logits"):
                     if k in new:
                         _ctl[k] = new[k]
                 _ctl["_mtime"] = mt
@@ -259,6 +261,14 @@ if _DIR:
             _maybe_dump_source(mod)
         cls = type(mod).__name__
         c = _ctl
+        cl = c.get("capture_logits")   # {"min_rows": N, "from": a, "to": b}: save log-softmax rows [a, b) of big logits calls
+        if cl and cls == "LogitsProcessor" and torch.is_tensor(out) and out.dim() == 2 and _rank0() \
+                and out.shape[0] >= int(cl.get("min_rows", 2000)):
+            a0, b0 = int(cl.get("from", 0)), int(cl.get("to", out.shape[0]))
+            with torch.no_grad():
+                lp = torch.log_softmax(out[a0:b0].float(), dim=-1).to(torch.float16).cpu().numpy()
+            _st["logit_calls"] = _st.get("logit_calls", 0) + 1
+            np.save(os.path.join(_DIR, f"logits_{os.getpid()}_{_st['logit_calls']:05d}.npy"), lp)
         # shared-expert output of the current MoE layer (after its gate): keep the FULL (TP-reduced) tensor
         if c.get("shared_class") and cls == c["shared_class"] and _st["layer"] > 0 and \
                 (isinstance(c["k_ref"], int) or c.get("ratio_override") is not None):
