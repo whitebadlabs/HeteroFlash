@@ -52,9 +52,10 @@ def cmd_compare(ref, logits_dir, manifest, out):
     nv = 2 * ((n_vocab + 1) // 2) + 4
     first = n_ctx // 2
     n_rec = n_ctx - 1 - first
+    # this vLLM build computes prompt logits in 1024-row slices: two captured calls per 2048-token chunk
     files = sorted(glob.glob(os.path.join(logits_dir, "logits_*.npy")), key=os.path.getmtime)
-    assert len(files) >= n_chunk, (len(files), n_chunk)
-    files = files[-n_chunk:]                                   # the last n_chunk captures belong to this run
+    assert len(files) >= 2 * n_chunk, (len(files), 2 * n_chunk)
+    files = files[-2 * n_chunk:]                               # the last 2*n_chunk captures belong to this run
     man = json.load(open(manifest))
     dom_of = {}
     for d in man["domains"]:
@@ -66,7 +67,8 @@ def cmd_compare(ref, logits_dir, manifest, out):
         hdr = raw[:, :4].copy().view(np.float32)              # scale, min_log_prob
         q = raw[:, 4:4 + n_vocab].astype(np.float32)
         lp_ref = hdr[:, 1:2] + hdr[:, 0:1] * q                # exactly as llama.cpp: no renormalisation
-        lp_ctl = np.load(files[c]).astype(np.float32)[:n_rec, :n_vocab]
+        full = np.concatenate([np.load(files[2 * c]), np.load(files[2 * c + 1])], 0)   # positions 0..2047
+        lp_ctl = full[first:first + n_rec, :n_vocab].astype(np.float32)          # rows predicting tokens first+1..
         lp_ctl -= np.log(np.exp(lp_ctl).sum(1, keepdims=True))
         tgt = np.array(toks[c * n_ctx + first + 1: c * n_ctx + first + 1 + n_rec])
         p_ref = np.where(lp_ref > -16.0, np.exp(lp_ref), 0.0)   # llama.cpp counts only log p_base > -16
