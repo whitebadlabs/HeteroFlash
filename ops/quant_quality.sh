@@ -20,6 +20,8 @@ KB=${Q1_BASE:-base_q4k.kld}
 COMMON="--rpc $WS_IP:50052 -ngl 999 --tensor-split 0,1 -ot '$REMOTE' -t 20"
 t() { date -u +%H:%M:%SZ; }
 up() {
+  # a Max-Q GPU job (control measurement, pilot capture/training) holds this lock; wait so we never stop its server
+  while ssh maxq 'test -e /srv/cache/heteroflash/GPU_RUN.lock'; do sleep 60; done
   ssh maxq '/srv/tools/heteroflash/ops/lok/hf-run stop >/dev/null 2>&1; true'
   ssh -n maxq "LLAMA_CACHE=/srv/cache/heteroflash/llama-rpc-cache setsid nohup /srv/tools/llama.cpp/build/bin/ggml-rpc-server -H $WS_IP -p 50052 -t 32 -c > $WG/rpc-server.log 2>&1 < /dev/null & echo \$! > $WG/rpc-server.pid; sleep 3"
   ssh spark 'docker stop qfn >/dev/null 2>&1; sleep 5'
