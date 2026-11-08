@@ -103,10 +103,17 @@ Layer 45 (MTP) is kept, with IQ2_XXS experts. Size: 86 GB.
 
 | CPU share of routes | plan | dNLL | KLD | same top-1 | decode speed |
 |---|---|---|---|---|---|
-| 0% | none | +0.182 +/- 0.004 | 0.239 | 84.9% | 17.3 tok/s |
-| 29% | hottest 64 experts per layer (from the M1 routing traces) | +0.123 +/- 0.004 | 0.175 | 87.4% | not yet measured |
-| 100% | all experts | **+0.028 +/- 0.002** | **0.057** | **92.8%** | not yet measured |
+| 0% | none | +0.182 +/- 0.004 | 0.239 | 84.9% | 8.85 tok/s eager (17.3 with CUDA graphs) |
+| 29% | hottest 64 experts per layer (from the M1 routing traces) | +0.123 +/- 0.004 | 0.175 | 87.4% | 7.07 tok/s eager |
+| 100% | all experts | **+0.028 +/- 0.002** | **0.057** | **92.8%** | 6.85 tok/s eager |
 | | control (EXL3 3.5 bpw, 2x Max-Q) | +0.0148 | 0.042 | 94.0% | 122-132 tok/s |
+
+**Decode speed.** 256 tokens, batch 1, eager mode in all three rows, because the hook needs Python inside each MoE layer. This is not yet overlapped: the hook syncs GPU to CPU in every layer before sending.
+
+- All experts on the CPU add about 33 ms per token (0.78 ms per layer).
+- The hot-64 plan, with 29% of routes, already adds 28 ms.
+- So most of the cost is fixed per-layer overhead (the GPU-to-host sync and the Python/numpy request packing), not CPU expert compute. The server alone measured 0.41-0.67 ms per layer in runtime-v1.
+- Projection, modeled: with CUDA graphs (breakable segments around the hook) and no overlap, the extra 33 ms on top of 58 ms per token gives about 11 tok/s. Hiding the CPU leg behind attention and shared-expert work, and removing the per-layer Python, is the runtime-v2 engineering.
 
 **All-on-CPU still fails the non-inferiority bar.** The control is the bar: +0.0148.
 
