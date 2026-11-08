@@ -1,0 +1,46 @@
+{
+ "layer": 32,
+ "holdout": "knowledge_qa",
+ "init": "ptq",
+ "lr_w": 0.0001,
+ "lr_s": 0.01,
+ "batch": 512,
+ "tokens_by_domain": {
+  "code": 161037,
+  "instruction_following": 156087,
+  "knowledge_qa": 163730,
+  "math": 156601,
+  "multilingual": 25523
+ },
+ "eval_tokens": 2048,
+ "train_assignments": 3993984,
+ "budget_s": 3000.0,
+ "passes": 5,
+ "rel_err_heldout": {
+  "q4k_ptq": 0.10166241228580475,
+  "iq3xxs_ptq_llamacpp": 0.2627253234386444,
+  "iq3xxs_step0": 0.2627253234386444
+ },
+ "curve": [
+  {
+   "pass": 1,
+   "budget_frac": 0.2,
+   "rel_err_heldout": 0.23897631466388702,
+   "gap_recovered": 0.147,
+   "steps": 24499,
+   "pass_s": 627.8
+  },
+  {
+   "pass": 2,
+   "budget_frac": 0.4,
+   "rel_err_heldout": 0.25095459818840027,
+   "gap_recovered": 0.073,
+   "steps": 24480,
+   "pass_s": 627.3
+  }
+ ],
+ "stopped": "plateau after pass 2: improvement -0.01198 < 2% of 0.23898",
+ "gpu_seconds_train": 1255.0,
+ "gpu_seconds_total": 1548.9,
+ "export_roundtrip_maxabs": 0.0
+}
