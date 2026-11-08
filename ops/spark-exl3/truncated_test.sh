@@ -5,18 +5,21 @@
 set -u
 N=${1:-20}
 EXTRA=${2:-}
-M=/srv/vllm-research/models/exl3/GLM-5.3-Flash-EXL3-TR3-3.5bpw
+M=${MODEL_DIR:-/srv/vllm-research/models/exl3/GLM-5.3-Flash-EXL3-TR3-3.5bpw}
+IMG=${IMG:-local/hf-spark-exl3:1}
+QUANT=${QUANT:-exl3}
+COMPAT=${COMPAT:-1}
 OUT=/srv/vllm-research/work/HeteroFlash/results/2026-11-08-spark-exl3; mkdir -p $OUT
-LOG=$OUT/truncated_L${N}.log
+LOG=$OUT/truncated_L${N}_${QUANT}.log
 t() { date -u +%H:%M:%SZ; }
 docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done   # wait until memory is really released
 echo "$(t) mem before: $(free -g | awk '/^Mem:/{print $3" GiB used"}')"
 docker rm -f hf-exl3 >/dev/null 2>&1
 docker run -d --name hf-exl3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro -v /srv/vllm-research/work/cache/b12x:/cache/b12x \
-  -e B12X_COMPILE_CACHE_DIR=/cache/b12x -e HF_TRUNCATE_LAYERS=1 -e HF_B12X_COMPAT=1 -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-LBNHC} -e PYTHONPATH=/trunc -v /srv/vllm-research/work/HeteroFlash/ops/spark-exl3/trunc_hook:/trunc:ro -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=1800 \
-  --entrypoint vllm local/hf-spark-exl3:1 serve /m --port 8095 --host 0.0.0.0 --served-model-name t \
-  --quantization exl3 --dtype bfloat16 --max-model-len 8192 --max-num-seqs 1 --max-num-batched-tokens 2048 \
+  -e B12X_COMPILE_CACHE_DIR=/cache/b12x -e HF_TRUNCATE_LAYERS=1 -e HF_B12X_COMPAT=$COMPAT -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-LBNHC} -e PYTHONPATH=/trunc -v /srv/vllm-research/work/HeteroFlash/ops/spark-exl3/trunc_hook:/trunc:ro -e HF_HUB_OFFLINE=1 -e B12X_LUT_E4M3_SMEM=${LUT_SMEM:-1} -e VLLM_ENGINE_READY_TIMEOUT_S=1800 \
+  --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name t \
+  --quantization $QUANT --dtype bfloat16 --max-model-len 8192 --max-num-seqs 1 --max-num-batched-tokens 2048 \
   --gpu-memory-utilization 0.85 --enforce-eager --trust-remote-code \
   --hf-overrides "{\"text_config\": {\"num_hidden_layers\": $N, \"num_nextn_predict_layers\": 0}}" $EXTRA >/dev/null
 for i in $(seq 120); do
