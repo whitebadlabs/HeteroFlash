@@ -11,15 +11,24 @@
 // verify windows), which is what makes windows cheaper than separate calls.
 //
 // Wire format (little-endian):
-//   request : u32 magic 'HFX1' | u16 layer | u16 ntok | u16 npairs | u16 reserved
+//   request : u32 magic 'HFX1' | u16 layer | u16 ntok | u16 npairs | u16 flags (bit0: switch this connection to busy-poll,
+//             bit1: heartbeat - while computing, the server sends a 0x00 byte every 20 us so the link never idles; the
+//             client skips 0x00 bytes before the reply magic. Measured: removes a ~300 us idle-gap penalty)
 //             npairs x {u16 tok, u16 expert, f32 weight} | ntok x 4096 bf16
 //   reply   : u32 magic 'HFY1' | u16 ntok | u16 status (0 ok, 1 missing expert) | u32 server_us | ntok x 4096 bf16
 //
 // Usage: expert_server serve <port> [synthetic_layers=42] [experts_per_layer=288] [resident_per_layer=288]
+//        expert_server serve-weights <port> <dir> [abs_layer_list e.g. 20,30,44]
+//        env HF_BIND=<ip> binds to one address (default: all). Busy-poll (runtime-v1): TCP_NODELAY + TCP_QUICKACK
+//        + SO_BUSY_POLL 50 us + non-blocking spin recv, enabled per connection by request flag bit0.
 //        expert_server selftest
 // Weights: synthetic (deterministic random) until the real-weight loader lands.
 #include <immintrin.h>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <poll.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <math.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -183,8 +192,52 @@ static int run_layer(int layer, int ntok, const float *x, int npairs, const Pair
     return 0;
 }
 
-static int readn(int fd, void *buf, size_t n) { size_t o = 0; while (o < n) { ssize_t k = read(fd, (char *)buf + o, n - o); if (k <= 0) return -1; o += k; } return 0; }
-static int writen(int fd, const void *buf, size_t n) { size_t o = 0; while (o < n) { ssize_t k = write(fd, (const char *)buf + o, n - o); if (k <= 0) return -1; o += k; } return 0; }
+static int busy_conn = 0;  // per-connection busy-poll mode
+static int readn(int fd, void *buf, size_t n) {
+    size_t o = 0; long spins = 0;
+    while (o < n) {
+        ssize_t k = recv(fd, (char *)buf + o, n - o, busy_conn ? MSG_DONTWAIT : 0);
+        if (k > 0) { o += k; continue; }
+        if (k == 0) return -1;
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {   // spin up to ~2 ms, then block in poll() so an idle
+            if (++spins > 20000) {                        // busy connection does not burn a core
+                struct pollfd pf = {.fd = fd, .events = POLLIN}; poll(&pf, 1, 1000); spins = 0;
+            }
+            continue;
+        }
+        return -1;
+    }
+    if (busy_conn) { int one = 1; setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof one); }
+    return 0;
+}
+static int writen(int fd, const void *buf, size_t n) {
+    size_t o = 0;
+    while (o < n) { ssize_t k = send(fd, (const char *)buf + o, n - o, MSG_NOSIGNAL); if (k < 0 && (errno == EAGAIN || errno == EINTR)) continue; if (k <= 0) return -1; o += k; }
+    return 0;
+}
+// heartbeat pacer: while hb_state == 1 send one 0x00 byte every 20 us on hb_fd
+static atomic_int hb_state = 0, hb_in_send = 0; static int hb_fd = -1;
+static void *hb_thread(void *arg) {
+    (void)arg; const char z = 0; struct timespec t; double next = 0;
+    for (;;) {
+        int st = atomic_load(&hb_state);
+        if (st == 2) return NULL;
+        clock_gettime(CLOCK_MONOTONIC, &t); double now = t.tv_sec * 1e6 + t.tv_nsec / 1e3;
+        if (st == 1 && now >= next) {
+            atomic_store(&hb_in_send, 1);
+            if (atomic_load(&hb_state) == 1) send(hb_fd, &z, 1, MSG_NOSIGNAL);
+            atomic_store(&hb_in_send, 0);
+            next = now + 20;
+        } else if (st == 0) next = 0;
+    }
+}
+static void hb_stop(void) { atomic_store(&hb_state, 0); while (atomic_load(&hb_in_send)) ; }
+static void set_busy(int fd) {
+    int one = 1, bp = 50; busy_conn = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof one);
+    setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL, &bp, sizeof bp);
+}
 static double now_us(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e6 + t.tv_nsec / 1e3; }
 
 static void build_table(int layers, int experts, int resident) {
@@ -202,12 +255,16 @@ static void build_table(int layers, int experts, int resident) {
 // Load exported layer files (src/quantize_experts_int4.py export): <dir>/layer<L>.hfx, L = absolute
 // decoder layer (first MoE layer = FIRST_MOE -> table index 0).
 #define FIRST_MOE 3
-static int load_weights(const char *dir, int layers, int experts) {
+static int load_weights(const char *dir, int layers, int experts, const char *only) {
     NL = layers; NE = experts;
     table = calloc(layers, sizeof(Expert *));
     for (int l = 0; l < layers; l++) table[l] = calloc(experts, sizeof(Expert));
     int files = 0; size_t bytes = 0;
     for (int l = 0; l < layers; l++) {
+        if (only) {  // comma-separated absolute decoder layers
+            char buf[512]; snprintf(buf, sizeof buf, ",%s,", only); char key[16]; snprintf(key, sizeof key, ",%d,", l + FIRST_MOE);
+            if (!strstr(buf, key)) continue;
+        }
         char path[1024]; snprintf(path, sizeof path, "%s/layer%d.hfx", dir, l + FIRST_MOE);
         FILE *f = fopen(path, "rb"); if (!f) continue;
         char magic[4]; uint32_t hl, n;
@@ -284,7 +341,7 @@ int main(int argc, char **argv) {
     if (argc < 3) { fprintf(stderr, "usage: %s serve <port> [layers] [experts] [resident] | serve-weights <port> <dir> | selftest\n", argv[0]); return 2; }
     int port = atoi(argv[2]);
     if (!strcmp(argv[1], "serve-weights")) {
-        if (argc < 4 || load_weights(argv[3], 42, 288) <= 0) { fprintf(stderr, "no weights loaded\n"); return 1; }
+        if (argc < 4 || load_weights(argv[3], 42, 288, argc > 4 ? argv[4] : NULL) <= 0) { fprintf(stderr, "no weights loaded\n"); return 1; }
     } else {
         int layers = argc > 3 ? atoi(argv[3]) : 42, experts = argc > 4 ? atoi(argv[4]) : 288, resident = argc > 5 ? atoi(argv[5]) : 288;
         fprintf(stderr, "building synthetic table: %d layers x %d resident experts (%.1f GB)\n", layers, resident,
@@ -294,27 +351,36 @@ int main(int argc, char **argv) {
     int srv = socket(AF_INET, SOCK_STREAM, 0), one = 1;
     setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
     struct sockaddr_in a = {.sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY};
+    if (getenv("HF_BIND")) inet_pton(AF_INET, getenv("HF_BIND"), &a.sin_addr);
     if (bind(srv, (void *)&a, sizeof a) || listen(srv, 4)) { perror("bind/listen"); return 1; }
     fprintf(stderr, "listening on %d\n", port);
+    pthread_t hbt; int hb_started = 0;
     static float x[MAXTOK * H], y[MAXTOK * H]; static uint16_t xb[MAXTOK * H], yb[MAXTOK * H]; static Pair pairs[MAXPAIR];
     for (;;) {
         int c = accept(srv, NULL, NULL); if (c < 0) continue;
         setsockopt(c, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+        busy_conn = 0;
         for (;;) {
             uint32_t magic; uint16_t hdr[4];
             if (readn(c, &magic, 4) || magic != 0x31584648u || readn(c, hdr, 8)) break;
             int layer = hdr[0], ntok = hdr[1], np = hdr[2];
+            if ((hdr[3] & 1) && !busy_conn) set_busy(c);
+            int use_hb = (hdr[3] & 2) != 0;
+            if (use_hb && !hb_started) { hb_fd = c; atomic_store(&hb_state, 0); pthread_create(&hbt, NULL, hb_thread, NULL); hb_started = 1; }
             if (ntok > MAXTOK || np > MAXPAIR || layer >= NL) break;
             struct { uint16_t tok, expert; float w; } __attribute__((packed)) wire[MAXPAIR];
             if (readn(c, wire, (size_t)np * 8) || readn(c, xb, (size_t)ntok * H * 2)) break;
             double t0 = now_us();
+            if (use_hb) atomic_store(&hb_state, 1);
             for (int p = 0; p < np; p++) { pairs[p].tok = wire[p].tok; pairs[p].expert = wire[p].expert; pairs[p].w = wire[p].w; }
             for (int i = 0; i < ntok * H; i++) x[i] = bf16_to_f(xb[i]);
             int st = run_layer(layer, ntok, x, np, pairs, y);
             for (int i = 0; i < ntok * H; i++) yb[i] = f_to_bf16(y[i]);
+            if (use_hb) hb_stop();
             uint32_t us = (uint32_t)(now_us() - t0), rm = 0x31594648u; uint16_t rh[2] = {(uint16_t)ntok, (uint16_t)st};
             if (writen(c, &rm, 4) || writen(c, rh, 4) || writen(c, &us, 4) || writen(c, yb, (size_t)ntok * H * 2)) break;
         }
+        if (hb_started) { atomic_store(&hb_state, 2); pthread_join(hbt, NULL); hb_started = 0; atomic_store(&hb_state, 0); }
         close(c);
     }
 }

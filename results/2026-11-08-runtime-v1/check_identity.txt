@@ -1,0 +1,1 @@
+check: 30 requests, busy-poll+heartbeat vs plain replies identical: YES (0 differ)
