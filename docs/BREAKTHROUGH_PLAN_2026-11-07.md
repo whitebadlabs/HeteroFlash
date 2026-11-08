@@ -114,5 +114,12 @@ Superseded projection, kept for the record: 94-127 tok/s, computed at 241 GB/s w
      - At tau 3.3 the modeled stack in the table above falls to roughly 80-95 tok/s [P].
      - 125 tok/s on prose would need a drafter about 35% better than anything published.
    - **Next.** Measure incoai/canada-quant prose tau on our target [M] before any drafter-training decision.
-5. **Runtime.** Parallel Spark/CPU expert execution. This proceeds independently of the training gates.
+5. **Runtime v1: measured (2026-11-08).** Branch `runtime-v1`, `results/2026-11-08-runtime-v1/`.
+   - **Setup:** busy-poll per-layer expert exchange over real int4 experts, Spark CPU client, no GPU yet.
+   - **CPU expert bandwidth: 165-200 GB/s [M].** The modeled 182 GB/s holds.
+   - **Socket wake-up penalty: ~300 us per exchange [M]** whenever the server computes for >= 100 us, in every unprivileged socket mode.
+     - A 20 us heartbeat from the server cuts it to 62 us per decode layer [M].
+     - Decode sync is then about 2.6 ms per 42-layer token [M], meeting the modeled <= 3 ms.
+   - **Verify exchange: 109 us (T=4) and 172-178 us (T=8) per layer [M].** That is 4.4-7.5 ms per step, not yet overlapped with GPU work.
+   - **Open items:** int8 activations (about -105 us at T=8, [P]), GPU integration and overlap, and the root cause of the 300 us penalty (needs root tracing).
 6. **Memory.** Pre-check B: full Spark budget, covering weights, KV/state caches, drafter, CUDA context, runtime buffers and OS.
