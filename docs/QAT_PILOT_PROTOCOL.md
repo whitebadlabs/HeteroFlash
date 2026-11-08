@@ -69,3 +69,28 @@ Anything in between is reported as inconclusive, with the measured recovery curv
 - 3.44 bpw (IQ3_S) with fewer Spark layers;
 - accept a TTFT miss;
 - revisit the remote-layer budget.
+
+## Addendum (2026-11-08, written before any pilot training result)
+
+**Non-inferiority bar measured.** On the balanced eval, against the Q8_0 BF16 proxy, the EXL3 3.5 bpw control scores:
+
+- dNLL +0.0148 +/- 0.0017;
+- KLD 0.042;
+- same top token 94.0%.
+
+**Candidates, same eval:**
+
+| experts | dNLL | per layer |
+|---|---|---|
+| all-Q4_K + imatrix (G0) | +0.0045 | |
+| IQ3_XXS PTQ | additive across layer groups | about +0.00118 nats per IQ3 layer |
+
+**Implied requirement, reported alongside the pre-registered criterion (which is unchanged):**
+
+- **Room for 3-bit.** The quality room up to the control is about 0.0103 nats. That fits roughly 8-9 PTQ IQ3 layers.
+- **Recovery needed for the cold-TTFT layout.** That layout needs about 36 IQ3 layers on the Spark. To stay within the control bar, QAT must remove **at least about 76%** of each layer's IQ3 loss.
+- **How it is measured.** Recovery is measured as the fraction of the held-out layer-output gap closed, assuming a proportional end-to-end effect. The end-to-end check comes later.
+
+**Capture coverage.** The capture holds 4 full domains (code, instruction_following, knowledge_qa, math) plus partial multilingual. writing_chat is missing because the capture hit its 55-min cap.
+
+**Pilot folds:** hold out knowledge_qa, then code.
