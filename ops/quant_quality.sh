@@ -14,7 +14,9 @@ WG=/srv/models/gguf
 HF=/srv/vllm-research/work/HeteroFlash
 Q=$SG/kld; OUT=$HF/results/q1-expert-bits-raw
 REF=GLM-5.3-Flash-E2E-v0-Q8attn-Q4Kexp.gguf
-REMOTE="blk\\.(2[4-9]|3[0-9]|4[0-4])\\.ffn_.*_exps\\.weight=RPC0[$WS_IP:50052]"
+RL=${Q1_REMOTE:-2[4-9]|3[0-9]|4[0-5]}   # remote MoE layers (regex); Q6_K needs 20-45
+REMOTE="blk\\.(${RL})\\.ffn_.*_exps\\.weight=RPC0[$WS_IP:50052]"
+KB=${Q1_BASE:-base_q4k.kld}
 COMMON="--rpc $WS_IP:50052 -ngl 999 --tensor-split 0,1 -ot '$REMOTE' -t 20"
 t() { date -u +%H:%M:%SZ; }
 up() {
@@ -45,7 +47,7 @@ quant)
   ;;
 eval)
   [ -n "$QT" ] || { echo "usage: eval <type>"; exit 2; }
-  V=GLM-5.3-Flash-Q8attn-${QT}exp.gguf
+  V=GLM-5.3-Flash-Q8attn-${QT}exp.gguf; [ "$QT" = q4k ] && V=$REF
   if ! ssh spark "test -s $SG/$V"; then
     echo "$(t) copy $V to the Spark over the direct link (temporary HTTP server bound to the link address only)"
     ssh -n maxq "cd $WG; setsid nohup python3 -m http.server 8765 --bind $WS_IP > $WG/http_copy.log 2>&1 < /dev/null & echo \$! > $WG/http_copy.pid; sleep 2"
@@ -54,7 +56,20 @@ eval)
   fi
   up
   echo "$(t) KLD of $QT experts vs the Q4_K reference"
-  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/base_q4k.kld --kl-divergence > $OUT/kld_$QT.log 2>&1; sed -n '/KL divergence statistics/,\$p' $OUT/kld_$QT.log | head -30"
+  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/$KB --kl-divergence > $OUT/kld_${QT}_vs_${KB%.kld}.log 2>&1; sed -n '/KL divergence statistics/,\$p' $OUT/kld_${QT}_vs_${KB%.kld}.log | head -30"
+  ;;
+refbase)
+  [ -n "$QT" ] || { echo "usage: refbase <type>"; exit 2; }
+  V=GLM-5.3-Flash-Q8attn-${QT}exp.gguf
+  if ! ssh spark "test -s $SG/$V"; then
+    echo "$(t) copy $V to the Spark over the direct link"
+    ssh -n maxq "cd $WG; setsid nohup python3 -m http.server 8765 --bind $WS_IP > $WG/http_copy.log 2>&1 < /dev/null & echo \$! > $WG/http_copy.pid; sleep 2"
+    ssh spark "curl -fsS -o $SG/$V.part http://$WS_IP:8765/$V && mv $SG/$V.part $SG/$V; ls -la $SG/$V"
+    ssh maxq "kill \$(cat $WG/http_copy.pid) 2>/dev/null; rm -f $WG/http_copy.pid"
+  fi
+  up
+  echo "$(t) KLD reference logits from $QT experts (remote layers $RL)"
+  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/base_${QT}.kld > $OUT/base_${QT}_ppl.log 2>&1; grep -E 'Final estimate' $OUT/base_${QT}_ppl.log | tail -1; ls -la $Q/base_${QT}.kld"
   ;;
 esac
 echo "$(t) Q1_${MODE}_DONE"

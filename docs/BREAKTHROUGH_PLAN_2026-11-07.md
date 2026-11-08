@@ -85,14 +85,17 @@ Superseded projection, kept for the record: 94-127 tok/s, computed at 241 GB/s w
 ## Gates (status)
 
 1. **3-bit experts.**
-   - PTQ: **failed [M]**. Routed experts only, measured against the Q4_K reference on the 6-domain holdout:
+   - PTQ: **failed [M]**. Routed experts only, 6-domain holdout (20 x 2048 tokens), measured against a **Q6_K-expert reference** (near-lossless, PPL 3.622). Fixed weights are Q8_0 in every model.
 
-     | format (bpw) | dNLL | mean KLD | same top token |
+     | experts (bpw) | dNLL vs Q6_K | mean KLD | same top token |
      |---|---|---|---|
-     | IQ3_S (3.44) | +0.052 | 0.115 | 88.2% |
-     | IQ3_XXS (3.06) | +0.068 | 0.138 | 87.0% |
-     | IQ2_S (2.5) | +0.132 | 0.215 | 84.1% |
+     | Q4_K (4.5) | +0.007 +/- 0.002 | 0.038 | 92.8% |
+     | IQ3_S (3.44) | +0.059 +/- 0.004 | 0.099 | 89.2% |
+     | IQ3_XXS (3.06) | +0.075 +/- 0.004 | 0.126 | 87.7% |
+     | IQ2_S (2.5), vs the Q4_K reference only | +0.132 vs Q4_K | 0.215 vs Q4_K | 84.1% |
 
+     - 4-bit experts cost about the same as FP8 fixed weights. The "4-bit is quality-safe" assumption is now measured.
+     - The IQ3_XXS gap to Q4_K is about 0.068 nats. That is what the QAT pilot must recover.
    - Next: pre-check A (Spark 3-bit kernel), then a bounded QAT pilot on representative layers with a fixed compute budget. Go/no-go before training all 42 layers.
 2. **NVFP4 attention.**
    - Pre-check C: FP8 vs NVFP4 quality from M2 [M], plus kernel performance on GB10.
