@@ -105,3 +105,23 @@ Same 6-layer checkpoint and prompt as above.
 - **Cause.** The candidates are prepared without a route map. Without a map, the route count falls back to `weight_E` (216), while the prewarmed route-pack launches were compiled with `route_E` (288).
 - **Fix.** Give the tuner's synthetic routes the map, or compile its route-pack launches with `weight_E` when no map is present. This is a b12x patch.
 - **Impact.** It blocks only the VRAM saving. The overlap runtime can proceed with all weights resident plus the identity map, which is exact within noise.
+
+## MTP on this stack: root cause of the KV split failure (2026-11-08)
+
+**Symptom.** With `--speculative-config '{"method": "mtp", ...}'`, KV init fails in `v1/kv_cache_interface.py:~388`: "BLHNC ... block stride != page ... cannot be split into 19 kernel blocks of 256 tokens". Neither LBNHC, FP32 SSM state, nor disabling prefix caching helps.
+
+**Cause.** Read from source; the fix is still to be confirmed by a run.
+
+1. `v1/worker/gpu/spec_decode/eagle/utils.py:14-31` (`_make_eagle_draft_vllm_config`) always overwrites the draft's `attention_config.backend` with `speculative_config.attention_backend`, which is None by default. The later "only when set" guard therefore never takes effect.
+2. With the backend at None, the MTP layer's MLA attention falls back to `FLASHINFER_MLA_SPARSE_SM120` instead of the B12X GLM5Next backend. That backend uses 64/256-token kernel blocks and an uncustomized fp8_ds_mla page (656 B per token, against 528 for the target).
+3. The mixed page sizes disable the GLM-5.3 per-layer tensor packing (`v1/core/kv_cache_utils.py:1325`, `_glm5_next_tensor_layout`). The generic BLHNC packing then puts every layer inside one block: 11 x 2568192 + 3190784 + 11 x 160512 = 33206528 bytes of block stride, which cannot be split into 256-token kernel blocks.
+
+**Fix.** Add `"attention_backend": "B12X"` to the speculative config, as NVIDIA's published GLM-5.3-Flash Spark recipe does.
+
+**Upstream-worthy patch.** In the fork, only override the draft backend when one is set:
+
+```diff
+-    vllm_config = replace(vllm_config, attention_config=replace(vllm_config.attention_config, backend=speculative_config.attention_backend))
++    if speculative_config.attention_backend is not None:
++        vllm_config = replace(vllm_config, attention_config=replace(vllm_config.attention_config, backend=speculative_config.attention_backend))
+```

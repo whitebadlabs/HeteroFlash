@@ -35,7 +35,7 @@ HFO=()
 [ -n "${NO_MTP:-}" ] && HFO=(--hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}')
 SPEC=()
 if [ $MODE = mtp ]; then
-  HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}}")
+  HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}, \"attention_backend\": \"B12X\"}")
   TAG=${TAG}_mtp${MTP_N:-3}
 fi
 docker stop qfn >/dev/null 2>&1
