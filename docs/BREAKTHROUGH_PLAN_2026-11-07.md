@@ -81,6 +81,21 @@ If gates 1-2 fail, the projected non-inferior ceiling is ~60-80 tok/s [P].
    - Pre-check C: FP8 vs NVFP4 quality from M2 [M], plus kernel performance on GB10.
    - QAD comes only after a go decision.
 3. **Link latency: passed [M].** 50 us round trip for 8 KB (busy-poll); about 2 ms sync per decoded token [P].
-4. **Drafter.** Pre-check D: evaluate the existing GLM-5.3-Flash DFlash2 checkpoint before any drafter training.
+4. **Drafter. Pre-check D done (2026-11-07). The literature/community evidence weakens bet 4.**
+   - **Existing checkpoint:** incoai/GLM-5.3-Flash-DFlash2.
+     - Architecture: 5 layers, block 8, taps layers 5/14/24/33/42; 2.34 GB bf16.
+     - License: CC-BY-NC-ND-4.0, research only.
+   - **Permissive alternatives:**
+     - canada-quant/GLM-5.3-Flash-DFlash2-G: Apache-2.0, at parity with incoai on canada-quant's own measurements.
+     - modal-labs/GLM-5.3-Flash-DFlash: MIT, unbenchmarked.
+   - **Reported acceptance [L, community].**
+     - Prose tau is about 3.0-3.3 at temp 0. The RedHat DSpark drafter reaches writing 3.13 and summarization 3.73; incoai on vLLM reaches 3.28.
+     - Code tau is about 4.5-4.7 and math 5-6.
+     - On 2x Spark: 1.41x on prose and 1.88x on code.
+     - Self-fine-tuning gave +0.04 tau or less.
+   - **Implication.** The plan's tau 4.5 for prose [P] is not supported. The best published drafter is about 3.3 on prose against our measured MTP 2.8 [M].
+     - At tau 3.3 the modeled stack in the table above falls to roughly 80-95 tok/s [P].
+     - 125 tok/s on prose would need a drafter about 35% better than anything published.
+   - **Next.** Measure incoai/canada-quant prose tau on our target [M] before any drafter-training decision.
 5. **Runtime.** Parallel Spark/CPU expert execution. This proceeds independently of the training gates.
 6. **Memory.** Pre-check B: full Spark budget, covering weights, KV/state caches, drafter, CUDA context, runtime buffers and OS.
