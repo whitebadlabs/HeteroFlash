@@ -6,3 +6,5 @@ ops/maxq-trace/compose.run.yaml
 results/e2e-*-raw/
 data/
 ops/local.env
+results/q1-expert-bits-raw/
+results/glm_mmid_perf_raw.txt

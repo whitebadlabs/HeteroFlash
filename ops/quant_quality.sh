@@ -24,7 +24,7 @@ up() {
   TRAP=1
 }
 down() {
-  ssh spark 'pkill -x llama-imatrix; pkill -x llama-perplexity; sleep 3; docker start qfn >/dev/null 2>&1; echo qfn: $(docker inspect -f "{{.State.Status}}" qfn)'
+  ssh spark 'pkill -f "[l]lama-imatrix"; pkill -f "[l]lama-perplexity"; sleep 3; docker start qfn >/dev/null 2>&1; echo qfn: $(docker inspect -f "{{.State.Status}}" qfn)'
   ssh maxq "P=\$(cat $WG/rpc-server.pid 2>/dev/null); [ -n \"\$P\" ] && kill \$P 2>/dev/null; echo rpc stopped"
 }
 TRAP=0; trap '[ $TRAP = 1 ] && down' EXIT
@@ -41,14 +41,14 @@ quant)
   [ -n "$QT" ] || { echo "usage: quant <type>"; exit 2; }
   ssh spark "cat $Q/imatrix_q4k.gguf" | ssh maxq "cat > $WG/imatrix_q4k.gguf"
   echo "$(t) quantize BF16 -> routed experts $QT (fixed weights Q8_0, as in the reference)"
-  ssh maxq "/srv/tools/llama.cpp/build/bin/llama-quantize --imatrix $WG/imatrix_q4k.gguf --tensor-type 'ffn_.*_exps=$QT' --output-tensor-type q8_0 --token-embedding-type q8_0 $WG/GLM-5.3-Flash-BF16.gguf $WG/GLM-5.3-Flash-Q8attn-${QT}exp.gguf Q8_0 32 > $WG/quantize_$QT.log 2>&1; tail -2 $WG/quantize_$QT.log; ls -la $WG/GLM-5.3-Flash-Q8attn-${QT}exp.gguf"
+  ssh maxq "/srv/tools/llama.cpp/build/bin/llama-quantize --imatrix $WG/imatrix_q4k.gguf --tensor-type 'blk\.([0-9]|[1-3][0-9]|4[0-4])\.ffn_.*_exps=$QT' --tensor-type 'blk\.45\.ffn_.*_exps=q4_K' --output-tensor-type q8_0 --token-embedding-type q8_0 $WG/GLM-5.3-Flash-BF16.gguf $WG/GLM-5.3-Flash-Q8attn-${QT}exp.gguf Q8_0 32 > $WG/quantize_$QT.log 2>&1; tail -2 $WG/quantize_$QT.log; ls -la $WG/GLM-5.3-Flash-Q8attn-${QT}exp.gguf" ; ssh maxq "grep -q 'failed to quantize' $WG/quantize_$QT.log" && { echo "$(t) QUANT_FAILED"; ssh maxq "rm -f $WG/GLM-5.3-Flash-Q8attn-${QT}exp.gguf"; exit 4; }
   ;;
 eval)
   [ -n "$QT" ] || { echo "usage: eval <type>"; exit 2; }
   V=GLM-5.3-Flash-Q8attn-${QT}exp.gguf
   if ! ssh spark "test -s $SG/$V"; then
     echo "$(t) copy $V to the Spark over the direct link (temporary HTTP server bound to the link address only)"
-    ssh -n maxq "cd $WG && setsid nohup python3 -m http.server 8765 --bind $WS_IP > $WG/http_copy.log 2>&1 < /dev/null & echo \$! > $WG/http_copy.pid; sleep 2"
+    ssh -n maxq "cd $WG; setsid nohup python3 -m http.server 8765 --bind $WS_IP > $WG/http_copy.log 2>&1 < /dev/null & echo \$! > $WG/http_copy.pid; sleep 2"
     ssh spark "curl -fsS -o $SG/$V.part http://$WS_IP:8765/$V && mv $SG/$V.part $SG/$V; ls -la $SG/$V"
     ssh maxq "kill \$(cat $WG/http_copy.pid) 2>/dev/null; rm -f $WG/http_copy.pid"
   fi
