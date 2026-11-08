@@ -19,7 +19,7 @@ echo "$(t) configure the hook: logits capture only (no router capture)"
 ssh maxq "python3 -I - <<'PY'
 import json
 p='$C/traces/control.json'; c=json.load(open(p))
-c.update({'capture': False, 'capture_inputs': None, 'capture_logits': {'min_rows': 2000, 'from': 1024, 'to': 2047}})
+c.update({'capture': False, 'capture_inputs': None, 'capture_logits': {'min_rows': 2000, 'from': 1024, 'to': 2047, 'debug': True}})
 json.dump(c, open(p + '.tmp', 'w')); import os; os.replace(p + '.tmp', p); print(c)
 PY"
 ssh maxq "mkdir -p $C/traces/raw/ctl_logits_old && find $C/traces/raw -maxdepth 1 -name 'logits_*.npy' -exec mv {} $C/traces/raw/ctl_logits_old/ \; ; true"
@@ -37,7 +37,11 @@ json.dump(c, open(p + '.tmp', 'w')); os.replace(p + '.tmp', p)
 PY"
 ssh maxq "/srv/tools/heteroflash/ops/lok/hf-run stop >/dev/null 2>&1; true"
 echo "$(t) control GPU time: $(( ($(date +%s) - G0) )) s wall on 2 GPUs"
-ssh maxq "ls $C/traces/raw/logits_*.npy | wc -l"
+ssh maxq "ls $C/traces/raw/logits_*.npy 2>/dev/null | wc -l; tail -3 $C/traces/raw/logits_debug_*.txt 2>/dev/null"
 echo "$(t) compare against the reference"
 ssh maxq "export DOCKER_HOST=unix:///run/user/1000/docker.sock; docker run --rm -v $C:/c --entrypoint python3 localhost/vllm-glm53f-exl3-sm120-turbo:r6 /c/analysis/control_kld.py compare /c/kld/base_q8_0_bal.kld /c/traces/raw /c/analysis/q_eval_balanced_v1.manifest.json /c/analysis/control_exl3_vs_q8_bal.json 2>&1 | tail -2"
 echo "$(t) CONTROL_DONE"
+# Sequencing (2026-11-08): the bounded pilot capture runs right after the control measurement, before any eval.
+echo "$(t) run the pilot capture"
+PC_LOG=$T bash "$(dirname "$0")/pilot_capture.sh" > $T/pilot_capture.log 2>&1
+grep -vE "^\s*$" $T/pilot_capture.log | tail -10

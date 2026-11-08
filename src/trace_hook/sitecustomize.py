@@ -40,6 +40,7 @@ rank 0 writes capture files; all ranks apply surgery identically.
 import os
 
 _DIR = os.environ.get("HF_TRACE_DIR")
+_PID = f"{os.getpid()}t{int(__import__('time').time()) % 100000000}"   # unique per process start (old files may be unwritable)
 if _DIR:
     import json
     import threading
@@ -147,7 +148,7 @@ if _DIR:
         _fq["applied"] = json.dumps(spec, sort_keys=True)
         _fq["report"] = {"spec": spec, "modules": n, "GB_bf16": round(nbytes / 1e9, 3),
                          "mean_rel_sq_err": round(err / max(n, 1), 6), "pid": os.getpid(), "time": time.time()}
-        with open(os.path.join(_DIR, f"fixed_quant_{os.getpid()}.json"), "w") as f:
+        with open(os.path.join(_DIR, f"fixed_quant_{_PID}.json"), "w") as f:
             json.dump(_fq["report"], f)
 
     def _inventory(model):
@@ -156,7 +157,7 @@ if _DIR:
             w = getattr(mod, "weight", None)
             inv.append([mname, type(mod).__name__, str(w.dtype) if torch.is_tensor(w) else None,
                         list(w.shape) if torch.is_tensor(w) else None])
-        with open(os.path.join(_DIR, f"modules_{os.getpid()}.json"), "w") as f:
+        with open(os.path.join(_DIR, f"modules_{_PID}.json"), "w") as f:
             json.dump(inv, f)
 
     def _rank0():
@@ -170,7 +171,7 @@ if _DIR:
         if not _st["buf"]:
             return
         b = _st["buf"]
-        path = os.path.join(_DIR, f"r0_{os.getpid()}_{_st['chunk']:05d}.npz")
+        path = os.path.join(_DIR, f"r0_{_PID}_{_st['chunk']:05d}.npz")
         np.savez(path + ".tmp.npz", fwd=np.array([x[0] for x in b], np.int64), layer=np.array([x[1] for x in b], np.int16),
                  ntok=np.array([x[2] for x in b], np.int32), t=np.array([x[3] for x in b], np.float64),
                  kact=np.array([x[5] for x in b], np.int16), logits=np.concatenate([x[4] for x in b], axis=0))
@@ -211,7 +212,7 @@ if _DIR:
                     _st["first_fwd_counts"] = _st["layer"]
                 if _st["calls"] is not None and _st["calls"]["done"] is False and _st["calls"]["started"]:
                     _st["calls"]["done"] = True
-                    with open(os.path.join(_DIR, f"diag_calls_{os.getpid()}.json"), "w") as f:
+                    with open(os.path.join(_DIR, f"diag_calls_{_PID}.json"), "w") as f:
                         json.dump(_st["calls"]["seq"][:4000], f)
                 if c["diag"] and _st["calls"] is None:
                     _st["calls"] = {"seq": [], "started": True, "done": False}
@@ -239,7 +240,7 @@ if _DIR:
             return
         b = _cap["buf"]
         tg = _cap.get("tag") or ""
-        path = os.path.join(_DIR, f"inputs_{tg + '_' if tg else ''}{os.getpid()}_{_cap['chunk']:05d}.npz")
+        path = os.path.join(_DIR, f"inputs_{tg + '_' if tg else ''}{_PID}_{_cap['chunk']:05d}.npz")
         np.savez(path + ".tmp.npz", fwd=np.array([x[0] for x in b], np.int64), layer=np.array([x[1] for x in b], np.int16),
                  ntok=np.array([x[2] for x in b], np.int32), hidden=np.concatenate([x[3] for x in b], 0),
                  logits=np.concatenate([x[4] for x in b], 0))
@@ -262,13 +263,21 @@ if _DIR:
         cls = type(mod).__name__
         c = _ctl
         cl = c.get("capture_logits")   # {"min_rows": N, "from": a, "to": b}: save log-softmax rows [a, b) of big logits calls
+        if cl and cl.get("debug") and cls == "LogitsProcessor":
+            try:
+                with open(os.path.join(_DIR, f"logits_debug_{_PID}.txt"), "a") as fdbg:
+                    fdbg.write(json.dumps({"rank0": _rank0(), "type": type(out).__name__,
+                                           "shape": list(out.shape) if torch.is_tensor(out) else None,
+                                           "args": [list(x.shape) for x in _flat(args) if torch.is_tensor(x)]}) + "\n")
+            except Exception as ex:  # noqa: BLE001
+                pass
         if cl and cls == "LogitsProcessor" and torch.is_tensor(out) and out.dim() == 2 and _rank0() \
                 and out.shape[0] >= int(cl.get("min_rows", 2000)):
             a0, b0 = int(cl.get("from", 0)), int(cl.get("to", out.shape[0]))
             with torch.no_grad():
                 lp = torch.log_softmax(out[a0:b0].float(), dim=-1).to(torch.float16).cpu().numpy()
             _st["logit_calls"] = _st.get("logit_calls", 0) + 1
-            np.save(os.path.join(_DIR, f"logits_{os.getpid()}_{_st['logit_calls']:05d}.npy"), lp)
+            np.save(os.path.join(_DIR, f"logits_{_PID}_{_st['logit_calls']:05d}.npy"), lp)
         # shared-expert output of the current MoE layer (after its gate): keep the FULL (TP-reduced) tensor
         if c.get("shared_class") and cls == c["shared_class"] and _st["layer"] > 0 and \
                 (isinstance(c["k_ref"], int) or c.get("ratio_override") is not None):
@@ -330,7 +339,7 @@ if _DIR:
             if _st["diag"] is not None and _st["fwd"] >= 3 and "written" not in _st["diag"]:
                 _st["diag"]["layers_in_first_forward"] = _st["first_fwd_counts"]
                 _st["diag"]["written"] = True
-                with open(os.path.join(_DIR, f"diag_{os.getpid()}.json"), "w") as f:
+                with open(os.path.join(_DIR, f"diag_{_PID}.json"), "w") as f:
                     json.dump(_st["diag"], f)
             if _st["rows"] >= FLUSH:
                 _flush()
