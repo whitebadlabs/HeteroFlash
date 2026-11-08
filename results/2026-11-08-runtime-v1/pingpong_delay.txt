@@ -1,0 +1,54 @@
+delay=0 req=8192 rep=8192 busy=1 p50=50.1us p90=51.3us p99=55.3us
+delay=100 req=8192 rep=8192 busy=1 p50=499.6us p90=502.6us p99=503.5us
+delay=300 req=8192 rep=8192 busy=1 p50=607.8us p90=609.2us p99=611.0us
+delay=600 req=8192 rep=8192 busy=1 p50=907.5us p90=909.9us p99=911.0us
+delay=1500 req=8192 rep=8192 busy=1 p50=1808.1us p90=1810.2us p99=1811.2us
+delay=0 SO_PREFER_BUSY_POLL: Operation not permitted
+SO_BUSY_POLL_BUDGET: Operation not permitted
+req=8192 rep=8192 busy=2 p50=50.2us p90=53.3us p99=56.5us
+delay=100 SO_PREFER_BUSY_POLL: Operation not permitted
+SO_BUSY_POLL_BUDGET: Operation not permitted
+req=8192 rep=8192 busy=2 p50=499.4us p90=502.5us p99=503.6us
+delay=300 SO_PREFER_BUSY_POLL: Operation not permitted
+SO_BUSY_POLL_BUDGET: Operation not permitted
+req=8192 rep=8192 busy=2 p50=607.5us p90=609.6us p99=611.2us
+delay=600 SO_PREFER_BUSY_POLL: Operation not permitted
+SO_BUSY_POLL_BUDGET: Operation not permitted
+req=8192 rep=8192 busy=2 p50=907.6us p90=909.9us p99=911.1us
+delay=1500 SO_PREFER_BUSY_POLL: Operation not permitted
+SO_BUSY_POLL_BUDGET: Operation not permitted
+req=8192 rep=8192 busy=2 p50=1807.9us p90=1810.3us p99=1811.4us
+server_busy=0 client_busy=0 delay=0 req=8192 rep=8192 busy=0 p50=315.9us p90=318.9us p99=322.6us
+server_busy=0 client_busy=0 delay=300 req=8192 rep=8192 busy=0 p50=618.1us p90=622.4us p99=630.2us
+server_busy=0 client_busy=0 delay=600 req=8192 rep=8192 busy=0 p50=918.0us p90=920.1us p99=927.2us
+server_busy=3 client_busy=3 delay=0 req=8192 rep=8192 busy=3 p50=307.8us p90=310.9us p99=315.6us
+server_busy=3 client_busy=3 delay=300 req=8192 rep=8192 busy=3 p50=610.9us p90=612.2us p99=617.4us
+server_busy=3 client_busy=3 delay=600 req=8192 rep=8192 busy=3 p50=910.7us p90=912.0us p99=913.7us
+server_busy=1 client_busy=3 delay=0 req=8192 rep=8192 busy=3 p50=401.3us p90=402.8us p99=407.5us
+server_busy=1 client_busy=3 delay=300 req=8192 rep=8192 busy=3 p50=607.8us p90=610.2us p99=707.0us
+server_busy=1 client_busy=3 delay=600 req=8192 rep=8192 busy=3 p50=907.6us p90=910.0us p99=913.8us
+server_busy=3 client_busy=1 delay=0 req=8192 rep=8192 busy=1 p50=64.1us p90=66.4us p99=74.0us
+server_busy=3 client_busy=1 delay=300 req=8192 rep=8192 busy=1 p50=605.3us p90=606.3us p99=608.0us
+server_busy=3 client_busy=1 delay=600 req=8192 rep=8192 busy=1 p50=905.7us p90=906.6us p99=907.6us
+server_busy=1 client_busy=4 delay=0 req=8192 rep=8192 busy=4 p50=50.2us p90=51.3us p99=53.5us
+server_busy=1 client_busy=4 delay=100 req=8192 rep=8192 busy=4 p50=499.6us p90=502.6us p99=503.7us
+server_busy=1 client_busy=4 delay=300 req=8192 rep=8192 busy=4 p50=607.5us p90=609.4us p99=618.2us
+server_busy=1 client_busy=4 delay=600 req=8192 rep=8192 busy=4 p50=907.4us p90=910.2us p99=911.6us
+server_busy=1 client_busy=4 delay=1500 req=8192 rep=8192 busy=4 p50=1807.8us p90=1810.4us p99=1819.4us
+server_busy=4 client_busy=4 delay=0 req=8192 rep=8192 busy=4 p50=5113.0us p90=5141.2us p99=5393.5us
+server_busy=4 client_busy=4 delay=100 req=8192 rep=8192 busy=4 p50=5233.0us p90=5236.3us p99=5241.1us
+server_busy=4 client_busy=4 delay=300 req=8192 rep=8192 busy=4 p50=5432.5us p90=5436.9us p99=5441.7us
+server_busy=4 client_busy=4 delay=600 req=8192 rep=8192 busy=4 p50=5732.7us p90=5737.4us p99=5749.6us
+server_busy=4 client_busy=4 delay=1500 req=8192 rep=8192 busy=4 p50=6632.6us p90=6638.7us p99=6653.8us
+heartbeat_us=0 delay=300 req=8192 rep=8192 busy=1 p50=607.8us p90=609.7us p99=611.1us
+heartbeat_us=0 delay=600 req=8192 rep=8192 busy=1 p50=907.4us p90=909.6us p99=914.2us
+heartbeat_us=0 delay=1500 req=8192 rep=8192 busy=1 p50=1807.9us p90=1810.2us p99=1811.2us
+heartbeat_us=1000000 delay=300 req=8192 rep=8192 busy=1 p50=607.6us p90=611.0us p99=612.4us
+heartbeat_us=1000000 delay=600 req=8192 rep=8192 busy=1 p50=907.4us p90=910.4us p99=911.9us
+heartbeat_us=1000000 delay=1500 req=8192 rep=8192 busy=1 p50=1807.3us p90=1810.8us p99=1812.3us
+heartbeat_us=50 delay=300 req=8192 rep=8192 busy=1 p50=402.3us p90=579.4us p99=603.0us
+heartbeat_us=50 delay=600 req=8192 rep=8192 busy=1 p50=805.2us p90=906.5us p99=922.5us
+heartbeat_us=50 delay=1500 req=8192 rep=8192 busy=1 p50=1655.8us p90=1754.4us p99=1809.4us
+heartbeat_us=20 delay=300 req=8192 rep=8192 busy=1 p50=351.5us p90=364.7us p99=586.3us
+heartbeat_us=20 delay=600 req=8192 rep=8192 busy=1 p50=652.1us p90=694.4us p99=902.8us
+heartbeat_us=20 delay=1500 req=8192 rep=8192 busy=1 p50=1552.3us p90=1610.7us p99=1804.3us
