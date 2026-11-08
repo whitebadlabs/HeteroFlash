@@ -14,10 +14,11 @@ G[GL_iq3late]="33|34|36|38|40|41|42|43|44"                  # 9 late layers (+ s
 for name in G0_q4kim GS_iq3small GM_iq3mid GL_iq3late; do
   L=${G[$name]}
   OUTF=$W/GLM-5.3-Flash-Q8attn-${name}exp.gguf
-  if [ -n "$L" ]; then TT="--tensor-type blk\\.(${L})\\.ffn_.*_exps=iq3_xxs --tensor-type ffn_.*_exps=q4_K"; else TT="--tensor-type ffn_.*_exps=q4_K"; fi
+  if [ -n "$L" ]; then TT="--tensor-type 'blk\\.(${L})\\.ffn_.*_exps=iq3_xxs' --tensor-type 'ffn_.*_exps=q4_K'"; else TT="--tensor-type 'ffn_.*_exps=q4_K'"; fi
   echo "$(date -u +%H:%M:%SZ) quantize $name (iq3 layers: ${L:-none})"
   ssh maxq "test -s $OUTF || { /srv/tools/llama.cpp/build/bin/llama-quantize --imatrix $IM $TT --output-tensor-type q8_0 --token-embedding-type q8_0 $BF $OUTF.part Q8_0 32 > $W/quantize_$name.log 2>&1 && mv $OUTF.part $OUTF; }; grep -c 'failed to quantize' $W/quantize_$name.log; ls -la $OUTF"
   ssh maxq "test -s $OUTF" || { echo "QUANT_FAILED $name"; continue; }
+  [ -n "${Q1G_SKIP_EVAL:-}" ] && continue
   Q1_BASE=base_q8_0.kld bash $D/quant_quality.sh eval $name > $T/q1g_eval_$name.log 2>&1
   echo "== $name vs Q8_0 exit $?"
   ssh spark "grep -E 'Mean ln\(PPL|Mean    KLD|99.0%   KLD|Same top p' /srv/vllm-research/work/HeteroFlash/results/q1-expert-bits-raw/kld_${name}_vs_base_q8_0.log"

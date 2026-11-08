@@ -1,0 +1,85 @@
+{
+ "ctx": 2048,
+ "chunks_per_domain": 6,
+ "domains": [
+  {
+   "domain": "writing_chat",
+   "source": "HuggingFaceH4/ultrachat_200k [default/test_gen]",
+   "samples": 21,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    0,
+    5
+   ]
+  },
+  {
+   "domain": "knowledge_qa",
+   "source": "TIGER-Lab/MMLU-Pro [default/validation]",
+   "samples": 62,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    6,
+    11
+   ]
+  },
+  {
+   "domain": "math",
+   "source": "openai/gsm8k [main/train]",
+   "samples": 95,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    12,
+    17
+   ]
+  },
+  {
+   "domain": "code",
+   "source": "google-research-datasets/mbpp [full/test]",
+   "samples": 125,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    18,
+    23
+   ]
+  },
+  {
+   "domain": "multilingual",
+   "source": "CohereLabs/aya_dataset [default/train]",
+   "samples": 40,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    24,
+    29
+   ]
+  },
+  {
+   "domain": "instruction_following",
+   "source": "HuggingFaceH4/no_robots [default/test]",
+   "samples": 49,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    30,
+    35
+   ]
+  },
+  {
+   "domain": "long_context",
+   "source": "wikimedia/wikipedia [20231101.en/train]",
+   "samples": 24,
+   "skipped_calib_overlap": 0,
+   "tokens": 12288,
+   "chunks": [
+    36,
+    41
+   ]
+  }
+ ],
+ "total_tokens_concat": 86015,
+ "total_chunks": 42
+}

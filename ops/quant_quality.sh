@@ -37,7 +37,7 @@ base)
   echo "$(t) imatrix on the calibration split (Q4_K model as the activation source)"
   ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-imatrix -m $SG/$REF $COMMON -f $HF/data/q_imatrix_calib.txt -c 512 --chunks 160 -o $Q/imatrix_q4k.gguf > $OUT/imatrix.log 2>&1; tail -3 $OUT/imatrix.log; ls -la $Q/imatrix_q4k.gguf"
   echo "$(t) KLD reference logits on the holdout split"
-  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$REF $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/base_q4k.kld > $OUT/base_ppl.log 2>&1; grep -E 'Final estimate|PPL' $OUT/base_ppl.log | tail -2; ls -la $Q/base_q4k.kld"
+  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$REF $COMMON -f $HF/${Q1_TEXT:-data/q_kld_holdout.txt} -c 2048 --chunks ${Q1_CHUNKS:-20} --kl-divergence-base $Q/base_q4k.kld > $OUT/base_ppl.log 2>&1; grep -E 'Final estimate|PPL' $OUT/base_ppl.log | tail -2; ls -la $Q/base_q4k.kld"
   ;;
 quant)
   [ -n "$QT" ] || { echo "usage: quant <type>"; exit 2; }
@@ -56,7 +56,7 @@ eval)
   fi
   up
   echo "$(t) KLD of $QT experts vs the Q4_K reference"
-  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/$KB --kl-divergence > $OUT/kld_${QT}_vs_${KB%.kld}.log 2>&1; sed -n '/KL divergence statistics/,\$p' $OUT/kld_${QT}_vs_${KB%.kld}.log | head -30"
+  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/${Q1_TEXT:-data/q_kld_holdout.txt} -c 2048 --chunks ${Q1_CHUNKS:-20} --kl-divergence-base $Q/$KB --kl-divergence > $OUT/kld_${QT}_vs_${KB%.kld}.log 2>&1; sed -n '/KL divergence statistics/,\$p' $OUT/kld_${QT}_vs_${KB%.kld}.log | head -30"
   ;;
 refbase)
   [ -n "$QT" ] || { echo "usage: refbase <type>"; exit 2; }
@@ -69,7 +69,7 @@ refbase)
   fi
   up
   echo "$(t) KLD reference logits from $QT experts (remote layers $RL)"
-  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/data/q_kld_holdout.txt -c 2048 --chunks 20 --kl-divergence-base $Q/base_${QT}.kld > $OUT/base_${QT}_ppl.log 2>&1; grep -E 'Final estimate' $OUT/base_${QT}_ppl.log | tail -1; ls -la $Q/base_${QT}.kld"
+  ssh spark "cd $LB && LD_LIBRARY_PATH=$LB ./llama-perplexity -m $SG/$V $COMMON -f $HF/${Q1_TEXT:-data/q_kld_holdout.txt} -c 2048 --chunks ${Q1_CHUNKS:-20} --kl-divergence-base $Q/base_${QT}${Q1_SET:+_$Q1_SET}.kld > $OUT/base_${QT}${Q1_SET:+_$Q1_SET}_ppl.log 2>&1; grep -E 'Final estimate' $OUT/base_${QT}${Q1_SET:+_$Q1_SET}_ppl.log | tail -1; ls -la $Q/base_${QT}${Q1_SET:+_$Q1_SET}.kld"
   ;;
 esac
 echo "$(t) Q1_${MODE}_DONE"
