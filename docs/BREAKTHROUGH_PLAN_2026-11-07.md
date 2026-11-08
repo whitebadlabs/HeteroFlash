@@ -6,7 +6,14 @@
 - **[L]** reported in the literature (deep research, 3-vote verified), not reproduced here;
 - **[P]** a modeled projection from bandwidth arithmetic, not measured.
 
-The targets are unchanged: 120-130 tok/s prose decode, cold 45K TTFT <= 10.8 s, cached 45K+32 <= 0.2 s, and non-inferior general-purpose quality.
+Targets (revised by Carmen, 2026-11-08):
+
+- **Decode goal: 80 tok/s**, with 125 tok/s as a stretch goal.
+- Cold 45K TTFT <= 10.8 s.
+- Cached 45K+32 <= 0.2 s.
+- Non-inferior general-purpose quality.
+
+The last three are unchanged.
 
 Hardware is fixed: one DGX Spark, the workstation CPU/RAM, and the existing 10 GbE direct link. Max-Q GPUs may be used only for offline training and evaluation.
 
