@@ -22,6 +22,10 @@ Everything here was measured on the Spark (GB10), Spark-only: no CPU experts, no
 | KLD (mean / p99) | **0.238** / 3.05 | control 0.042 |
 | same top token | **85.0%** | control 94.0% |
 
+**Caveat.** Do not compare this directly with the earlier best of 17.0 tok/s. That was llama.cpp with Q8_0 attention and MTP speculative decoding. This run has BF16 attention and no MTP: the build used `--max-layers 45`, which drops the MTP layer (index 45), and serving sets `num_nextn_predict_layers: 0`. The next full build keeps layer 45.
+
+**What this checkpoint is.** It is the fits-entirely-on-Spark extreme. It proves the pipeline end to end: coherent output, and our own quantizer, byte-exact with llama-quantize. It is not a quality candidate: about 12x the control's dNLL.
+
 **Where decode bytes go** (checkpoint tensor sizes; per-token reads at batch 1):
 
 | part | stored | read per token |
@@ -45,6 +49,12 @@ Everything here was measured on the Spark (GB10), Spark-only: no CPU experts, no
   - workstation-CPU bandwidth for part of the bytes (the heterogeneous split).
 - **Quality.** All-2-bit experts are far outside the control bar, as expected (QAT pilot: 3-bit costs about 0.0012 nats per layer; 2-bit much more). The quality-relevant mixes need higher-bit experts. Those do not fit in Spark memory, hence remote experts (runtime v2).
 - **Cold prefill** at 36.9 s is 3.4x the target. This is a compute question (prefill is not bandwidth-bound) for the profile step.
+
+**Reframing (measured).** At batch 1, routed experts are only 11% of decode bytes. Earlier levers (QAT pilot, per-layer sensitivity, placement) all targeted that 11%. The decode equation is roughly:
+
+    time per token ~ (non-expert bytes + active expert bytes) / bandwidth / (tokens accepted per MTP block)
+
+So the heterogeneous CPU split mainly earns its place on the **quality** axis, giving room for higher-bit experts. Speed comes from non-expert precision and MTP.
 
 ## Format and runtime checks (6-layer truncated checkpoints; output text meaningless by construction)
 
