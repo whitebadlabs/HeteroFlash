@@ -12,7 +12,8 @@ at most once per second, so experiments switch without restarting the server:
    "shared_class": "Glm5NextMLP",  # module class of the shared-expert MLP inside each MoE layer
    "ratio_override": null,     # debug: force r for every token (r=0 must equal routing all experts away)
    "diag": false,              # dump the module call sequence of the next forward to diag_calls_<pid>.json
-   "capture_inputs": null,     # {"max_rows": N}: also save the MoE gate's INPUT hidden states (fp16) with the logits
+   "capture_inputs": null,     # {"max_rows": N, "layers": [MoE idx 0..41]}: also save the MoE gate's INPUT hidden states
+                               # (fp16) with the logits; "layers" restricts capture to those MoE layers (max_rows is the total)
    "dump_source": null,        # ["MoERunner", ...]: write inspect.getsource(cls.forward) of these classes once
    "fixed_quant": null}        # simulated quantization of fixed (non-routed) weights, applied in place:
                                # {"fmt": "fp8" | "nvfp4", "include": regex, "exclude": regex}; null restores BF16.
@@ -322,7 +323,8 @@ if _DIR:
             if _st["rows"] >= FLUSH:
                 _flush()
             ci = c.get("capture_inputs")
-            if ci and where == "output" and _rank0() and _cap["rows"] < int(ci.get("max_rows", 200000)):
+            if ci and where == "output" and _rank0() and _cap["rows"] < int(ci.get("max_rows", 200000)) \
+                    and (not ci.get("layers") or li in ci["layers"]):
                 hid = next((t for t in _flat(args) if torch.is_tensor(t) and t.dim() == 2 and t.shape[0] == x.shape[0]), None)
                 if hid is not None:
                     _cap["buf"].append((_st["fwd"], li, int(x.shape[0]), hid.detach().to(torch.float16).cpu().numpy(),
