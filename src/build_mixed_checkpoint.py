@@ -59,6 +59,8 @@ def quantize_layer(a, idx, L, codec, nbytes, add):
         with safe_open(os.path.join(a.bf16, idx[name]), "pt") as f:
             w = f.get_tensor(name).float().numpy()
         im = _imatrix.get(f"blk.{L}.{gname[p]}.weight", e) if _imatrix else None
+        if im is None and _imatrix is not None:
+            im = np.ones(w.shape[1], dtype=np.float32)        # tensor absent from the imatrix (e.g. MTP layer 45)
         q = ggml_quant.quantize(codec, w, im)
         return name, q.reshape(q.shape[0], -1, nbytes)
 
@@ -78,6 +80,9 @@ def main():
     ap.add_argument("--shard-gb", type=float, default=4.0)
     ap.add_argument("--imatrix", default="")
     ap.add_argument("--threads", type=int, default=32)
+    ap.add_argument("--fixed", default="bf16", choices=["bf16", "fp8"],
+                    help="fp8: non-expert weights as in the NVIDIA reference recipe (MXFP8 1x32 for KDA q/k/v/o, dense MLP, "
+                         "lm_head; FP8_PB_WO 128x128 for MLA projections and shared experts; small projections stay BF16)")
     a = ap.parse_args()
     plan = {int(k): v for k, v in json.load(open(a.plan)).items()}
     os.makedirs(a.out, exist_ok=True)
@@ -107,6 +112,49 @@ def main():
         if shard_bytes >= a.shard_gb * 1e9:
             flush()
 
+    mla_layers = {int(m.group(1)) for m in (re.search(r"\.layers\.(\d+)\.self_attn\.q_a_proj\.weight$", k) for k in idx) if m}
+    quantized_layers = {}
+
+    def fixed_recipe(name):
+        if a.fixed != "fp8" or not name.endswith(".weight"):
+            return None
+        mod = name[:-len(".weight")]
+        if mod == "lm_head":
+            return "MXFP8"
+        m = LAYER_RE.search(name)
+        if not m:
+            return None
+        L = int(m.group(1))
+        if re.search(r"\.mlp\.(gate|up|down)_proj$", mod):
+            return "MXFP8"                                   # dense MLP layers 0-2
+        if re.search(r"\.mlp\.shared_experts\.(gate|up|down)_proj$", mod):
+            return "FP8_PB_WO"
+        if L in mla_layers and re.search(r"\.self_attn\.(q_a_proj|q_b_proj|kv_a_proj_with_mqa|o_proj)$", mod):
+            return "FP8_PB_WO"
+        if L not in mla_layers and re.search(r"\.self_attn\.(q|k|v|o)_proj$", mod):
+            return "MXFP8"                                   # KDA projections
+        return None
+
+    def add_fixed(name, w, recipe):
+        mod = name[:-len(".weight")]
+        w = w.float()
+        if recipe == "MXFP8":                                # vLLM mxfp8_utils._mxfp8_e4m3_quantize_torch semantics
+            O, I = w.shape
+            blk = w.view(O, I // 32, 32)
+            amax = blk.abs().amax(-1).clamp(min=torch.finfo(torch.float32).tiny)
+            sb = (torch.ceil(torch.log2(amax / 448.0)) + 127.0).clamp(0, 254)
+            q = (blk / torch.exp2(sb - 127.0).unsqueeze(-1)).view(O, I).to(torch.float8_e4m3fn)
+            add(name, q); add(mod + ".weight_scale", sb.to(torch.uint8))
+            quantized_layers[mod] = {"quant_algo": "MXFP8", "weight_block_size": [1, 32]}
+        else:                                                # FP8_PB_WO: fp32 scale per 128x128 block, dequant = q * scale
+            O, I = w.shape
+            assert O % 128 == 0 and I % 128 == 0, (name, w.shape)
+            blk = w.view(O // 128, 128, I // 128, 128)
+            sc = (blk.abs().amax(dim=(1, 3), keepdim=True) / 448.0).clamp(min=torch.finfo(torch.float32).tiny)
+            q = (blk / sc).clamp(-448, 448).view(O, I).to(torch.float8_e4m3fn)
+            add(name, q); add(mod + ".weight_scale", sc.view(O // 128, 1, I // 128, 1).contiguous())
+            quantized_layers[mod] = {"quant_algo": "FP8_PB_WO", "weight_block_size": [128, 128]}
+
     # 1) non-expert tensors from BF16, plus BF16 experts for layers not in the plan
     by_file = {}
     for name, fn in idx.items():
@@ -119,9 +167,12 @@ def main():
                 m = expert_re.search(name)
                 if m and int(m.group(1)) in plan:
                     continue                                   # replaced by GGUF blocks below
-                add(name, f.get_tensor(name))
+                r = fixed_recipe(name)
+                if r:
+                    add_fixed(name, f.get_tensor(name), r)
+                else:
+                    add(name, f.get_tensor(name))
     # 2) planned experts from GGUF blocks
-    quantized_layers = {}
     proj = {"gate": "ffn_gate_exps", "up": "ffn_up_exps", "down": "ffn_down_exps"}
     for L in sorted(plan):
         if a.max_layers and L >= a.max_layers:

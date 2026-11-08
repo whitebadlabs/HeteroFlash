@@ -54,6 +54,8 @@ class Imatrix:
         self.t = {t.name: t for t in gguf.GGUFReader(path).tensors}
 
     def get(self, tensor, expert):
+        if tensor + ".in_sum2" not in self.t:
+            return None                                       # caller falls back to a uniform importance
         s2 = np.asarray(self.t[tensor + ".in_sum2"].data, dtype=np.float32)
         c = np.asarray(self.t[tensor + ".counts"].data, dtype=np.float32).reshape(-1)
         s2 = s2.reshape(c.shape[0], -1)

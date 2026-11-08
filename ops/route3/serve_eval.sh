@@ -1,6 +1,6 @@
 #!/bin/bash
 # Route 3: serve a full BF16-derived MIXED_PRECISION checkpoint on the Spark (Spark-native vLLM + b12x) and measure it.
-#   serve_eval.sh MODEL_DIR TAG [speed|quality|both]
+#   serve_eval.sh MODEL_DIR TAG [speed|quality|both|mtp]   (mtp: speed only, MTP speculative decoding, MTP_N tokens)
 # speed:   CUDA graphs on, no hook; decode tok/s (256 tokens), cold 45K TTFT, cached 45K+32 turn (prefix cache).
 # quality: eager + logits hook; balanced eval (42 x 2048 tokens) scored against the Q8_0 BF16-proxy reference,
 #          same tokens and KLD definition as the EXL3 control measurement (src/control_kld.py).
@@ -22,7 +22,7 @@ start() {   # start <extra docker args> -- <extra vllm args>
     -e VLLM_KV_CACHE_LAYOUT=BLHNC -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 "${dargs[@]}" \
     --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name GLM-5.3-Flash \
     --quantization modelopt_mixed --dtype bfloat16 --max-num-seqs 1 --gpu-memory-utilization ${GPU_UTIL:-0.90} \
-    --trust-remote-code --hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}' $FLAGS "${vargs[@]}" >/dev/null
+    --trust-remote-code "${HFO[@]}" $FLAGS "${vargs[@]}" >/dev/null
   for i in $(seq 240); do
     sleep 15
     docker ps -q --filter name=hf-r3 | grep -q . || break
@@ -30,11 +30,17 @@ start() {   # start <extra docker args> -- <extra vllm args>
   done
   return 1
 }
+HFO=(--hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}')
+SPEC=()
+if [ $MODE = mtp ]; then
+  HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}}")
+  TAG=${TAG}_mtp${MTP_N:-3}
+fi
 docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done
 echo "$(t) $TAG: mem before $(free -g | awk '/^Mem:/{print $3}') GiB used"
 if [ $MODE != quality ]; then
-  if start -- --max-model-len 65536 --max-num-batched-tokens 8192; then
+  if start -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}"; then
     docker logs hf-r3 > $OUT/${TAG}_speed.log 2>&1
     echo "$(t) speed server healthy; mem $(free -g | awk '/^Mem:/{print $3}') GiB used"
     python3 -I - <<'PY' | tee $OUT/${TAG}_speed.txt
@@ -62,7 +68,7 @@ PY
     docker logs hf-r3 > $OUT/${TAG}_speed.log 2>&1; echo "$(t) speed server NOT healthy"; grep -iE "error|Traceback" $OUT/${TAG}_speed.log | tail -8
   fi
 fi
-if [ $MODE != speed ]; then
+if [ $MODE != speed ] && [ $MODE != mtp ]; then
   mkdir -p $TR/raw
   echo '{"capture": false, "capture_inputs": null, "k_active": 8, "k_ref": null, "capture_logits": {"min_rows": 1000, "from": 0, "to": 1024}}' > $TR/control.json
   if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json -e PYTHONPATH=/hook -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
