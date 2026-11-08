@@ -13,7 +13,8 @@ at most once per second, so experiments switch without restarting the server:
    "ratio_override": null,     # debug: force r for every token (r=0 must equal routing all experts away)
    "diag": false,              # dump the module call sequence of the next forward to diag_calls_<pid>.json
    "capture_inputs": null,     # {"max_rows": N, "layers": [MoE idx 0..41]}: also save the MoE gate's INPUT hidden states
-                               # (fp16) with the logits; "layers" restricts capture to those MoE layers (max_rows is the total)
+                               # (fp16) with the logits; "layers" restricts capture to those MoE layers (max_rows is the total);
+                               # "tag": label in the file name (inputs_<tag>_<pid>_<n>.npz); changing it flushes the buffer
    "dump_source": null,        # ["MoERunner", ...]: write inspect.getsource(cls.forward) of these classes once
    "fixed_quant": null}        # simulated quantization of fixed (non-routed) weights, applied in place:
                                # {"fmt": "fp8" | "nvfp4", "include": regex, "exclude": regex}; null restores BF16.
@@ -235,7 +236,8 @@ if _DIR:
         if not _cap["buf"]:
             return
         b = _cap["buf"]
-        path = os.path.join(_DIR, f"inputs_{os.getpid()}_{_cap['chunk']:05d}.npz")
+        tg = _cap.get("tag") or ""
+        path = os.path.join(_DIR, f"inputs_{tg + '_' if tg else ''}{os.getpid()}_{_cap['chunk']:05d}.npz")
         np.savez(path + ".tmp.npz", fwd=np.array([x[0] for x in b], np.int64), layer=np.array([x[1] for x in b], np.int16),
                  ntok=np.array([x[2] for x in b], np.int32), hidden=np.concatenate([x[3] for x in b], 0),
                  logits=np.concatenate([x[4] for x in b], 0))
@@ -325,6 +327,8 @@ if _DIR:
             ci = c.get("capture_inputs")
             if ci and where == "output" and _rank0() and _cap["rows"] < int(ci.get("max_rows", 200000)) \
                     and (not ci.get("layers") or li in ci["layers"]):
+                if (ci.get("tag") or "") != (_cap.get("tag") or ""):   # new tag (e.g. domain): flush, then label files
+                    _flush_inputs(); _cap["tag"] = ci.get("tag") or ""
                 hid = next((t for t in _flat(args) if torch.is_tensor(t) and t.dim() == 2 and t.shape[0] == x.shape[0]), None)
                 if hid is not None:
                     _cap["buf"].append((_st["fwd"], li, int(x.shape[0]), hid.detach().to(torch.float16).cpu().numpy(),
