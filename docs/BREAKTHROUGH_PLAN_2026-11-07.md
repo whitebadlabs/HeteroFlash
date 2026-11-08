@@ -133,3 +133,23 @@ Superseded projection, kept for the record: 94-127 tok/s, computed at 241 GB/s w
    - **Verify exchange: 109 us (T=4) and 172-178 us (T=8) per layer [M].** That is 4.4-7.5 ms per step, not yet overlapped with GPU work.
    - **Open items:** int8 activations (about -105 us at T=8, [P]), GPU integration and overlap, and the root cause of the 300 us penalty (needs root tracing).
 6. **Memory.** Pre-check B: full Spark budget, covering weights, KV/state caches, drafter, CUDA context, runtime buffers and OS.
+
+## Next experiment: hot/cold expert placement with per-device formats (Carmen, 2026-11-08)
+
+This combines Carmen's two founding ideas: less-used experts in system RAM, and quant types matched to each processor.
+
+- **Placement.** A per-expert map in runtime-v1. llama.cpp RPC is not suitable: it can only split whole layers.
+  - Hot experts and the fixed weights live on the Spark, at the smallest format that passes quality.
+  - Cold experts live on the workstation CPU at Q4_K or better (+0.006 nats [M]); RAM is plentiful there.
+- **Execution.** The Spark and CPU compute their experts within each layer in parallel. Dependency: runtime-v1 GPU integration.
+- **Rationale [M].**
+  - Bandwidth is similar on both sides: Spark expert kernels about 170 GB/s, CPU experts 165-200 GB/s.
+  - Capacity differs greatly: Spark headroom 0.5-1.6 GiB at 3-bit, against about 230 GB free on the workstation.
+  - Keeping 50% of experts resident covers about 72% of routing, and there are no dead experts. That is why the experiment needs parallel execution, not a cache-miss path.
+- **Measurements:** decode, cold 45K TTFT, cached 45K+32, Spark headroom, and per-domain quality on the balanced eval set.
+- **Pass bar:** no worse than the dual-Max-Q EXL3 3.5 bpw control. That control must be measured against the BF16 proxy first.
+- **Order:**
+  1. Balanced eval set.
+  2. Layer-group IQ3 attribution (decides the Spark-side format).
+  3. runtime-v1 GPU integration.
+  4. This experiment.
