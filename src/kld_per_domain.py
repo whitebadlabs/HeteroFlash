@@ -20,7 +20,8 @@ def main(log, manifest):
     out = {}
     for d in m["domains"]:
         a, b = d["chunks"][0], d["chunks"][1] + 1          # chunks are 0-based in the manifest; rows are 1-based
-        if b not in run:
+        b = min(b, max(run) if run else 0)                  # last block may be cut short (text one token under N*ctx)
+        if b <= a:
             continue
         prev = run.get(a, {"dnll": 0.0, "kld": 0.0, "top": 0.0}) if a > 0 else {"dnll": 0.0, "kld": 0.0, "top": 0.0}
         out[d["domain"]] = {k: round((b * run[b][k] - a * prev[k]) / (b - a), 5) for k in ("dnll", "kld", "top")}

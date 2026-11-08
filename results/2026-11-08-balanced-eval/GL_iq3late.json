@@ -1,0 +1,43 @@
+{
+ "writing_chat": {
+  "dnll": 0.00425,
+  "kld": 0.01507,
+  "top": 95.569
+ },
+ "knowledge_qa": {
+  "dnll": 0.02631,
+  "kld": 0.04981,
+  "top": 94.427
+ },
+ "math": {
+  "dnll": 0.01069,
+  "kld": 0.03025,
+  "top": 94.803
+ },
+ "code": {
+  "dnll": 0.02867,
+  "kld": 0.03835,
+  "top": 96.985
+ },
+ "multilingual": {
+  "dnll": 0.01073,
+  "kld": 0.03767,
+  "top": 93.731
+ },
+ "instruction_following": {
+  "dnll": 0.00095,
+  "kld": 0.04503,
+  "top": 92.031
+ },
+ "long_context": {
+  "dnll": 0.01844,
+  "kld": 0.03972,
+  "top": 93.1396
+ },
+ "_overall": {
+  "dnll": 0.01419,
+  "kld": 0.03648,
+  "top": 94.414,
+  "chunks": 41
+ }
+}
