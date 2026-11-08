@@ -5,19 +5,28 @@ set -u
 # Machine-specific address of the workstation (git-ignored): ops/local.env with WS_IP=<workstation LAN address>
 . "$(dirname "$0")/local.env"
 : "${WS_IP:?set WS_IP in ops/local.env}"
-F=GLM-5.3-Flash-E2E-v0-Q8attn-Q4Kexp.gguf
+F=${E2E_GGUF:-GLM-5.3-Flash-E2E-v0-Q8attn-Q4Kexp.gguf}
 SP=/srv/vllm-research/models/gguf/$F
 LB=/srv/vllm-research/work/llama.cpp/build/bin
 OUT=${E2E_OUT:-/srv/vllm-research/work/HeteroFlash/results/e2e-v0-raw}
-REMOTE_LAYERS="blk\\.(2[4-9]|3[0-9]|4[0-4])\\.ffn_.*_exps\\.weight=RPC0[$WS_IP:50052]"
+RL=${E2E_REMOTE:-2[4-9]|3[0-9]|4[0-4]}   # MoE layers whose routed experts run on the workstation CPU (regex)
+REMOTE_LAYERS="blk\\.(${RL})\\.ffn_.*_exps\\.weight=RPC0[$WS_IP:50052]"
 t() { date -u +%H:%M:%SZ; }
+pause_bg() {   # pause CPU-heavy analysis containers on the workstation so they cannot perturb latency
+  ssh maxq 'export DOCKER_HOST=unix:///run/user/1000/docker.sock; for c in $(docker ps -q); do docker inspect -f "{{.Args}}" $c | grep -q expert_quant_sensitivity && docker pause $c >/dev/null && echo "paused scan $c"; done; true'
+}
+unpause_bg() {
+  ssh maxq 'export DOCKER_HOST=unix:///run/user/1000/docker.sock; for c in $(docker ps -q --filter status=paused); do docker unpause $c >/dev/null && echo "unpaused $c"; done; true'
+}
 cleanup() {
+  unpause_bg
   echo "$(t) cleanup: stop llama-server + rpc-server, restart Qwen"
   ssh spark 'P=$(pgrep -x llama-server); [ -n "$P" ] && kill $P; sleep 5; docker start qfn >/dev/null 2>&1; echo qfn: $(docker inspect -f "{{.State.Status}}" qfn)'
   ssh maxq 'P=$(cat /srv/models/gguf/rpc-server.pid 2>/dev/null); [ -n "$P" ] && kill $P 2>/dev/null; echo rpc stopped'
 }
 trap cleanup EXIT
 until ssh -o ConnectTimeout=10 spark "test -s $SP"; do sleep 60; done
+pause_bg
 echo "$(t) GGUF present on Spark: $(ssh spark "stat -c %s $SP") bytes"
 ssh spark "mkdir -p $OUT /srv/vllm-research/work/HeteroFlash/data"
 ssh maxq 'cat /srv/cache/heteroflash/prompts/m1_calib_v1.jsonl' | ssh spark 'cat > /srv/vllm-research/work/HeteroFlash/data/m1_calib_v1.jsonl'
