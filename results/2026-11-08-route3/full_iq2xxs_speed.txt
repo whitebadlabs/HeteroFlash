@@ -1,0 +1,4 @@
+sample: ' The capital of France is Paris.</think>Answer: The capital of France is Paris.'
+sample: '    if n <= 1:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b\n\ndef fibonacci(n):\n    """Return the n-th'
+{"decode_tok_s": 10.9, "ttft_short_s": 0.014}
+{"cold_45k_ttft_s": 36.85, "cached_45k_plus32_s": 0.389}
