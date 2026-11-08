@@ -71,7 +71,14 @@ fi
 if [ $MODE != speed ] && [ $MODE != mtp ]; then
   mkdir -p $TR/raw
   echo '{"capture": false, "capture_inputs": null, "k_active": 8, "k_ref": null, "capture_logits": {"min_rows": 1000, "from": 0, "to": 1024}}' > $TR/control.json
-  if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json -e PYTHONPATH=/hook -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
+  RARGS=(-e PYTHONPATH=/hook)
+  if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 prototype: planned experts computed on the workstation CPU
+    RARGS=(-e PYTHONPATH=/rhook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/route3/remote_hook:/rhook:ro
+           -e HF_REMOTE_EXPERTS=/rplan.json -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR
+           -e HF_REMOTE_STATS=/tr/remote_stats.jsonl)
+    rm -f $TR/remote_stats.jsonl
+  fi
+  if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json "${RARGS[@]}" -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
        -- --enforce-eager --max-model-len 4096 --max-num-batched-tokens 2048; then
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1
     echo "$(t) quality server healthy; scoring"
@@ -80,6 +87,7 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1
     docker rm -f hf-r3 >/dev/null 2>&1
     echo "$(t) logits files: $(ls $TR/raw/logits_*.npy 2>/dev/null | wc -l)"
+    [ -s $TR/remote_stats.jsonl ] && { tail -1 $TR/remote_stats.jsonl; cp $TR/remote_stats.jsonl $OUT/${TAG}_remote_stats.jsonl; }
     docker run --rm -v $H:/h -v $TR:/tr -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG -I /h/src/control_kld.py compare \
       /ref/$(basename $REF) /tr/raw /h/data/q_eval_balanced_v1.manifest.json /h/results/2026-11-08-route3/${TAG}_vs_q8_bal.json 2>&1 | tail -3
   else
