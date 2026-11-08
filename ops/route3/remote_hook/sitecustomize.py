@@ -92,6 +92,50 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
             _st["masks"][key] = m
         return m
 
+    _MAILBOX = os.environ.get("HF_REMOTE_MODE", "") == "mailbox"
+    _NSUB, _MAXT = 8, 16
+    _mb = {"ext": None}
+
+    def _ext():
+        if _mb["ext"] is None:
+            from torch.utils.cpp_extension import load
+            src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hf_mailbox.cu")
+            ext = load(name="hf_mailbox", sources=[src], extra_cuda_cflags=["-O3"], verbose=False)
+            ext.init(64 * _NSUB, _host, int(_port), _FLAGS)
+            _mb["ext"] = ext
+        return _mb["ext"]
+
+    def _mb_select(L, x, w, ids):
+        """Pack the first _NSUB 16-token chunks into this layer's mailbox sub-slots; the GPU keeps the rest."""
+        ext = _ext()
+        rem = _mask_for(L, ids.device)
+        T = int(x.shape[0])
+        chunks = [(t0, min(T, t0 + _MAXT)) for t0 in range(0, T, _MAXT)]
+        xb = x if x.dtype == __import__("torch").bfloat16 else x.to(__import__("torch").bfloat16)
+        wg = []
+        for c, (t0, t1) in enumerate(chunks):
+            if c < _NSUB:
+                wg.append(ext.pack((L - _FIRST_MOE) * _NSUB + c, L - _FIRST_MOE, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), rem))
+            else:
+                import torch
+                wg.append(w[t0:t1].masked_fill(rem[ids[t0:t1].long()], 0.0))
+        _tl.mb = (L, xb, ids, w, rem, chunks)
+        import torch
+        return (wg[0] if len(wg) == 1 else torch.cat(wg, 0)), ids
+
+    def _mb_finish(mb, out):
+        """Wait for each chunk's CPU partial sum (pipelined over _NSUB sub-slots) and add it to the layer output."""
+        ext = _ext()
+        L, xb, ids, w, rem, chunks = mb
+        base = (L - _FIRST_MOE) * _NSUB
+        for c, (t0, t1) in enumerate(chunks):
+            ext.wait_add(base + c % _NSUB, out[t0:t1])
+            n = c + _NSUB
+            if n < len(chunks):
+                a0, a1 = chunks[n]
+                ext.pack(base + n % _NSUB, L - _FIRST_MOE, xb[a0:a1].contiguous(), ids[a0:a1].contiguous(), w[a0:a1].contiguous(), rem)
+        return out
+
     def _install():
         import sys
         fr = sys.modules.get("vllm.model_executor.layers.fused_moe.router.fused_moe_router")
@@ -108,6 +152,8 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
             L = getattr(_tl, "layer", None)
             if L is None or L not in _plan_raw or hidden_states.shape[0] == 0:
                 return w, ids
+            if _MAILBOX:
+                return _mb_select(L, hidden_states, w, ids)
             remote = _mask_for(L, ids.device)[ids.long()]
             nz = remote.nonzero()
             if nz.numel() == 0:
@@ -139,7 +185,15 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
             m = _layer_re.search(str(getattr(self, "layer_name", "")))
             _tl.layer = int(m.group(1)) if m else None
             _tl.pending = None
+            _tl.mb = None
             out = orig_fwd(self, hidden_states, router_logits, *a, **k)
+            if _MAILBOX:
+                mb = getattr(_tl, "mb", None)
+                _tl.layer, _tl.mb = None, None
+                if mb is not None:
+                    out = _mb_finish(mb, out)
+                _st["calls"] += 1
+                return out
             p = getattr(_tl, "pending", None)
             _tl.layer, _tl.pending = None, None
             if p is not None:

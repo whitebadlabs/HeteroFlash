@@ -12,14 +12,14 @@ OUT=$H/results/2026-11-08-route3; mkdir -p $OUT
 TR=/srv/vllm-research/work/cache/route3_traces/$TAG
 REF=/srv/vllm-research/models/gguf/kld/base_q8_0_bal.kld
 t() { date -u +%H:%M:%SZ; }
-FLAGS="--block-size 256 --kv-cache-dtype fp8 --mamba-ssm-cache-dtype bfloat16 --attention-backend B12X --linear-backend b12x --moe-backend b12x"
+FLAGS="--block-size 256 --kv-cache-dtype fp8 --mamba-ssm-cache-dtype ${MAMBA_DTYPE:-bfloat16} --attention-backend B12X --linear-backend b12x --moe-backend b12x"
 start() {   # start <extra docker args> -- <extra vllm args>
   docker rm -f hf-r3 >/dev/null 2>&1
   local dargs=() vargs=() sep=0
   for x in "$@"; do if [ "$x" = "--" ]; then sep=1; elif [ $sep = 0 ]; then dargs+=("$x"); else vargs+=("$x"); fi; done
   docker run -d --name hf-r3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro \
     -v /srv/vllm-research/work/cache/b12x:/cache/b12x -e B12X_COMPILE_CACHE_DIR=/cache/b12x \
-    -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-BLHNC} -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 "${dargs[@]}" \
+    -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-BLHNC} -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 ${V2RUNNER:+-e VLLM_USE_V2_MODEL_RUNNER=$V2RUNNER} "${dargs[@]}" \
     --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name GLM-5.3-Flash \
     --quantization modelopt_mixed --dtype bfloat16 --max-num-seqs 1 --gpu-memory-utilization ${GPU_UTIL:-0.90} \
     --trust-remote-code "${HFO[@]}" $FLAGS "${vargs[@]}" >/dev/null
@@ -44,12 +44,17 @@ echo "$(t) $TAG: mem before $(free -g | awk '/^Mem:/{print $3}') GiB used"
 if [ $MODE != quality ]; then
   SARGS=(); SV=()
   if [ -n "${EAGER:-}" ]; then SV=(--enforce-eager); fi
-  if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 decode speed: eager + remote-expert hook, short prompts only
-    SV=(--enforce-eager)
+  if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 decode speed: remote-expert hook, short prompts only
     SARGS=(-e PYTHONPATH=/rhook -v $H/ops/route3/remote_hook:/rhook:ro -e HF_REMOTE_EXPERTS=/rplan.json
            -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR)
+    if [ -n "${MB:-}" ]; then           # mailbox handoff: graph-capturable, CUDA graphs stay on
+      mkdir -p /srv/vllm-research/work/cache/hf_ext
+      SARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext)
+    else
+      SV=(--enforce-eager)              # python socket path needs eager mode
+    fi
   fi
-  if start "${SARGS[@]}" -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}" "${SV[@]}"; then
+  if start "${SARGS[@]}" -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}" "${SV[@]}" ${SPEED_EXTRA:-}; then
     docker logs hf-r3 > $OUT/${TAG}_speed.log 2>&1
     echo "$(t) speed server healthy; mem $(free -g | awk '/^Mem:/{print $3}') GiB used"
     SKIP_LONG=${SKIP_LONG:-} python3 -I - <<'PY' | tee $OUT/${TAG}_speed.txt
@@ -87,6 +92,7 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     RARGS=(-e PYTHONPATH=/rhook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/route3/remote_hook:/rhook:ro
            -e HF_REMOTE_EXPERTS=/rplan.json -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR
            -e HF_REMOTE_STATS=/tr/remote_stats.jsonl)
+    [ -n "${MB:-}" ] && RARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext)
     rm -f $TR/remote_stats.jsonl
   fi
   if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json "${RARGS[@]}" -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
