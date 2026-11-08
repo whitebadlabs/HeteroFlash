@@ -4,7 +4,9 @@
 Per-layer routed-expert formats come from llama.cpp GGUFs produced from the same BF16 (Q8_0, IQ2_XS, IQ2_XXS are
 served by vLLM's ModelOpt IQ2 path with packing "ggml": each expert projection is a uint8 tensor
 (out_rows, in/block, block_bytes), i.e. the GGUF rows unchanged). Non-expert tensors are copied from BF16
-(unquantized in this first version). The plan file maps MoE layer -> {"codec": "Q8_0"|"IQ2_XS"|"IQ2_XXS", "gguf": path}.
+(unquantized in this first version). The plan file maps MoE layer -> {"codec": "Q8_0"|"IQ2_XS"|"IQ2_XXS", and either
+"gguf": path (copy that GGUF's rows) or "quantize": true (quantize the BF16 experts here with llama.cpp's quantizer via
+ggml_quant.py, using --imatrix for codecs that need one; byte-identical to llama-quantize, see ggml_quant.selftest)}.
 
   build_mixed_checkpoint.py --bf16 DIR --plan plan.json --out DIR [--max-layers N]
 --max-layers N keeps decoder layers < N only (truncated load tests; use with hf_overrides num_hidden_layers=N).
@@ -16,6 +18,8 @@ import os
 import re
 import shutil
 import sys
+
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -33,6 +37,37 @@ def gguf_expert_reader(path, gguf_py):
     return {t.name: t for t in r.tensors if "_exps.weight" in t.name}
 
 
+_imatrix = None
+
+
+def quantize_layer(a, idx, L, codec, nbytes, add):
+    """Quantize layer L's BF16 routed experts to `codec` (llama.cpp quantizer, per-expert imatrix if given)."""
+    global _imatrix
+    import time
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import ggml_quant
+    if a.imatrix and _imatrix is None:
+        _imatrix = ggml_quant.Imatrix(a.imatrix, a.gguf_py)
+    gname = {"gate": "ffn_gate_exps", "up": "ffn_up_exps", "down": "ffn_down_exps"}
+    names = [(e, p) for p in ("gate", "up", "down") for e in range(288)
+             if f"model.language_model.layers.{L}.mlp.experts.{e}.{p}_proj.weight" in idx]
+    t0 = time.time()
+
+    def one(ep):
+        e, p = ep
+        name = f"model.language_model.layers.{L}.mlp.experts.{e}.{p}_proj.weight"
+        with safe_open(os.path.join(a.bf16, idx[name]), "pt") as f:
+            w = f.get_tensor(name).float().numpy()
+        im = _imatrix.get(f"blk.{L}.{gname[p]}.weight", e) if _imatrix else None
+        q = ggml_quant.quantize(codec, w, im)
+        return name, q.reshape(q.shape[0], -1, nbytes)
+
+    with ThreadPoolExecutor(a.threads) as ex:
+        for name, q in ex.map(one, names):
+            add(name, torch.from_numpy(q))
+    print(json.dumps({"layer": L, "codec": codec, "matrices": len(names), "s": round(time.time() - t0, 1)}), flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bf16", required=True)
@@ -41,6 +76,8 @@ def main():
     ap.add_argument("--gguf-py", required=True)
     ap.add_argument("--max-layers", type=int, default=0)
     ap.add_argument("--shard-gb", type=float, default=4.0)
+    ap.add_argument("--imatrix", default="")
+    ap.add_argument("--threads", type=int, default=32)
     a = ap.parse_args()
     plan = {int(k): v for k, v in json.load(open(a.plan)).items()}
     os.makedirs(a.out, exist_ok=True)
@@ -91,15 +128,18 @@ def main():
             continue
         codec = plan[L]["codec"].upper()
         blk, nbytes, gtype = CODECS[codec]
-        g = readers.setdefault(plan[L]["gguf"], gguf_expert_reader(plan[L]["gguf"], a.gguf_py))
-        for p, gname in proj.items():
-            t = g[f"blk.{L}.{gname}.weight"]
-            assert int(t.tensor_type) == gtype, (L, p, int(t.tensor_type), codec)
-            data = np.asarray(t.data)                          # (n_experts, rows, row_bytes)
-            n_e, rows = data.shape[0], data.shape[1]
-            per = data.reshape(n_e, rows, -1, nbytes)
-            for e in range(n_e):
-                add(f"model.language_model.layers.{L}.mlp.experts.{e}.{p}_proj.weight", torch.from_numpy(np.ascontiguousarray(per[e])))
+        if plan[L].get("quantize"):
+            quantize_layer(a, idx, L, codec, nbytes, add)
+        else:
+            g = readers.setdefault(plan[L]["gguf"], gguf_expert_reader(plan[L]["gguf"], a.gguf_py))
+            for p, gname in proj.items():
+                t = g[f"blk.{L}.{gname}.weight"]
+                assert int(t.tensor_type) == gtype, (L, p, int(t.tensor_type), codec)
+                data = np.asarray(t.data)                          # (n_experts, rows, row_bytes)
+                n_e, rows = data.shape[0], data.shape[1]
+                per = data.reshape(n_e, rows, -1, nbytes)
+                for e in range(n_e):
+                    add(f"model.language_model.layers.{L}.mlp.experts.{e}.{p}_proj.weight", torch.from_numpy(np.ascontiguousarray(per[e])))
         quantized_layers[f"model.language_model.layers.{L}.mlp.experts"] = {
             "quant_algo": codec, "group_size": blk, "block_payload_bytes": nbytes, "packing": "ggml"}
     flush()
