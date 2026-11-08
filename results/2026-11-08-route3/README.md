@@ -65,3 +65,53 @@ See `docs/RUNTIME_V2_VLLM_HOOKS.md` for the full tables.
 - **`topk_ids = -1` masking is NOT exact.** Max logprob deviation 9.9 vs the zero-weight mask; do not use it.
 - **`route_expert_map` masking matches the zero-weight mask.** 510/511 same top-1, mean abs logprob diff 0.005; repeat runs are bit-identical.
 - **Compact resident-only expert weights** (to free VRAM) are blocked by b12x tuner route geometry (216 vs 288). A b12x patch is needed.
+
+## FP8 non-expert weights + MTP layer kept (`full_iq2xxs_fp8`) [M]
+
+**Build.** Same IQ2_XXS experts. Non-expert weights use the NVIDIA reference recipe (`--fixed fp8`):
+
+- MXFP8 1x32 for KDA q/k/v/o, dense MLP and lm_head;
+- FP8_PB_WO 128x128 for MLA projections and shared experts.
+
+Layer 45 (MTP) is kept, with IQ2_XXS experts. Size: 86 GB.
+
+| measure | BF16 non-expert | **FP8 non-expert** |
+|---|---|---|
+| decode (256 tokens, batch 1, no MTP) | 10.9 tok/s | **17.3 tok/s** |
+| cold 45K TTFT | 36.9 s | 39.8 s |
+| cached 45K+32 | 0.389 s | 0.452 s |
+| dNLL / KLD / same top-1 | +0.183 / 0.238 / 85.0% | +0.182 / 0.239 / 84.9% |
+
+**Reading.**
+
+- FP8 on the non-expert weights costs no measurable quality.
+- Decode is 1.58x faster, matching the bytes-per-token model: about 19.5 GB per token before, about 11 GB after.
+- **MTP speculative decoding did not start.** b12x refuses to split the hybrid-manager KV block of the BLHNC layout into 256-token kernel blocks: "block stride 33206528 != page 2568192". This is the next fix.
+
+## Runtime v2 prototype: routed experts on the workstation CPU as a precision upgrade [M]
+
+**Setup.** vLLM hook `ops/route3/remote_hook`:
+
+- For the planned experts of each layer, the routes are sent to `runtime/expert_server.c` on the workstation, over the 10 GbE link with busy-poll and heartbeat.
+- The server holds all 42 MoE layers as int4 RTN g128, 171 GB in RAM.
+- Those routes are masked on the GPU with weight 0 (exact), and the CPU partial sums are added per token.
+- The GPU keeps its IQ2_XXS copy of every expert.
+- Wire format verified against a BF16 reference (`runtime/remote_wire_test.py`).
+
+**Quality.** Same balanced eval, 41,943 tokens against the Q8_0 BF16 proxy, eager mode:
+
+| CPU share of routes | plan | dNLL | KLD | same top-1 |
+|---|---|---|---|---|
+| 0% | none | +0.182 +/- 0.004 | 0.239 | 84.9% |
+| 29% | hottest 64 experts per layer (from the M1 routing traces) | +0.123 +/- 0.004 | 0.175 | 87.4% |
+| 100% | all experts | **+0.028 +/- 0.002** | **0.057** | **92.8%** |
+| | control (EXL3 3.5 bpw, 2x Max-Q) | +0.0148 | 0.042 | 94.0% |
+
+**Reading.**
+
+- The remote-expert path is correct end to end, and it moves quality from 12x to about 1.9x the control's dNLL.
+- **The gain is roughly proportional to the CPU's share of routes.** Hot-64 is slightly better than linear. Routing is flat (the hottest 64 of 288 experts cover only 29-46% of routes), so a small hot set cannot carry the quality.
+- **The remaining gap is the CPU format.** int4 RTN (+0.028) is far behind the Q4_K + imatrix experts measured in llama.cpp (+0.0045 on the same eval).
+  - A better CPU quantizer (imatrix-weighted / MSE scales, or Q4_K blocks) is the obvious next quality lever.
+  - That is CPU-only work, with no training.
+- **Prefill.** During the all-remote prefill eval, client wait (911 s) about equals server compute (907 s): transport is hidden, and the CPU is the bottleneck for prefill.

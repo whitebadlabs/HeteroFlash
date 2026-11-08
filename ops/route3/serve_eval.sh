@@ -30,7 +30,9 @@ start() {   # start <extra docker args> -- <extra vllm args>
   done
   return 1
 }
-HFO=(--hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}')
+# Checkpoints without the MTP layer (built with --max-layers 45) need NO_MTP=1 so the model does not expect it.
+HFO=()
+[ -n "${NO_MTP:-}" ] && HFO=(--hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}')
 SPEC=()
 if [ $MODE = mtp ]; then
   HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}}")
