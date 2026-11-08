@@ -19,7 +19,7 @@ start() {   # start <extra docker args> -- <extra vllm args>
   for x in "$@"; do if [ "$x" = "--" ]; then sep=1; elif [ $sep = 0 ]; then dargs+=("$x"); else vargs+=("$x"); fi; done
   docker run -d --name hf-r3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro \
     -v /srv/vllm-research/work/cache/b12x:/cache/b12x -e B12X_COMPILE_CACHE_DIR=/cache/b12x \
-    -e VLLM_KV_CACHE_LAYOUT=BLHNC -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 "${dargs[@]}" \
+    -e VLLM_KV_CACHE_LAYOUT=${KV_LAYOUT:-BLHNC} -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 "${dargs[@]}" \
     --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name GLM-5.3-Flash \
     --quantization modelopt_mixed --dtype bfloat16 --max-num-seqs 1 --gpu-memory-utilization ${GPU_UTIL:-0.90} \
     --trust-remote-code "${HFO[@]}" $FLAGS "${vargs[@]}" >/dev/null
@@ -42,10 +42,17 @@ docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done
 echo "$(t) $TAG: mem before $(free -g | awk '/^Mem:/{print $3}') GiB used"
 if [ $MODE != quality ]; then
-  if start -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}"; then
+  SARGS=(); SV=()
+  if [ -n "${EAGER:-}" ]; then SV=(--enforce-eager); fi
+  if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 decode speed: eager + remote-expert hook, short prompts only
+    SV=(--enforce-eager)
+    SARGS=(-e PYTHONPATH=/rhook -v $H/ops/route3/remote_hook:/rhook:ro -e HF_REMOTE_EXPERTS=/rplan.json
+           -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR)
+  fi
+  if start "${SARGS[@]}" -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}" "${SV[@]}"; then
     docker logs hf-r3 > $OUT/${TAG}_speed.log 2>&1
     echo "$(t) speed server healthy; mem $(free -g | awk '/^Mem:/{print $3}') GiB used"
-    python3 -I - <<'PY' | tee $OUT/${TAG}_speed.txt
+    SKIP_LONG=${SKIP_LONG:-} python3 -I - <<'PY' | tee $OUT/${TAG}_speed.txt
 import json, time, urllib.request
 U = "http://127.0.0.1:8095/v1/completions"
 def req(body, stream=False):
@@ -60,7 +67,9 @@ for _ in range(2):
     _, d1 = req({"prompt": "Write a long essay about rivers.", "max_tokens": 1, "ignore_eos": True})
     _, d2 = req({"prompt": "Write a long essay about rivers.", "max_tokens": 257, "ignore_eos": True})
 print(json.dumps({"decode_tok_s": round(256 / (d2 - d1), 2), "ttft_short_s": round(d1, 3)}))
-import random
+import os, random
+if os.environ.get("SKIP_LONG"):
+    raise SystemExit(0)
 random.seed(7); ids = [random.randrange(1000, 60000) for _ in range(45000)]
 _, cold = req({"prompt": ids, "max_tokens": 1})
 _, cached = req({"prompt": ids + [random.randrange(1000, 60000) for _ in range(32)], "max_tokens": 1})
