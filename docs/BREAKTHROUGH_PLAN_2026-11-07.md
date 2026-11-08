@@ -47,25 +47,35 @@ No source shows 7-12 accepted tokens on general prose. No published DGX Spark re
 
 These figures are modeled, not measured.
 
-The model is t_step = max(Spark bytes / 241 GB/s, CPU bytes / 182 GB/s) + sync, with the Spark/CPU expert split chosen to balance the two terms. The bandwidth inputs are measured [M]; every other input is an assumption until its gate passes.
+**Revision (2026-11-08), using measured kernel bandwidth and published drafter acceptance.**
 
-Inputs:
+The earlier table (headline 127 tok/s) assumed two things that the pre-checks contradict:
 
-- **Fixed weights:** NVFP4 after QAD, 4.6 GB. *Assumption: gate 2.*
-- **Experts:** 3-bit at 9.4 MB or 4-bit at 12.6 MB. *3-bit is an assumption: gate 1 plus pre-check A.*
-- **Verify window:** 7 tokens, with an EcoSpec union of ~23 experts per layer. *Assumption: gate 4.*
-- **Drafter:** tau 4.5. *Assumption [L-level]: gate 4 plus pre-check D.*
+- **Kernel bandwidth:** it assumed 241 GB/s for Spark expert reads. Pre-check A measured 160-175 GB/s for the existing MoE GEMV at verify sizes [M].
+- **Drafter:** it assumed prose tau 4.5. Pre-check D found the published GLM-5.3-Flash DFlash2 at about 3.3 [L]; our MTP is 2.8 [M].
 
-| experts | sync per step | step [P] | tok/s [P] |
+The model is: t_step = fixed bytes / fixed-GEMV bandwidth [M] + Spark expert bytes / 170 GB/s [M], balanced against CPU expert bytes / 182 GB/s, plus 3 ms sync.
+
+- The 182 GB/s CPU figure is [P], to be replaced by the runtime-v1 measurement.
+- The 3 ms sync is [P], extrapolated from the 50 us [M] round trip.
+- The verify-window union with EcoSpec is [L]/[M]: 22.9 -> ~20 for 4 tokens, and ~37 -> ~32 for an 8-token block.
+
+| fixed weights | experts | MTP, tau 2.8 [M], 4-token window | DFlash2, tau 3.3 [L], 8-token block |
 |---|---|---|---|
-| 4-bit | 8 ms (kernel TCP) | 47.7 ms | 94 |
-| 4-bit | 3 ms (busy-poll, overlapped) | 42.7 ms | 105 |
-| 3-bit | 8 ms | 40.4 ms | 111 |
-| 3-bit | 3 ms | 35.4 ms | 127 |
+| FP8, 8.7 GB at 218 GB/s (quality-safe, +0.006 nats [M]) | 3-bit IQ3_XXS | 62 tok/s | 55 tok/s |
+| FP8 | 4-bit Q4_K | 50 | 43 |
+| NVFP4, 4.6 GB at 240 GB/s (needs QAD; PTQ +0.030 nats [M]) | 3-bit IQ3_XXS | **79** | 67 |
+| NVFP4 | 4-bit Q4_K | 61 | 50 |
 
-The 127 tok/s figure is a modeled upper bound. It requires all six bets plus kernels at the bandwidth roofline.
+What the revised table means:
 
-If gates 1-2 fail, the projected non-inferior ceiling is ~60-80 tok/s [P].
+- **No modeled configuration reaches 120-130 tok/s.** The best is about 79 tok/s [P]. It needs NVFP4 attention via QAD, trained 3-bit experts, the MTP drafter and EcoSpec, all at measured kernel efficiency.
+- **Closing the remaining ~1.6x needs both of these:**
+  - expert GEMV kernels near the 241 GB/s peak, against 170 measured today. That is worth about 1.2-1.3x.
+  - a prose drafter well beyond the published state of the art (tau >= 4.5 at a small expert union).
+- **MTP beats DFlash2 in this model.** DFlash2's 8-token block pulls a much larger expert union for little extra acceptance.
+
+Superseded projection, kept for the record: 94-127 tok/s, computed at 241 GB/s with tau 4.5.
 
 ## Cold 45K TTFT and cached turn [P]
 
@@ -75,7 +85,14 @@ If gates 1-2 fail, the projected non-inferior ceiling is ~60-80 tok/s [P].
 ## Gates (status)
 
 1. **3-bit experts.**
-   - PTQ: **failed [M]** (see above).
+   - PTQ: **failed [M]**. Routed experts only, measured against the Q4_K reference on the 6-domain holdout:
+
+     | format (bpw) | dNLL | mean KLD | same top token |
+     |---|---|---|---|
+     | IQ3_S (3.44) | +0.052 | 0.115 | 88.2% |
+     | IQ3_XXS (3.06) | +0.068 | 0.138 | 87.0% |
+     | IQ2_S (2.5) | +0.132 | 0.215 | 84.1% |
+
    - Next: pre-check A (Spark 3-bit kernel), then a bounded QAT pilot on representative layers with a fixed compute budget. Go/no-go before training all 42 layers.
 2. **NVFP4 attention.**
    - Pre-check C: FP8 vs NVFP4 quality from M2 [M], plus kernel performance on GB10.
