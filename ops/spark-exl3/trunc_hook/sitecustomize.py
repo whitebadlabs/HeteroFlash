@@ -132,3 +132,46 @@ if os.environ.get("HF_REMOTE_MASK"):
                 pass
         return mod
     _b3.__import__ = _hook3
+
+# Test-only expert-map path (HF_ROUTE_MAP=k): plan b12x MoE with route_num_experts=288 and bind every MoE call with
+# route_expert_map[e] = e, or -1 for e % k == 0 (all weights stay resident). Exact if it matches HF_REMOTE_MASK=zero.
+if os.environ.get("HF_ROUTE_MAP"):
+    import builtins as _b4
+    _imp4 = _b4.__import__
+    _m4 = {"done": False, "maps": {}}
+    _k4 = int(os.environ["HF_ROUTE_MAP"])
+
+    def _install4():
+        import sys as _s
+        fm = _s.modules.get("b12x.moe.fused_moe")
+        if fm is None or not hasattr(fm, "bind") or not hasattr(fm, "ExecutionCapacity"):
+            return
+        import torch
+        cap_cls, orig_bind = fm.ExecutionCapacity, fm.bind
+
+        def ExecutionCapacity(*a, **k):
+            if not k.get("route_num_experts"):
+                k["route_num_experts"] = 288
+            return cap_cls(*a, **k)
+
+        def bind(plan, **k):
+            dev = k["topk_ids"].device
+            m = _m4["maps"].get(dev)
+            if m is None:
+                m = torch.arange(288, dtype=torch.int32, device=dev)
+                m = torch.where(m % _k4 == 0, torch.full_like(m, -1), m)
+                _m4["maps"][dev] = m
+            k["route_expert_map"] = m
+            return orig_bind(plan, **k)
+        fm.ExecutionCapacity, fm.bind = ExecutionCapacity, bind
+        _m4["done"] = True
+
+    def _hook4(name, *a, **k):
+        mod = _imp4(name, *a, **k)
+        if not _m4["done"] and (name.startswith("b12x") or name.startswith("vllm")):
+            try:
+                _install4()
+            except Exception:  # noqa: BLE001
+                pass
+        return mod
+    _b4.__import__ = _hook4

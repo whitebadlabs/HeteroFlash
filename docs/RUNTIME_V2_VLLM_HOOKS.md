@@ -63,3 +63,30 @@ An exact skip would make "neg" equal "zero". Instead "neg" is further from both 
 - Do not use -1 masking.
 - The correct interim mask is weight 0. It is exact, but the remote experts are still resident and computed on the GPU.
 - The memory- and compute-saving path is the `route_expert_map` patch, which needs its own exactness test: map vs zero-weight A/B as above.
+
+## Measured: the `route_expert_map` path does skip remote experts [M, 2026-11-08]
+
+**Setup.** Hook `HF_ROUTE_MAP=4`:
+
+- b12x is planned with `route_num_experts=288`;
+- every `bind` gets `route_expert_map[e] = e`, or -1 when e % 4 == 0;
+- all weights stay resident.
+
+Same 6-layer checkpoint and prompt as above.
+
+| comparison | same top-1 | mean abs logprob diff | max abs |
+|---|---|---|---|
+| none vs none (repeat run) | 511/511 | 0 | 0 |
+| map vs zero-weight | 510/511 | 0.0053 | 0.100 |
+| map vs none (true effect of dropping the experts) | 354/511 | | 4.71 |
+
+**Reading.**
+
+- Runs are bit-deterministic.
+- The map path is not bit-identical to zero-weight masking. Its deviation is about 1/1000 of the masked effect, which fits a different accumulation order over fewer routes. It is far from the -1 failure (9.9 max).
+- The map path is the one to build on.
+
+**Next steps:**
+
+1. Allocate only resident experts: `n_local` rows plus a global-to-local `weight_loader` remap, so remote experts free VRAM.
+2. Send the remote routes to the CPU expert server, and add the result outside the `moe_forward_shared` op, in a breakable-graph segment.
