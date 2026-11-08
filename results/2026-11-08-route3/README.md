@@ -86,6 +86,7 @@ Layer 45 (MTP) is kept, with IQ2_XXS experts. Size: 86 GB.
 
 - FP8 on the non-expert weights costs no measurable quality.
 - Decode is 1.58x faster, matching the bytes-per-token model: about 19.5 GB per token before, about 11 GB after.
+- **Prefill got slower: cold 45K +8%, cached +16%.** This is not explained yet. Candidate cause, from the serve log: the KDA input projection now runs as two GEMMs (q/k/v MXFP8 plus b/f_a BF16) instead of one fused BF16 GEMM, and MXFP8 activations are quantized per call (`VLLM_GLM53_KDA_MXFP8_ACTIVATION_MODE=auto`). It needs a prefill profile before the cold-TTFT work.
 - **MTP speculative decoding did not start.** b12x refuses to split the hybrid-manager KV block of the BLHNC layout into 256-token kernel blocks: "block stride 33206528 != page 2568192". This is the next fix.
 
 ## Runtime v2 prototype: routed experts on the workstation CPU as a precision upgrade [M]
@@ -100,18 +101,22 @@ Layer 45 (MTP) is kept, with IQ2_XXS experts. Size: 86 GB.
 
 **Quality.** Same balanced eval, 41,943 tokens against the Q8_0 BF16 proxy, eager mode:
 
-| CPU share of routes | plan | dNLL | KLD | same top-1 |
-|---|---|---|---|---|
-| 0% | none | +0.182 +/- 0.004 | 0.239 | 84.9% |
-| 29% | hottest 64 experts per layer (from the M1 routing traces) | +0.123 +/- 0.004 | 0.175 | 87.4% |
-| 100% | all experts | **+0.028 +/- 0.002** | **0.057** | **92.8%** |
-| | control (EXL3 3.5 bpw, 2x Max-Q) | +0.0148 | 0.042 | 94.0% |
+| CPU share of routes | plan | dNLL | KLD | same top-1 | decode speed |
+|---|---|---|---|---|---|
+| 0% | none | +0.182 +/- 0.004 | 0.239 | 84.9% | 17.3 tok/s |
+| 29% | hottest 64 experts per layer (from the M1 routing traces) | +0.123 +/- 0.004 | 0.175 | 87.4% | not yet measured |
+| 100% | all experts | **+0.028 +/- 0.002** | **0.057** | **92.8%** | not yet measured |
+| | control (EXL3 3.5 bpw, 2x Max-Q) | +0.0148 | 0.042 | 94.0% | 122-132 tok/s |
+
+**All-on-CPU still fails the non-inferiority bar.** The control is the bar: +0.0148.
 
 **Reading.**
 
 - The remote-expert path is correct end to end, and it moves quality from 12x to about 1.9x the control's dNLL.
 - **The gain is roughly proportional to the CPU's share of routes.** Hot-64 is slightly better than linear. Routing is flat (the hottest 64 of 288 experts cover only 29-46% of routes), so a small hot set cannot carry the quality.
-- **The remaining gap is the CPU format.** int4 RTN (+0.028) is far behind the Q4_K + imatrix experts measured in llama.cpp (+0.0045 on the same eval).
+- **The remaining gap is most likely the CPU weight format.**
+  - The server also quantizes activations to u8 per token. Earlier checks, though, put server-vs-same-int4-dequant at 1.6% output error and int4-RTN-vs-BF16 at 22%, so weight rounding dominates.
+  - int4 RTN (+0.028) is far behind the Q4_K + imatrix experts measured in llama.cpp (+0.0045 on the same eval).
   - A better CPU quantizer (imatrix-weighted / MSE scales, or Q4_K blocks) is the obvious next quality lever.
   - That is CPU-only work, with no training.
 - **Prefill.** During the all-remote prefill eval, client wait (911 s) about equals server compute (907 s): transport is hidden, and the CPU is the bottleneck for prefill.
