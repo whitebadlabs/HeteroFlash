@@ -263,7 +263,7 @@ if _DIR:
         cls = type(mod).__name__
         c = _ctl
         cl = c.get("capture_logits")   # {"min_rows": N, "from": a, "to": b}: save log-softmax rows [a, b) of big logits calls
-        if cl and cl.get("debug") and cls == "LogitsProcessor":
+        if cl and cl.get("debug") and (cls == "LogitsProcessor" or (torch.is_tensor(out) and out.dim() == 2 and out.shape[-1] >= 100000)):
             try:
                 with open(os.path.join(_DIR, f"logits_debug_{_PID}.txt"), "a") as fdbg:
                     fdbg.write(json.dumps({"rank0": _rank0(), "type": type(out).__name__,
