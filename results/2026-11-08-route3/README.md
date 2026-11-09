@@ -233,3 +233,26 @@ All routed experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. Quality as
 | overall | +0.0069 | +0.0148 | 0.0300 | 0.0423 | 0.948 | 0.940 |
 
 **Reading.** Better than or equal to the control in every domain, on every metric.
+
+## Expert-map skip, and prefill on the quality-passing config [M]
+
+All experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. With `HF_REMOTE_EXPERT_MAP=1`, the GPU skips its 2-bit copies through b12x `route_expert_map`, instead of computing them with weight 0.
+
+| measure | weight-0 mask | expert map |
+|---|---|---|
+| dNLL / KLD / same-top | +0.0069 / 0.030 / 94.8% | identical. With all experts remote, the GPU routed sum is exactly 0 either way |
+| decode, no MTP | 13.37 tok/s | 13.34 tok/s |
+| decode, MTP-3 | 19.49 tok/s | **15.99 tok/s** |
+| cold 45K TTFT, MTP-3 config | not run | **994 s** (target 10.8 s) |
+| cached 45K+32 | not run | **1.17 s** (target 0.2 s) |
+
+**Reading.**
+
+1. **Skipping the GPU's own expert work saves nothing on decode.** That work was already hidden behind the wait for the CPU, so the overlap works and the CPU expert time is the critical path. The mapped b12x path is slower with MTP's multi-token verify, so keep the weight-0 mask.
+2. **Cold prefill with every expert on the CPU is 92x off the target.**
+   - 45K tokens x 8 experts x 42 layers is about 760 TFLOP of expert math.
+   - Even a perfect int8 GEMM on the 32 Zen5 cores (about 30 TOPS) would take at least about 25 s.
+   - Today's kernel is a row-by-token GEMV, so it reaches 994 s.
+   - **Prefill must run on the GPU.**
+   - The cached-turn miss (1.17 s) has the same cause.
+3. **This creates the key design question.** The Spark can hold about 100 GB of experts. At 4.5 bpw that is about 58% of them; at 2-bit, all of them. Prefill on GPU experts at 2-bit costs quality: the prompt's KV state is built with 2-bit experts. How much that affects answer quality, as opposed to prompt-token prediction (which is what the balanced eval scores), needs its own measurement.
