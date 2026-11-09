@@ -88,12 +88,12 @@ PY
 fi
 if [ $MODE != speed ] && [ $MODE != mtp ]; then
   mkdir -p $TR/raw
-  echo '{"capture": false, "capture_inputs": null, "k_active": 8, "k_ref": null, "capture_logits": {"min_rows": 1000, "from": 0, "to": 1024}}' > $TR/control.json
-  RARGS=(-e PYTHONPATH=/hook)
+  echo "{\"capture\": false, \"capture_inputs\": null, \"k_active\": 8, \"k_ref\": null, \"capture_logits\": {\"min_rows\": 1000, \"from\": 0, \"to\": 1024}, \"fixed_quant\": ${FQ_SPEC:-null}}" > $TR/control.json
+  RARGS=(-e PYTHONPATH=/hook -e HF_FQ_NO_RESTORE=1)
   if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 prototype: planned experts computed on the workstation CPU
     RARGS=(-e PYTHONPATH=/rhook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/route3/remote_hook:/rhook:ro
            -e HF_REMOTE_EXPERTS=/rplan.json -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR
-           -e HF_REMOTE_STATS=/tr/remote_stats.jsonl)
+           -e HF_REMOTE_STATS=/tr/remote_stats.jsonl -e HF_FQ_NO_RESTORE=1)
     [ -n "${MB:-}" ] && RARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext -e HF_REMOTE_EXPERT_MAP=${EMAP:-0} -e HF_REMOTE_MAX_T=${MAX_T:-0} -e HF_REMOTE_SPLIT_POS=${SPLIT_POS:-0})
     rm -f $TR/remote_stats.jsonl
   fi

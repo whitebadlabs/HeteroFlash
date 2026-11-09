@@ -130,13 +130,16 @@ if _DIR:
                 if (w is None or not torch.is_tensor(w) or w.dim() != 2 or w.dtype not in (torch.bfloat16, torch.float16)
                         or not inc.search(mname) or exc.search(mname)):
                     continue
-                if mname not in _fq["orig"]:
-                    _fq["orig"][mname] = (w, w.detach().to("cpu", copy=True))
-                cpu = _fq["orig"][mname][1]
+                if os.environ.get("HF_FQ_NO_RESTORE"):       # unified-memory hosts: no CPU copies (one spec per boot)
+                    cpu = w.detach()
+                else:
+                    if mname not in _fq["orig"]:
+                        _fq["orig"][mname] = (w, w.detach().to("cpu", copy=True))
+                    cpu = _fq["orig"][mname][1]
                 rows = 128 if spec["fmt"] == "fp8" else 256       # small GPU temporaries (server holds ~98% of VRAM)
                 num = den = 0.0
                 for r in range(0, cpu.shape[0], rows):
-                    o = cpu[r:r + rows].to(w.device)
+                    o = cpu[r:r + rows].to(w.device).clone()
                     q = fn(o)
                     num += float(((q.float() - o.float()) ** 2).sum())
                     den += float((o.float() ** 2).sum())

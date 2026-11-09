@@ -1,0 +1,30 @@
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/s/score.py", line 193, in <lambda>
+    res = list(ex.map(lambda it: (it, score_item(it, recs.get(it["id"]))), todo))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/s/score.py", line 149, in score_item
+    s, d = score_turn(sp, visible_answer(t), item, t)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/s/score.py", line 62, in score_turn
+    r = ifeval_check(text, spec["instruction_id_list"], spec["kwargs"], spec["prompt"])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/s/common.py", line 370, in ifeval_check
+    from instruction_following_eval import instructions_registry
+  File "/s/lib/instruction_following_eval/instructions_registry.py", line 17, in <module>
+    from instruction_following_eval import instructions
+  File "/s/lib/instruction_following_eval/instructions.py", line 24, in <module>
+    from absl import logging
+ModuleNotFoundError: No module named 'absl'

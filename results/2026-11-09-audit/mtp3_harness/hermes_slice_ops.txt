@@ -1,0 +1,1 @@
+{'hermes_slice_drafts': 6472, 'accepted': 9913, 'committed_per_step': 2.532}

@@ -12,7 +12,7 @@ SPEC_DEF="{\"method\": \"mtp\", \"num_speculative_tokens\": $N, \"attention_back
 docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done
 docker rm -f hf-r3 >/dev/null 2>&1
-docker run -d --name hf-r3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro -v $PROF:/prof \
+docker run -d --name hf-r3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m:ro -v $PROF:/prof -v /srv/vllm-research/work/cache/control_chat_template.jinja:/tmpl.jinja:ro \
   -v /srv/vllm-research/work/cache/b12x:/cache/b12x -e B12X_COMPILE_CACHE_DIR=/cache/b12x \
   -e VLLM_KV_CACHE_LAYOUT=BLHNC -e B12X_LUT_E4M3_SMEM=0 -e HF_HUB_OFFLINE=1 -e VLLM_ENGINE_READY_TIMEOUT_S=3600 ${EXTRA_ENV:-} \
   --entrypoint vllm $IMG serve /m --port 8095 --host 0.0.0.0 --served-model-name GLM-5.3-Flash \
@@ -20,7 +20,9 @@ docker run -d --name hf-r3 --gpus all --ipc=host -p 127.0.0.1:8095:8095 -v $M:/m
   --block-size 256 --kv-cache-dtype fp8 --mamba-ssm-cache-dtype bfloat16 --attention-backend B12X --linear-backend b12x --moe-backend b12x \
   --max-model-len 65536 --max-num-batched-tokens 8192 \
   --speculative-config "${SPEC_JSON:-$SPEC_DEF}" ${EXTRA_ARGS:-} \
-  --profiler-config '{"profiler": "torch", "torch_profiler_dir": "/prof"}' >/dev/null
+  --profiler-config '{"profiler": "torch", "torch_profiler_dir": "/prof"}' \
+  --reasoning-parser glm45 --tool-call-parser glm47 --enable-auto-tool-choice --chat-template /tmpl.jinja \
+  --default-chat-template-kwargs.reasoning_effort=high >/dev/null
 for i in $(seq 240); do sleep 15; docker ps -q --filter name=hf-r3 | grep -q . || break; curl -fs http://127.0.0.1:8095/health >/dev/null && break; done
 docker logs hf-r3 > $OUT/serve.log 2>&1
 if ! curl -fs http://127.0.0.1:8095/health >/dev/null; then echo "$(t) NOT HEALTHY"; grep -iE "Error" $OUT/serve.log | tail -5; docker rm -f hf-r3 >/dev/null; docker start qfn >/dev/null; exit 1; fi
@@ -95,6 +97,17 @@ for rep in range(3):
     o, cached2 = req({"prompt": ids + [random.randrange(1000, 60000) for _ in range(32)], "max_tokens": 1, "temperature": 0})
     print(json.dumps({"cached_45k_plus32_s_unprofiled": round(cached2, 3), "rep": rep, "cached_tokens": (o.get("usage") or {}).get("prompt_tokens_details")}), flush=True)
 PY
+if [ -n "${HERMES:-}" ]; then   # Hermes-style workload: suite slice, spec-decode counters before/after
+  m() { curl -s http://127.0.0.1:8095/metrics | awk '/^vllm:spec_decode_num_drafts_total/{d=$2} /^vllm:spec_decode_num_accepted_tokens_total/{a=$2} END{print d+0, a+0}'; }
+  read d0 a0 < <(m); S=/srv/vllm-research/work/cache/hermes_suite
+  docker run --rm --network host -e PYTHONPATH=/s/pylib -e NLTK_DATA=/s/pylib/nltk_data -v $S:/s -w /s --entrypoint python3 $IMG \
+    run_suite.py --endpoint http://127.0.0.1:8095 --model GLM-5.3-Flash --out answers_prof_$TAG.jsonl --thinking off --limit 8 \
+    --categories reasoning coding tool_calling instruction_following multi_turn 2>&1 | tail -1
+  read d1 a1 < <(m)
+  docker run --rm --network none -e PYTHONPATH=/s/pylib -e NLTK_DATA=/s/pylib/nltk_data -v $S:/s -w /s --entrypoint python3 $IMG \
+    score.py answers_prof_$TAG.jsonl 2>&1 | sed -n '/-- ops/,$p' | tee $OUT/hermes_slice_ops.txt
+  python3 -c "d=$d1-$d0; a=$a1-$a0; print({'hermes_slice_drafts': d, 'accepted': a, 'committed_per_step': round(1+a/max(d,1),3)})" | tee -a $OUT/hermes_slice_ops.txt
+fi
 sleep 10; docker logs hf-r3 > $OUT/serve.log 2>&1
 docker rm -f hf-r3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
 echo "$(t) traces: $(find $PROF -type f | wc -l) files, $(du -sh $PROF | cut -f1)"; echo "$(t) PROF_DONE; qfn $(docker inspect -f '{{.State.Status}}' qfn)"
