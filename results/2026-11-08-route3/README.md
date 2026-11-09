@@ -256,3 +256,38 @@ All experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. With `HF_REMOTE_E
    - **Prefill must run on the GPU.**
    - The cached-turn miss (1.17 s) has the same cause.
 3. **This creates the key design question.** The Spark can hold about 100 GB of experts. At 4.5 bpw that is about 58% of them; at 2-bit, all of them. Prefill on GPU experts at 2-bit costs quality: the prompt's KV state is built with 2-bit experts. How much that affects answer quality, as opposed to prompt-token prediction (which is what the balanced eval scores), needs its own measurement.
+
+## Hybrid: prefill on the GPU, decode on the CPU (`HF_REMOTE_MAX_T=16`) [M]
+
+Batches of more than 16 tokens (prefill chunks, the 32-token cached turn) use the GPU's IQ2_XXS experts. Decode steps, including MTP verify windows of up to 4 tokens, use the CPU's Q4_K experts. MTP-3, CUDA graphs.
+
+| config | decode | cold 45K TTFT | cached 45K+32 | dNLL (balanced eval) |
+|---|---|---|---|---|
+| GPU only, 2-bit experts | 25.7 tok/s | 39.0 s | 0.42 s | +0.182 |
+| all experts on CPU, Q4_K | 15.3-19.5 tok/s (three runs: 19.49, 15.99 with map, 15.33 hybrid) | 994 s | 1.17 s | **+0.0069** |
+| **hybrid** | **15.3 tok/s** | **42.2 s** | **0.54 s** | not measurable with this eval (see below) |
+| target / control | 80 | 10.8 s | 0.2 s | +0.0148 |
+
+**Reading.**
+
+- The hybrid recovers GPU-class prefill (42 s against 994 s).
+- MTP-3 decode on the CPU-expert configs varies between runs (19.5 / 16.0 / 15.3 tok/s). It needs repeated measurement before a single number is quoted.
+- **The hybrid's quality is the open question.** The balanced eval scores prompt-token predictions, which all come from the prefill pass, so as run it would just measure the 2-bit path. The right test splits each 2048-token chunk: prefill the first half on the GPU 2-bit path, compute the second half on the CPU Q4_K path, and score only the second half against the all-CPU run. That measures answer quality given a 2-bit-prefilled context.
+
+## Prefill roofline (modeled, from spec)
+
+- About 17B active parameters per token (about 8.7B non-expert plus 8.5B for 8 routed experts), so about 34 GFLOP per token and about 1.5 PFLOP for a 45K prompt. Attention is extra and smaller.
+- GB10 dense tensor throughput, approximate from the spec (about 1 PFLOP FP4 with sparsity): about 500 TFLOPS FP4, 250 FP8, 125 BF16.
+
+| precision of the expert math | ideal time at 100% utilization | at about 50% |
+|---|---|---|
+| FP4 | about 3 s | about 6 s |
+| FP8 | about 6 s | about 12 s |
+| BF16 | about 12 s | about 25 s |
+
+The measured 39 s for 2-bit experts (BF16-class math) is about 30% of the BF16 peak.
+
+**Reading.**
+
+- **The 10.8 s cold target is reachable on this GPU only with FP8/FP4 tensor-core expert math at good utilization.** It is a format plus kernel problem with little headroom, not impossible.
+- **The cached turn** (one pass over about 11 GB of weights plus attention over the 45K context) has a floor of roughly 0.05-0.1 s. The 0.2 s target is reachable, and the measured 0.42-0.54 s is overhead.

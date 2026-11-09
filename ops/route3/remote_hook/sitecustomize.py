@@ -105,8 +105,13 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
             _mb["ext"] = ext
         return _mb["ext"]
 
+    _MAX_T = int(os.environ.get("HF_REMOTE_MAX_T", "0"))   # hybrid: batches larger than this stay on the GPU experts
+
     def _mb_select(L, x, w, ids):
         """Pack the first _NSUB 16-token chunks into this layer's mailbox sub-slots; the GPU keeps the rest."""
+        if _MAX_T and int(x.shape[0]) > _MAX_T:
+            _tl.mb = None
+            return w, ids
         ext = _ext()
         rem = _mask_for(L, ids.device)
         T = int(x.shape[0])
