@@ -248,7 +248,7 @@ All experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. With `HF_REMOTE_E
 
 **Reading.**
 
-1. **Skipping the GPU's own expert work saves nothing on decode.** That work was already hidden behind the wait for the CPU, so the overlap works and the CPU expert time is the critical path. The mapped b12x path is slower with MTP's multi-token verify, so keep the weight-0 mask.
+1. **Skipping the GPU's own expert work saves nothing on decode.** That work was already hidden behind the wait for the CPU, so the overlap works and the CPU expert time is the critical path. The mapped run was slower with MTP (16.0 vs 19.5 tok/s), but that is a single unreplicated pair under different background load (another job shared the workstation during the first run). Keep the weight-0 mask regardless.
 2. **Cold prefill with every expert on the CPU is 92x off the target.**
    - 45K tokens x 8 experts x 42 layers is about 760 TFLOP of expert math.
    - Even a perfect int8 GEMM on the 32 Zen5 cores (about 30 TOPS) would take at least about 25 s.
