@@ -185,3 +185,24 @@ Config: `--speculative-config '{"method": "mtp", "num_speculative_tokens": 3, "a
 - No acceptance-rate breakdown is logged yet.
 - Next: sweep `num_speculative_tokens` (1/2/3/5), and re-measure once the experts are better than 2-bit, which should raise draft acceptance.
 - The fork bug (draft attention backend unconditionally reset to None) is confirmed by this run, so the three-line patch is a valid upstream fix.
+
+## First configuration inside the quality bar: all routed experts on the CPU in Q4_K + imatrix [M]
+
+**Setup.**
+
+- The Spark GPU holds the FP8 non-expert weights and an IQ2_XXS copy of every expert, unused here.
+- The workstation CPU serves **every** routed expert from the Q4_K + imatrix GGUF rows (`runtime/expert_server_gguf.c`, llama.cpp `vec_dot` kernels, 175 GB mmapped and prefaulted in 82 s).
+- The handoff is the graph-capturable mailbox.
+
+| config | dNLL | KLD (mean / p99) | same top-1 | decode (CUDA graphs, no MTP) |
+|---|---|---|---|---|
+| CPU int4 RTN | +0.028 +/- 0.002 | 0.057 / 0.82 | 92.8% | 12.89 tok/s |
+| **CPU Q4_K + imatrix** | **+0.0069 +/- 0.0014** | **0.030** / 0.42 | **94.8%** | **13.37 tok/s** |
+| control: EXL3 3.5 bpw on 2x Max-Q | +0.0148 +/- 0.0017 | 0.042 | 94.0% | 122-132 tok/s |
+
+**Reading.**
+
+- This is the first Spark + CPU configuration that is non-inferior to the 2x Max-Q control on all three quality metrics, on the same balanced eval and the same reference.
+- Speed is 13.4 tok/s without MTP: the CPU's expert compute is now the decode bottleneck.
+- Cold prefill with all experts on the CPU was not measured (the quality eval's 2048-token chunks took about 60 s each, which is CPU-bound). It will be far from the 10.8 s target, so prefill needs the GPU experts, or a hybrid split.
+- Next: MTP on top (running), then the placement split. Hot experts get a better GPU format so the GPU shares the expert work, and the CPU keeps the rest at Q4_K.
