@@ -42,6 +42,7 @@
 - **Decode sizes (T ≤ 32) are bandwidth-bound** at 200–230 GB/s of trellis code bytes. That is GB10's practical peak, so unpacking costs nothing at decode.
 - **Prefill sizes are unpack/compute-bound** at about 28 TFLOPS: 8192 tokens × 8 routes × 50.3 MFLOP in 116 ms. The 2-bit GPU-only path was profiled at about 42 TFLOPS. So EXL3-class experts cost about 1.5× more prefill time than the 2-bit path.
 - *Large-T rows include aliased cold rows (computed with weight 0). The estimates below scale them by hot coverage.
+- **Decode timings are a lower bound.** Cold routes were aliased to one of the token's own hot experts, so they add no weight bytes. That alias gives wrong values at small M (§3). A correct runtime without expert-map support must load a distinct spare expert per cold route: at N=200 and T=4, up to about 6 extra loads on top of about 19 distinct hot experts. The real hot-tier GPU time is therefore higher, which strengthens the decision.
 
 ## 2. CPU execution, communication, sync [K]
 
@@ -64,12 +65,16 @@ Q4_K expert server on 32 Zen5 cores; real cold routes, p50 values.
 | Same with duplicate expert IDs at T=1 | 7.5% (runtime hazard, see Setup) |
 | Control EXL3 experts vs BF16, full layer | 14.6% |
 | b12x hot partial + exact cold vs BF16 | 14.4% |
-| Q4_K CPU cold partial vs BF16 | **11.0–11.4%** |
+| Q4_K CPU cold partial vs BF16 (clamp-fixed server) | **11.0–11.4%** |
 | Control EXL3 on the same cold routes vs BF16 | 16.3–19.9% |
+
+Disclosure: config B's earlier complete-model ΔNLL (+0.0069) was measured with the *unclamped* CPU server. The clamp is fixed now; the effect is expected to be small (gate and up activations rarely exceed 10), but it was not re-measured.
 
 The cold (rarely used) experts are among the worst-quantized in the control. Q4_K on the CPU beats EXL3 on exactly those routes.
 
 ## 4. Spark memory budget [M + E]
+
+**Not validated by a boot.** This budget is composed from the FP8 + MTP-3 serving log and the checkpoint headers. No hot-tier configuration was booted to confirm it.
 
 **Measured** (vLLM log of the FP8 + MTP-3 run, plus checkpoint headers):
 - Weights other than routed experts: 10.8 GiB.
@@ -149,12 +154,12 @@ For comparison [M]:
 
 ## Decision
 
-**Do not integrate the hot-expert tier.** It works numerically and its kernels are efficient. But at most it buys about +20–35% decode over config B (about 21–27 tok/s on Hermes) and a cached turn of about 0.45 s. It brings cold 45K TTFT only into the 70–140 s range, and only after a batched CPU GEMM path that doesn't exist yet. None of the hard targets moves into reach:
+**Do not integrate the hot-expert tier.** It works numerically and its kernels are efficient. But at most it buys about +15–35% decode over config B's measured 15.3–19.5 tok/s in the same MTP-3 harness (estimate: 18–24 tok/s prose, 21–27 on Hermes) and a cached turn of about 0.45 s. It brings cold 45K TTFT only into the 70–140 s range, and only after a batched CPU GEMM path that doesn't exist yet. None of the hard targets moves into reach:
 
 | Target | Best defensible value | Status |
 |---|---|---|
 | 80 tok/s decode | about 21–27 tok/s | **Blocked.** The fixed path alone is 58.5 ms per step [M], which caps decode at about 38 tok/s even with free experts. |
-| 10.8 s cold 45K TTFT | about 70 s at best | **Blocked.** The GB10 compute floor for the non-MoE path is 19.8 s; EXL3-class experts run at about 28 TFLOPS; long-context prefill covers only 53% of routes. |
+| 10.8 s cold 45K TTFT | about 70 s at best | **Blocked.** The non-MoE floor of 19.8 s is itself an estimate [E] (37.9 s measured minus 18.1 s estimated 2-bit MoE). The block holds without it: hot GPU experts (about 14 s) plus cold CPU experts (at least 50 s) already exceed 10.8 s. EXL3-class experts run at about 28 TFLOPS, and long-context prefill covers only 53% of routes. |
 | 0.2 s cached TTFT | about 0.43 s | **Blocked.** It was already 0.35 s GPU-only at 2-bit. |
 
 **Integration cost avoided:**
