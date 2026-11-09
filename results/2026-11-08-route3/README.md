@@ -206,3 +206,15 @@ Config: `--speculative-config '{"method": "mtp", "num_speculative_tokens": 3, "a
 - Speed is 13.4 tok/s without MTP: the CPU's expert compute is now the decode bottleneck.
 - Cold prefill with all experts on the CPU was not measured (the quality eval's 2048-token chunks took about 60 s each, which is CPU-bound). It will be far from the 10.8 s target, so prefill needs the GPU experts, or a hybrid split.
 - Next: MTP on top (running), then the placement split. Hot experts get a better GPU format so the GPU shares the expert work, and the CPU keeps the rest at Q4_K.
+
+## MTP on the quality-passing config [M]
+
+All routed experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. Quality as above; MTP is lossless.
+
+| MTP draft tokens | decode |
+|---|---|
+| 0 | 13.37 tok/s |
+| 1 | 17.22 tok/s |
+| **3** | **19.49 tok/s** |
+
+**Best measured configuration inside the quality bar: 19.5 tok/s.**
