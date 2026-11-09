@@ -1,0 +1,5 @@
+{"prose": {"tokens": 400, "s": 25.69, "tok_s": 15.57, "drafts": 180.0, "mean_accepted_per_draft": 1.217, "committed_per_step": 2.217, "per_pos_accept_rate": [0.65, 0.383, 0.183]}}
+{"code": {"tokens": 400, "s": 26.63, "tok_s": 15.02, "drafts": 184.0, "mean_accepted_per_draft": 1.168, "committed_per_step": 2.168, "per_pos_accept_rate": [0.641, 0.353, 0.174]}}
+{"chat": {"tokens": 400, "s": 25.92, "tok_s": 15.43, "drafts": 184.0, "mean_accepted_per_draft": 1.168, "committed_per_step": 2.168, "per_pos_accept_rate": [0.636, 0.364, 0.168]}}
+{"reasoning": {"tokens": 400, "s": 22.18, "tok_s": 18.03, "drafts": 153.0, "mean_accepted_per_draft": 1.608, "committed_per_step": 2.608, "per_pos_accept_rate": [0.699, 0.542, 0.366]}}
+{"tool": {"tokens": 56, "s": 3.93, "tok_s": 14.25, "drafts": 22.0, "mean_accepted_per_draft": 1.5, "committed_per_step": 2.5, "per_pos_accept_rate": [0.773, 0.455, 0.273]}}
