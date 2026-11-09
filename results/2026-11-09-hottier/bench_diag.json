@@ -1,0 +1,38 @@
+{
+ "label": "kernel microbenchmark (one MoE layer, b12x on GB10)",
+ "hot_sets": {
+  "256": {
+   "N": 256,
+   "build_s": 1.0,
+   "code_bytes": 2842689536,
+   "resident_bytes": 2881504768,
+   "test_route_coverage": 0.9737,
+   "test_route_coverage_by_domain": {
+    "knowledge_qa": 0.9626,
+    "code": 0.9788,
+    "math": 0.9792,
+    "instruction_following": 0.9761,
+    "multilingual": 0.9719
+   },
+   "tokens_with_no_cold_route": 0.8094,
+   "cold_routes_per_token_mean": 0.21,
+   "hot_partial_vs_exllamav3_rel": 0.00194,
+   "hot_partial_vs_bf16_rel": 0.14546,
+   "exllamav3_vs_bf16_hot_partial_rel": 0.14544,
+   "hot_partial_plus_exact_cold_vs_full_bf16_rel": 0.14421,
+   "T1_vs_exllamav3_rel": 0.00195,
+   "T1_duplicate_alias_vs_exllamav3_rel": 0.07508,
+   "sweep": [
+    {
+     "T": 1,
+     "ms": 0.3746,
+     "graph": true,
+     "distinct_hot_experts": 8,
+     "code_MB": 78.6,
+     "eff_GBps": 210.0,
+     "tok_per_s_layer": 2669.9
+    }
+   ]
+  }
+ }
+}

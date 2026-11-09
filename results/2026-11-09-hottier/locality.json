@@ -1,0 +1,881 @@
+{
+ "label": "routing trace analysis, layer 32, hot sets chosen on disjoint M1 traces",
+ "workloads": {
+  "long_context": {
+   "items": 6,
+   "prompt_tokens": 187958,
+   "prefill_tokens": 187958,
+   "decode_tokens": 378,
+   "decode_temporal_locality": {
+    "reuse_last_4": 0.47,
+    "reuse_last_16": 0.7092,
+    "reuse_last_64": null,
+    "spearman_vs_M1_popularity": -0.2008
+   }
+  },
+  "hermes": {
+   "items": 60,
+   "prompt_tokens": 7688,
+   "prefill_tokens": 7688,
+   "decode_tokens": 11363,
+   "decode_temporal_locality": {
+    "reuse_last_4": 0.4929,
+    "reuse_last_16": 0.7046,
+    "reuse_last_64": 0.8847,
+    "spearman_vs_M1_popularity": 0.6099
+   }
+  }
+ },
+ "by_N": {
+  "288": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 1.0,
+     "cold_routes_per_token": 0.0,
+     "block_T1": 0.0
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 1.0,
+     "cold_routes_per_token": 0.0,
+     "block_T1": 0.0,
+     "block_T4": 0.0
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 1.0,
+     "cold_routes_per_token": 0.0,
+     "block_T1": 0.0
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 1.0,
+     "cold_routes_per_token": 0.0,
+     "block_T1": 0.0,
+     "block_T4": 0.0
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 1.0,
+      "cold_routes_per_token": 0.0,
+      "block_T1": 0.0,
+      "block_T4": 0.0
+     }
+    }
+   }
+  },
+  "256": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.778,
+     "cold_routes_per_token": 1.776,
+     "block_T1": 0.6151
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.9666,
+     "cold_routes_per_token": 0.267,
+     "block_T1": 0.2434,
+     "block_T4": 0.6
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.9666,
+      "cold_routes_per_token": 0.267,
+      "block_T1": 0.2434,
+      "block_T4": 0.6
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.9597,
+     "cold_routes_per_token": 0.323,
+     "block_T1": 0.2559
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.966,
+     "cold_routes_per_token": 0.272,
+     "block_T1": 0.2139,
+     "block_T4": 0.4521
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.962,
+      "cold_routes_per_token": 0.304,
+      "block_T1": 0.2908,
+      "block_T4": 0.6622
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.9737,
+      "cold_routes_per_token": 0.211,
+      "block_T1": 0.1803,
+      "block_T4": 0.4147
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.9716,
+      "cold_routes_per_token": 0.227,
+      "block_T1": 0.2054,
+      "block_T4": 0.5267
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.983,
+      "cold_routes_per_token": 0.136,
+      "block_T1": 0.1307,
+      "block_T4": 0.3529
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.9876,
+      "cold_routes_per_token": 0.099,
+      "block_T1": 0.0886,
+      "block_T4": 0.2812
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.9206,
+      "cold_routes_per_token": 0.635,
+      "block_T1": 0.4277,
+      "block_T4": 0.6457
+     }
+    }
+   }
+  },
+  "232": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.6547,
+     "cold_routes_per_token": 2.763,
+     "block_T1": 0.7874
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.9375,
+     "cold_routes_per_token": 0.5,
+     "block_T1": 0.3968,
+     "block_T4": 0.8111
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.9375,
+      "cold_routes_per_token": 0.5,
+      "block_T1": 0.3968,
+      "block_T4": 0.8111
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.8938,
+     "cold_routes_per_token": 0.849,
+     "block_T1": 0.5377
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.9199,
+     "cold_routes_per_token": 0.641,
+     "block_T1": 0.4178,
+     "block_T4": 0.7414
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.8607,
+      "cold_routes_per_token": 1.114,
+      "block_T1": 0.7451,
+      "block_T4": 0.973
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.9359,
+      "cold_routes_per_token": 0.513,
+      "block_T1": 0.367,
+      "block_T4": 0.6845
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.914,
+      "cold_routes_per_token": 0.688,
+      "block_T1": 0.5037,
+      "block_T4": 0.8678
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.9649,
+      "cold_routes_per_token": 0.281,
+      "block_T1": 0.2465,
+      "block_T4": 0.5983
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.9549,
+      "cold_routes_per_token": 0.361,
+      "block_T1": 0.2758,
+      "block_T4": 0.6489
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.8446,
+      "cold_routes_per_token": 1.243,
+      "block_T1": 0.6432,
+      "block_T4": 0.8824
+     }
+    }
+   }
+  },
+  "216": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.5771,
+     "cold_routes_per_token": 3.383,
+     "block_T1": 0.8796
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.8965,
+     "cold_routes_per_token": 0.828,
+     "block_T1": 0.537,
+     "block_T4": 0.9
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.8965,
+      "cold_routes_per_token": 0.828,
+      "block_T1": 0.537,
+      "block_T4": 0.9
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.8395,
+     "cold_routes_per_token": 1.284,
+     "block_T1": 0.7121
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.8817,
+     "cold_routes_per_token": 0.947,
+     "block_T1": 0.5367,
+     "block_T4": 0.8614
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.8141,
+      "cold_routes_per_token": 1.487,
+      "block_T1": 0.8137,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.897,
+      "cold_routes_per_token": 0.824,
+      "block_T1": 0.5238,
+      "block_T4": 0.8333
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.8668,
+      "cold_routes_per_token": 1.065,
+      "block_T1": 0.6315,
+      "block_T4": 0.936
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.9394,
+      "cold_routes_per_token": 0.485,
+      "block_T1": 0.3722,
+      "block_T4": 0.7765
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.9332,
+      "cold_routes_per_token": 0.535,
+      "block_T1": 0.4066,
+      "block_T4": 0.8033
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.7881,
+      "cold_routes_per_token": 1.695,
+      "block_T1": 0.7141,
+      "block_T4": 0.9436
+     }
+    }
+   }
+  },
+  "200": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.5269,
+     "cold_routes_per_token": 3.785,
+     "block_T1": 0.9163
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.8479,
+     "cold_routes_per_token": 1.217,
+     "block_T1": 0.6429,
+     "block_T4": 0.9333
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.8479,
+      "cold_routes_per_token": 1.217,
+      "block_T1": 0.6429,
+      "block_T4": 0.9333
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.7838,
+     "cold_routes_per_token": 1.729,
+     "block_T1": 0.8094
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.8421,
+     "cold_routes_per_token": 1.263,
+     "block_T1": 0.6399,
+     "block_T4": 0.9284
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.7492,
+      "cold_routes_per_token": 2.007,
+      "block_T1": 0.8824,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.8577,
+      "cold_routes_per_token": 1.139,
+      "block_T1": 0.6271,
+      "block_T4": 0.9167
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.8189,
+      "cold_routes_per_token": 1.449,
+      "block_T1": 0.7408,
+      "block_T4": 0.9701
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.902,
+      "cold_routes_per_token": 0.784,
+      "block_T1": 0.5154,
+      "block_T4": 0.8908
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.9103,
+      "cold_routes_per_token": 0.717,
+      "block_T1": 0.4993,
+      "block_T4": 0.8879
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.7409,
+      "cold_routes_per_token": 2.072,
+      "block_T1": 0.7873,
+      "block_T4": 0.9694
+     }
+    }
+   }
+  },
+  "184": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.4848,
+     "cold_routes_per_token": 4.122,
+     "block_T1": 0.9417
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.8142,
+     "cold_routes_per_token": 1.487,
+     "block_T1": 0.6984,
+     "block_T4": 0.9667
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.8142,
+      "cold_routes_per_token": 1.487,
+      "block_T1": 0.6984,
+      "block_T4": 0.9667
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.7261,
+     "cold_routes_per_token": 2.191,
+     "block_T1": 0.8811
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.7977,
+     "cold_routes_per_token": 1.619,
+     "block_T1": 0.7298,
+     "block_T4": 0.9622
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.6275,
+      "cold_routes_per_token": 2.98,
+      "block_T1": 0.9542,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.8112,
+      "cold_routes_per_token": 1.511,
+      "block_T1": 0.7144,
+      "block_T4": 0.9524
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.7744,
+      "cold_routes_per_token": 1.805,
+      "block_T1": 0.8083,
+      "block_T4": 0.9851
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.8623,
+      "cold_routes_per_token": 1.101,
+      "block_T1": 0.6129,
+      "block_T4": 0.9345
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.8703,
+      "cold_routes_per_token": 1.037,
+      "block_T1": 0.6497,
+      "block_T4": 0.9504
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.6992,
+      "cold_routes_per_token": 2.406,
+      "block_T1": 0.8383,
+      "block_T4": 0.9855
+     }
+    }
+   }
+  },
+  "160": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.4279,
+     "cold_routes_per_token": 4.577,
+     "block_T1": 0.97
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.7629,
+     "cold_routes_per_token": 1.897,
+     "block_T1": 0.8095,
+     "block_T4": 0.9778
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.7629,
+      "cold_routes_per_token": 1.897,
+      "block_T1": 0.8095,
+      "block_T4": 0.9778
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.6539,
+     "cold_routes_per_token": 2.769,
+     "block_T1": 0.9346
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.73,
+     "cold_routes_per_token": 2.16,
+     "block_T1": 0.8509,
+     "block_T4": 0.9911
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.5462,
+      "cold_routes_per_token": 3.631,
+      "block_T1": 0.9739,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.7521,
+      "cold_routes_per_token": 1.983,
+      "block_T1": 0.8315,
+      "block_T4": 0.9861
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.6896,
+      "cold_routes_per_token": 2.483,
+      "block_T1": 0.9192,
+      "block_T4": 1.0
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.7997,
+      "cold_routes_per_token": 1.602,
+      "block_T1": 0.7822,
+      "block_T4": 0.9866
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.7973,
+      "cold_routes_per_token": 1.622,
+      "block_T1": 0.8005,
+      "block_T4": 0.9871
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.6392,
+      "cold_routes_per_token": 2.886,
+      "block_T1": 0.9104,
+      "block_T4": 0.9952
+     }
+    }
+   }
+  },
+  "128": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.3295,
+     "cold_routes_per_token": 5.364,
+     "block_T1": 0.9901
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.6802,
+     "cold_routes_per_token": 2.558,
+     "block_T1": 0.9048,
+     "block_T4": 1.0
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.6802,
+      "cold_routes_per_token": 2.558,
+      "block_T1": 0.9048,
+      "block_T4": 1.0
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.5367,
+     "cold_routes_per_token": 3.707,
+     "block_T1": 0.9758
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.6306,
+     "cold_routes_per_token": 2.956,
+     "block_T1": 0.9432,
+     "block_T4": 0.9993
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.4383,
+      "cold_routes_per_token": 4.493,
+      "block_T1": 0.9935,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.6478,
+      "cold_routes_per_token": 2.818,
+      "block_T1": 0.927,
+      "block_T4": 0.996
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.5885,
+      "cold_routes_per_token": 3.292,
+      "block_T1": 0.9683,
+      "block_T4": 1.0
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.7013,
+      "cold_routes_per_token": 2.39,
+      "block_T1": 0.9025,
+      "block_T4": 1.0
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.6852,
+      "cold_routes_per_token": 2.518,
+      "block_T1": 0.95,
+      "block_T4": 1.0
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.5559,
+      "cold_routes_per_token": 3.553,
+      "block_T1": 0.9646,
+      "block_T4": 1.0
+     }
+    }
+   }
+  },
+  "96": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.2597,
+     "cold_routes_per_token": 5.923,
+     "block_T1": 0.9952
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.4974,
+     "cold_routes_per_token": 4.021,
+     "block_T1": 0.9894,
+     "block_T4": 1.0
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.4974,
+      "cold_routes_per_token": 4.021,
+      "block_T1": 0.9894,
+      "block_T4": 1.0
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.4197,
+     "cold_routes_per_token": 4.642,
+     "block_T1": 0.9905
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.4891,
+     "cold_routes_per_token": 4.087,
+     "block_T1": 0.9891,
+     "block_T4": 1.0
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.3587,
+      "cold_routes_per_token": 5.131,
+      "block_T1": 0.9935,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.5115,
+      "cold_routes_per_token": 3.908,
+      "block_T1": 0.9868,
+      "block_T4": 1.0
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.4342,
+      "cold_routes_per_token": 4.526,
+      "block_T1": 0.9942,
+      "block_T4": 1.0
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.5753,
+      "cold_routes_per_token": 3.398,
+      "block_T1": 0.9793,
+      "block_T4": 1.0
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.5208,
+      "cold_routes_per_token": 3.834,
+      "block_T1": 0.9932,
+      "block_T4": 1.0
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.4178,
+      "cold_routes_per_token": 4.658,
+      "block_T1": 0.9924,
+      "block_T4": 1.0
+     }
+    }
+   }
+  },
+  "64": {
+   "long_context": {
+    "prefill": {
+     "tokens": 187958,
+     "coverage": 0.1587,
+     "cold_routes_per_token": 6.73,
+     "block_T1": 0.9997
+    },
+    "decode": {
+     "tokens": 378,
+     "coverage": 0.3476,
+     "cold_routes_per_token": 5.22,
+     "block_T1": 1.0,
+     "block_T4": 1.0
+    },
+    "decode_by_category": {
+     "long_context": {
+      "tokens": 378,
+      "coverage": 0.3476,
+      "cold_routes_per_token": 5.22,
+      "block_T1": 1.0,
+      "block_T4": 1.0
+     }
+    }
+   },
+   "hermes": {
+    "prefill": {
+     "tokens": 7688,
+     "coverage": 0.3064,
+     "cold_routes_per_token": 5.549,
+     "block_T1": 0.9961
+    },
+    "decode": {
+     "tokens": 11363,
+     "coverage": 0.3617,
+     "cold_routes_per_token": 5.106,
+     "block_T1": 0.9963,
+     "block_T4": 1.0
+    },
+    "decode_by_category": {
+     "tool_calling": {
+      "tokens": 306,
+      "coverage": 0.2774,
+      "cold_routes_per_token": 5.781,
+      "block_T1": 0.9935,
+      "block_T4": 1.0
+     },
+     "multi_turn": {
+      "tokens": 2041,
+      "coverage": 0.3808,
+      "cold_routes_per_token": 4.954,
+      "block_T1": 0.9951,
+      "block_T4": 1.0
+     },
+     "coding": {
+      "tokens": 1894,
+      "coverage": 0.3354,
+      "cold_routes_per_token": 5.317,
+      "block_T1": 0.9979,
+      "block_T4": 1.0
+     },
+     "instruction_following": {
+      "tokens": 2410,
+      "coverage": 0.4034,
+      "cold_routes_per_token": 4.773,
+      "block_T1": 0.9963,
+      "block_T4": 1.0
+     },
+     "reasoning": {
+      "tokens": 2201,
+      "coverage": 0.4052,
+      "cold_routes_per_token": 4.758,
+      "block_T1": 0.9959,
+      "block_T4": 1.0
+     },
+     "prose": {
+      "tokens": 2511,
+      "coverage": 0.2983,
+      "cold_routes_per_token": 5.613,
+      "block_T1": 0.9968,
+      "block_T4": 1.0
+     }
+    }
+   }
+  }
+ }
+}

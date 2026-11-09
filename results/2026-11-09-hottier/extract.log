@@ -1,0 +1,5 @@
+{"relayout_s": 2.9, "payload_bytes_per_slot": 49545216, "code_bytes_total": 3170893824, "trellis_bpw": 0.0273, "K_patterns": {"(3, 4, 4)": 21, "(4, 4, 4)": 124, "(3, 3, 3)": 128, "(3, 3, 4)": 11, "(4, 4, 3)": 3, "(3, 4, 3)": 1}}
+{"count_tokens": {"knowledge_qa": 163218, "code": 160525, "math": 156089, "instruction_following": 155575, "multilingual": 25011}}
+{"tokens": 2560, "per_domain": {"knowledge_qa": 512, "code": 512, "math": 512, "instruction_following": 512, "multilingual": 512}}
+{"exl3_vs_bf16_layer_rel_err": 0.14633, "experts_touched": 287}
+EXTRACT_DONE 10.0 s

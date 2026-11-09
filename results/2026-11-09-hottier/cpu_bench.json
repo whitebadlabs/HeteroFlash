@@ -1,0 +1,516 @@
+{
+ "label": "kernel+link microbenchmark (Q4_K experts on workstation CPU, Spark client, one MoE layer)",
+ "N": {
+  "288": {
+   "cold_routes_per_token": 0.0,
+   "tokens_blocking_T1": 0.0,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.0,
+    "rtt_us": null,
+    "server_us": null,
+    "link_sync_us": null
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 0.0,
+    "rtt_us": null,
+    "server_us": null,
+    "link_sync_us": null
+   },
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 0.0,
+    "rtt_us": null,
+    "server_us": null,
+    "link_sync_us": null
+   }
+  },
+  "256": {
+   "cold_routes_per_token": 0.21,
+   "tokens_blocking_T1": 0.1906,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.1906,
+    "rtt_us": {
+     "n": 488,
+     "mean": 424.9,
+     "p50": 407.4,
+     "p90": 479.7,
+     "p99": 552.5
+    },
+    "server_us": {
+     "n": 488,
+     "mean": 88.0,
+     "p50": 71.0,
+     "p90": 142.0,
+     "p99": 210.0
+    },
+    "link_sync_us": {
+     "n": 488,
+     "mean": 336.9,
+     "p50": 336.4,
+     "p90": 338.2,
+     "p99": 343.5
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 0.5453,
+    "rtt_us": {
+     "n": 349,
+     "mean": 447.9,
+     "p50": 410.5,
+     "p90": 474.8,
+     "p99": 768.3
+    },
+    "server_us": {
+     "n": 349,
+     "mean": 144.6,
+     "p50": 110.0,
+     "p90": 197.2,
+     "p99": 359.3
+    },
+    "link_sync_us": {
+     "n": 349,
+     "mean": 303.3,
+     "p50": 337.1,
+     "p90": 339.7,
+     "p99": 376.7
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.11411,
+   "exl3_cold_partial_vs_bf16_rel": 0.19864,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 0.9437,
+    "rtt_us": {
+     "n": 151,
+     "mean": 1023.8,
+     "p50": 421.6,
+     "p90": 3602.0,
+     "p99": 6738.7
+    },
+    "server_us": {
+     "n": 151,
+     "mean": 749.5,
+     "p50": 221.0,
+     "p90": 3199.0,
+     "p99": 6371.0
+    },
+    "link_sync_us": {
+     "n": 151,
+     "mean": 274.3,
+     "p50": 248.4,
+     "p90": 423.2,
+     "p99": 592.4
+    }
+   }
+  },
+  "216": {
+   "cold_routes_per_token": 1.033,
+   "tokens_blocking_T1": 0.648,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.648,
+    "rtt_us": {
+     "n": 1659,
+     "mean": 1242.4,
+     "p50": 536.1,
+     "p90": 665.1,
+     "p99": 21508.6
+    },
+    "server_us": {
+     "n": 1659,
+     "mean": 845.6,
+     "p50": 136.0,
+     "p90": 263.0,
+     "p99": 21079.7
+    },
+    "link_sync_us": {
+     "n": 1659,
+     "mean": 396.8,
+     "p50": 391.9,
+     "p90": 436.7,
+     "p99": 463.8
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 0.9563,
+    "rtt_us": {
+     "n": 612,
+     "mean": 739.6,
+     "p50": 681.3,
+     "p90": 973.5,
+     "p99": 1114.0
+    },
+    "server_us": {
+     "n": 612,
+     "mean": 352.0,
+     "p50": 299.5,
+     "p90": 492.9,
+     "p99": 628.0
+    },
+    "link_sync_us": {
+     "n": 612,
+     "mean": 387.6,
+     "p50": 439.3,
+     "p90": 478.4,
+     "p99": 527.1
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.11379,
+   "exl3_cold_partial_vs_bf16_rel": 0.17802,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 160,
+     "mean": 1749.3,
+     "p50": 1737.3,
+     "p90": 2237.0,
+     "p99": 2772.3
+    },
+    "server_us": {
+     "n": 160,
+     "mean": 1079.5,
+     "p50": 1030.0,
+     "p90": 1476.1,
+     "p99": 2037.3
+    },
+    "link_sync_us": {
+     "n": 160,
+     "mean": 669.8,
+     "p50": 673.8,
+     "p90": 769.4,
+     "p99": 833.7
+    }
+   }
+  },
+  "160": {
+   "cold_routes_per_token": 2.412,
+   "tokens_blocking_T1": 0.9094,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.9094,
+    "rtt_us": {
+     "n": 2328,
+     "mean": 1129.9,
+     "p50": 616.8,
+     "p90": 762.1,
+     "p99": 21359.1
+    },
+    "server_us": {
+     "n": 2328,
+     "mean": 733.5,
+     "p50": 217.0,
+     "p90": 356.0,
+     "p99": 20928.3
+    },
+    "link_sync_us": {
+     "n": 2328,
+     "mean": 396.4,
+     "p50": 384.7,
+     "p90": 433.5,
+     "p99": 444.0
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 640,
+     "mean": 1097.1,
+     "p50": 1111.7,
+     "p90": 1417.8,
+     "p99": 1574.2
+    },
+    "server_us": {
+     "n": 640,
+     "mean": 655.3,
+     "p50": 650.5,
+     "p90": 957.2,
+     "p99": 1116.2
+    },
+    "link_sync_us": {
+     "n": 640,
+     "mean": 441.8,
+     "p50": 450.9,
+     "p90": 465.3,
+     "p99": 506.7
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.1132,
+   "exl3_cold_partial_vs_bf16_rel": 0.17511,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 160,
+     "mean": 3390.3,
+     "p50": 3378.7,
+     "p90": 4060.7,
+     "p99": 4897.2
+    },
+    "server_us": {
+     "n": 160,
+     "mean": 2597.7,
+     "p50": 2577.5,
+     "p90": 3306.0,
+     "p99": 4065.0
+    },
+    "link_sync_us": {
+     "n": 160,
+     "mean": 792.6,
+     "p50": 792.4,
+     "p90": 839.1,
+     "p99": 900.3
+    }
+   }
+  },
+  "128": {
+   "cold_routes_per_token": 3.296,
+   "tokens_blocking_T1": 0.9691,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.9691,
+    "rtt_us": {
+     "n": 2481,
+     "mean": 1158.2,
+     "p50": 667.2,
+     "p90": 830.0,
+     "p99": 21253.6
+    },
+    "server_us": {
+     "n": 2481,
+     "mean": 765.2,
+     "p50": 274.0,
+     "p90": 437.0,
+     "p99": 20867.4
+    },
+    "link_sync_us": {
+     "n": 2481,
+     "mean": 393.0,
+     "p50": 383.3,
+     "p90": 434.4,
+     "p99": 443.7
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 640,
+     "mean": 1343.2,
+     "p50": 1354.2,
+     "p90": 1651.4,
+     "p99": 1850.9
+    },
+    "server_us": {
+     "n": 640,
+     "mean": 874.9,
+     "p50": 874.0,
+     "p90": 1173.1,
+     "p99": 1376.8
+    },
+    "link_sync_us": {
+     "n": 640,
+     "mean": 468.4,
+     "p50": 459.5,
+     "p90": 486.3,
+     "p99": 615.8
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.11019,
+   "exl3_cold_partial_vs_bf16_rel": 0.16554,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 160,
+     "mean": 4548.3,
+     "p50": 4402.7,
+     "p90": 5554.3,
+     "p99": 7576.2
+    },
+    "server_us": {
+     "n": 160,
+     "mean": 3638.4,
+     "p50": 3512.5,
+     "p90": 4552.1,
+     "p99": 6090.6
+    },
+    "link_sync_us": {
+     "n": 160,
+     "mean": 909.9,
+     "p50": 794.5,
+     "p90": 951.3,
+     "p99": 3535.1
+    }
+   }
+  },
+  "96": {
+   "cold_routes_per_token": 4.181,
+   "tokens_blocking_T1": 0.9867,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.9867,
+    "rtt_us": {
+     "n": 2526,
+     "mean": 1277.9,
+     "p50": 728.1,
+     "p90": 884.9,
+     "p99": 30520.0
+    },
+    "server_us": {
+     "n": 2526,
+     "mean": 883.9,
+     "p50": 336.0,
+     "p90": 490.5,
+     "p99": 30094.0
+    },
+    "link_sync_us": {
+     "n": 2526,
+     "mean": 394.0,
+     "p50": 391.3,
+     "p90": 403.1,
+     "p99": 440.7
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 640,
+     "mean": 1571.4,
+     "p50": 1573.5,
+     "p90": 1908.6,
+     "p99": 2157.5
+    },
+    "server_us": {
+     "n": 640,
+     "mean": 1108.5,
+     "p50": 1112.5,
+     "p90": 1452.2,
+     "p99": 1662.6
+    },
+    "link_sync_us": {
+     "n": 640,
+     "mean": 462.9,
+     "p50": 457.8,
+     "p90": 487.1,
+     "p99": 516.9
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.11026,
+   "exl3_cold_partial_vs_bf16_rel": 0.1648,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 160,
+     "mean": 5025.9,
+     "p50": 4870.3,
+     "p90": 6133.1,
+     "p99": 7729.5
+    },
+    "server_us": {
+     "n": 160,
+     "mean": 4361.5,
+     "p50": 4193.0,
+     "p90": 5465.7,
+     "p99": 7089.6
+    },
+    "link_sync_us": {
+     "n": 160,
+     "mean": 664.4,
+     "p50": 654.6,
+     "p90": 710.3,
+     "p99": 757.7
+    }
+   }
+  },
+  "64": {
+   "cold_routes_per_token": 5.116,
+   "tokens_blocking_T1": 0.9914,
+   "T1": {
+    "requests": 2560,
+    "blocking_fraction": 0.9914,
+    "rtt_us": {
+     "n": 2538,
+     "mean": 1258.0,
+     "p50": 755.5,
+     "p90": 899.9,
+     "p99": 13529.7
+    },
+    "server_us": {
+     "n": 2538,
+     "mean": 905.3,
+     "p50": 400.5,
+     "p90": 546.3,
+     "p99": 13175.9
+    },
+    "link_sync_us": {
+     "n": 2538,
+     "mean": 352.7,
+     "p50": 341.3,
+     "p90": 409.6,
+     "p99": 423.7
+    }
+   },
+   "T4": {
+    "requests": 640,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 640,
+     "mean": 1827.3,
+     "p50": 1818.9,
+     "p90": 2213.1,
+     "p99": 2484.0
+    },
+    "server_us": {
+     "n": 640,
+     "mean": 1363.4,
+     "p50": 1363.0,
+     "p90": 1747.8,
+     "p99": 1942.5
+    },
+    "link_sync_us": {
+     "n": 640,
+     "mean": 463.9,
+     "p50": 460.8,
+     "p90": 485.4,
+     "p99": 540.6
+    }
+   },
+   "q4k_cold_partial_vs_bf16_rel": 0.11064,
+   "exl3_cold_partial_vs_bf16_rel": 0.1632,
+   "T16": {
+    "requests": 160,
+    "blocking_fraction": 1.0,
+    "rtt_us": {
+     "n": 160,
+     "mean": 6074.3,
+     "p50": 5848.0,
+     "p90": 7379.4,
+     "p99": 8986.7
+    },
+    "server_us": {
+     "n": 160,
+     "mean": 5288.2,
+     "p50": 5059.5,
+     "p90": 6534.2,
+     "p99": 8209.6
+    },
+    "link_sync_us": {
+     "n": 160,
+     "mean": 786.1,
+     "p50": 769.6,
+     "p90": 818.7,
+     "p99": 1095.0
+    }
+   }
+  }
+ }
+}

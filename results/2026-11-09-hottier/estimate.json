@@ -1,0 +1,397 @@
+{
+ "label": "speculative architecture estimate from measured components (see ASSUMPTIONS)",
+ "measured_inputs": {
+  "step_ms_prose": 88.60911270983215,
+  "accept_prose": 2.217,
+  "accept_hermes": 2.532,
+  "moe_share_decode": 0.34,
+  "cold45k_s": 37.92,
+  "cached45k_s": 0.36,
+  "moe_prefill_2bit_s": 18.1188,
+  "nonmoe_step_ms": 58.48201438848921,
+  "nonmoe_prefill_s": 19.8012
+ },
+ "assumptions": {
+  "all_layers_like_layer32": true,
+  "link_net_us_busy_poll": 110,
+  "sync_us_per_blocking_layer": [
+   0,
+   50,
+   200
+  ],
+  "link_bulk_GBps": 1.15,
+  "cpu_us_per_pair_prefill": {
+   "current_server_T16": null,
+   "llamacpp_3TOPS": 16.776666666666667,
+   "torch_bf16_7.2TFLOPS": 6.990277777777778
+  },
+  "two_bit_expert_MB": 6.48019968
+ },
+ "by_N": {
+  "256": {
+   "hermes_decode_block_T4": 0.4521,
+   "long_context_prefill_coverage": 0.778,
+   "decode": {
+    "gpu_hot_ms_per_layer_T4": 1.143,
+    "cpu_cold_ms_per_layer_T4": 0.22,
+    "sync0us": {
+     "step_ms_overlap": 106.5,
+     "step_ms_serial": 110.7,
+     "prose_tok_s": [
+      20.0,
+      20.8
+     ],
+     "hermes_tok_s": [
+      22.9,
+      23.8
+     ]
+    },
+    "sync50us": {
+     "step_ms_overlap": 107.5,
+     "step_ms_serial": 111.6,
+     "prose_tok_s": [
+      19.9,
+      20.6
+     ],
+     "hermes_tok_s": [
+      22.7,
+      23.6
+     ]
+    },
+    "sync200us": {
+     "step_ms_overlap": 110.3,
+     "step_ms_serial": 114.5,
+     "prose_tok_s": [
+      19.4,
+      20.1
+     ],
+     "hermes_tok_s": [
+      22.1,
+      23.0
+     ]
+    }
+   },
+   "cold45k": {
+    "gpu_hot_experts_s": 20.9,
+    "cold_pairs": 3356639,
+    "link_activation_traffic_s": 16.6,
+    "nonmoe_s": 19.8,
+    "current_server_T16": {
+     "cpu_cold_s": 220.8,
+     "ttft_overlapped_s": 240.6,
+     "ttft_serial_s": 278.0
+    },
+    "llamacpp_3TOPS": {
+     "cpu_cold_s": 56.3,
+     "ttft_overlapped_s": 76.1,
+     "ttft_serial_s": 113.5
+    },
+    "torch_bf16_7.2TFLOPS": {
+     "cpu_cold_s": 23.5,
+     "ttft_overlapped_s": 43.3,
+     "ttft_serial_s": 80.7
+    },
+    "all_experts_on_gpu_if_they_fit_s": 46.6
+   },
+   "cached45k_plus32": {
+    "gpu_hot_ms_T32": 5.06,
+    "two_bit_equiv_ms": 3.21,
+    "cpu_ms_T32": 0.66,
+    "s_overlap": 0.438,
+    "s_serial": 0.466
+   }
+  },
+  "216": {
+   "hermes_decode_block_T4": 0.8614,
+   "long_context_prefill_coverage": 0.5771,
+   "decode": {
+    "gpu_hot_ms_per_layer_T4": 0.897,
+    "cpu_cold_ms_per_layer_T4": 0.409,
+    "sync0us": {
+     "step_ms_overlap": 96.2,
+     "step_ms_serial": 111.0,
+     "prose_tok_s": [
+      20.0,
+      23.1
+     ],
+     "hermes_tok_s": [
+      22.8,
+      26.3
+     ]
+    },
+    "sync50us": {
+     "step_ms_overlap": 98.0,
+     "step_ms_serial": 112.8,
+     "prose_tok_s": [
+      19.7,
+      22.6
+     ],
+     "hermes_tok_s": [
+      22.5,
+      25.8
+     ]
+    },
+    "sync200us": {
+     "step_ms_overlap": 103.4,
+     "step_ms_serial": 118.2,
+     "prose_tok_s": [
+      18.8,
+      21.4
+     ],
+     "hermes_tok_s": [
+      21.4,
+      24.5
+     ]
+    }
+   },
+   "cold45k": {
+    "gpu_hot_experts_s": 15.9,
+    "cold_pairs": 6394248,
+    "link_activation_traffic_s": 23.7,
+    "nonmoe_s": 19.8,
+    "current_server_T16": {
+     "cpu_cold_s": 398.5,
+     "ttft_overlapped_s": 418.3,
+     "ttft_serial_s": 457.9
+    },
+    "llamacpp_3TOPS": {
+     "cpu_cold_s": 107.3,
+     "ttft_overlapped_s": 127.1,
+     "ttft_serial_s": 166.7
+    },
+    "torch_bf16_7.2TFLOPS": {
+     "cpu_cold_s": 44.7,
+     "ttft_overlapped_s": 64.5,
+     "ttft_serial_s": 104.1
+    },
+    "all_experts_on_gpu_if_they_fit_s": 46.6
+   },
+   "cached45k_plus32": {
+    "gpu_hot_ms_T32": 4.51,
+    "two_bit_equiv_ms": 2.81,
+    "cpu_ms_T32": 2.28,
+    "s_overlap": 0.431,
+    "s_serial": 0.527
+   }
+  },
+  "200": {
+   "hermes_decode_block_T4": 0.9284,
+   "long_context_prefill_coverage": 0.5269,
+   "decode": {
+    "gpu_hot_ms_per_layer_T4": 0.839,
+    "cpu_cold_ms_per_layer_T4": 0.51,
+    "sync0us": {
+     "step_ms_overlap": 93.7,
+     "step_ms_serial": 113.6,
+     "prose_tok_s": [
+      19.5,
+      23.7
+     ],
+     "hermes_tok_s": [
+      22.3,
+      27.0
+     ]
+    },
+    "sync50us": {
+     "step_ms_overlap": 95.7,
+     "step_ms_serial": 115.5,
+     "prose_tok_s": [
+      19.2,
+      23.2
+     ],
+     "hermes_tok_s": [
+      21.9,
+      26.5
+     ]
+    },
+    "sync200us": {
+     "step_ms_overlap": 101.5,
+     "step_ms_serial": 121.4,
+     "prose_tok_s": [
+      18.3,
+      21.8
+     ],
+     "hermes_tok_s": [
+      20.9,
+      24.9
+     ]
+    }
+   },
+   "cold45k": {
+    "gpu_hot_experts_s": 14.3,
+    "cold_pairs": 7153272,
+    "link_activation_traffic_s": 24.7,
+    "nonmoe_s": 19.8,
+    "current_server_T16": {
+     "cpu_cold_s": 454.9,
+     "ttft_overlapped_s": 474.7,
+     "ttft_serial_s": 513.7
+    },
+    "llamacpp_3TOPS": {
+     "cpu_cold_s": 120.0,
+     "ttft_overlapped_s": 139.8,
+     "ttft_serial_s": 178.8
+    },
+    "torch_bf16_7.2TFLOPS": {
+     "cpu_cold_s": 50.0,
+     "ttft_overlapped_s": 69.8,
+     "ttft_serial_s": 108.8
+    },
+    "all_experts_on_gpu_if_they_fit_s": 46.6
+   },
+   "cached45k_plus32": {
+    "gpu_hot_ms_T32": 4.22,
+    "two_bit_equiv_ms": 2.61,
+    "cpu_ms_T32": 3.16,
+    "s_overlap": 0.428,
+    "s_serial": 0.561
+   }
+  },
+  "160": {
+   "hermes_decode_block_T4": 0.9911,
+   "long_context_prefill_coverage": 0.4279,
+   "decode": {
+    "gpu_hot_ms_per_layer_T4": 0.693,
+    "cpu_cold_ms_per_layer_T4": 0.76,
+    "sync0us": {
+     "step_ms_overlap": 90.1,
+     "step_ms_serial": 119.2,
+     "prose_tok_s": [
+      18.6,
+      24.6
+     ],
+     "hermes_tok_s": [
+      21.2,
+      28.1
+     ]
+    },
+    "sync50us": {
+     "step_ms_overlap": 92.2,
+     "step_ms_serial": 121.3,
+     "prose_tok_s": [
+      18.3,
+      24.0
+     ],
+     "hermes_tok_s": [
+      20.9,
+      27.5
+     ]
+    },
+    "sync200us": {
+     "step_ms_overlap": 98.5,
+     "step_ms_serial": 127.6,
+     "prose_tok_s": [
+      17.4,
+      22.5
+     ],
+     "hermes_tok_s": [
+      19.8,
+      25.7
+     ]
+    }
+   },
+   "cold45k": {
+    "gpu_hot_experts_s": 11.0,
+    "cold_pairs": 8650152,
+    "link_activation_traffic_s": 26.1,
+    "nonmoe_s": 19.8,
+    "current_server_T16": {
+     "cpu_cold_s": 577.7,
+     "ttft_overlapped_s": 597.5,
+     "ttft_serial_s": 634.7
+    },
+    "llamacpp_3TOPS": {
+     "cpu_cold_s": 145.1,
+     "ttft_overlapped_s": 164.9,
+     "ttft_serial_s": 202.1
+    },
+    "torch_bf16_7.2TFLOPS": {
+     "cpu_cold_s": 60.5,
+     "ttft_overlapped_s": 80.3,
+     "ttft_serial_s": 117.4
+    },
+    "all_experts_on_gpu_if_they_fit_s": 46.6
+   },
+   "cached45k_plus32": {
+    "gpu_hot_ms_T32": 3.5,
+    "two_bit_equiv_ms": 2.1,
+    "cpu_ms_T32": 5.38,
+    "s_overlap": 0.498,
+    "s_serial": 0.644
+   }
+  },
+  "128": {
+   "hermes_decode_block_T4": 0.9993,
+   "long_context_prefill_coverage": 0.3295,
+   "decode": {
+    "gpu_hot_ms_per_layer_T4": 0.663,
+    "cpu_cold_ms_per_layer_T4": 0.984,
+    "sync0us": {
+     "step_ms_overlap": 99.8,
+     "step_ms_serial": 127.6,
+     "prose_tok_s": [
+      17.4,
+      22.2
+     ],
+     "hermes_tok_s": [
+      19.8,
+      25.4
+     ]
+    },
+    "sync50us": {
+     "step_ms_overlap": 101.9,
+     "step_ms_serial": 129.7,
+     "prose_tok_s": [
+      17.1,
+      21.8
+     ],
+     "hermes_tok_s": [
+      19.5,
+      24.9
+     ]
+    },
+    "sync200us": {
+     "step_ms_overlap": 108.2,
+     "step_ms_serial": 136.0,
+     "prose_tok_s": [
+      16.3,
+      20.5
+     ],
+     "hermes_tok_s": [
+      18.6,
+      23.4
+     ]
+    }
+   },
+   "cold45k": {
+    "gpu_hot_experts_s": 8.4,
+    "cold_pairs": 10137960,
+    "link_activation_traffic_s": 26.7,
+    "nonmoe_s": 19.8,
+    "current_server_T16": {
+     "cpu_cold_s": 675.2,
+     "ttft_overlapped_s": 695.0,
+     "ttft_serial_s": 730.1
+    },
+    "llamacpp_3TOPS": {
+     "cpu_cold_s": 170.1,
+     "ttft_overlapped_s": 189.9,
+     "ttft_serial_s": 225.0
+    },
+    "torch_bf16_7.2TFLOPS": {
+     "cpu_cold_s": 70.9,
+     "ttft_overlapped_s": 90.7,
+     "ttft_serial_s": 125.8
+    },
+    "all_experts_on_gpu_if_they_fit_s": 46.6
+   },
+   "cached45k_plus32": {
+    "gpu_hot_ms_T32": 3.01,
+    "two_bit_equiv_ms": 1.76,
+    "cpu_ms_T32": 7.25,
+    "s_overlap": 0.59,
+    "s_serial": 0.717
+   }
+  }
+ }
+}

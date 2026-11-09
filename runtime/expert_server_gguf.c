@@ -120,7 +120,10 @@ static int run_layer(int L, int ntok, const float *x, int np, const Pair *pairs,
         for (int e = 0; e < ne; e++) for (int k = 0; k < MAXTOK; k++) {
             if (k >= ent[e]) continue;
             float h[I];
-            for (int i = 0; i < I; i++) { float gv = g[e][k][i]; h[i] = gv / (1.0f + expf(-gv)) * u[e][k][i]; }
+            for (int i = 0; i < I; i++) {   // GLM-5.3 clamped SiLU (swiglu_limit 10): gate <= 10, up in [-10, 10]
+                float gv = fminf(g[e][k][i], 10.0f), uv = fminf(fmaxf(u[e][k][i], -10.0f), 10.0f);
+                h[i] = gv / (1.0f + expf(-gv)) * uv;
+            }
             qd->from_float(h, hq[e][k], I);
         }
         #pragma omp for schedule(static)
