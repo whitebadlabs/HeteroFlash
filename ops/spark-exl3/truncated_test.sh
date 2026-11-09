@@ -55,5 +55,5 @@ if os.environ.get("LP_OUT"):    # prompt logprobs of a fixed prompt, for exact A
     print("prompt logprobs saved", os.environ["LP_OUT"])
 PY
 fi
-docker rm -f hf-exl3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
+docker rm -f hf-exl3 >/dev/null 2>&1; [ "${RESTART_QFN:-0}" = 1 ] && docker start qfn >/dev/null 2>&1
 echo "$(t) done; qfn: $(docker inspect -f '{{.State.Status}}' qfn)"

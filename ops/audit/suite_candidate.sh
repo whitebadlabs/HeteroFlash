@@ -34,5 +34,5 @@ PY="docker run --rm --network host -e PYTHONPATH=/s/pylib -e NLTK_DATA=/s/pylib/
 $PY run_suite.py --endpoint http://127.0.0.1:8095 --model GLM-5.3-Flash --out answers_$TAG.jsonl --thinking off $SARGS 2>&1 | tail -3
 $PY score.py answers_$TAG.jsonl --ref answers_control_thinkoff.jsonl 2>&1 | tail -30 | tee $OUT/score.txt
 cp $S/answers_$TAG.jsonl $OUT/ 2>/dev/null
-docker logs hf-r3 > $OUT/serve.log 2>&1; docker rm -f hf-r3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
+docker logs hf-r3 > $OUT/serve.log 2>&1; docker rm -f hf-r3 >/dev/null 2>&1; [ "${RESTART_QFN:-0}" = 1 ] && docker start qfn >/dev/null 2>&1
 echo "$(t) SUITE_DONE $TAG; qfn $(docker inspect -f '{{.State.Status}}' qfn)"

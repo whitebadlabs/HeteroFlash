@@ -39,5 +39,5 @@ pass nvfp4_attn '{"fmt": "nvfp4", "include": "attn"}'
 pass nvfp4_shared_dense_lmhead '{"fmt": "nvfp4", "include": "(shared_expert|lm_head|mlp\\.(gate_up_proj|down_proj))"}'
 pass nvfp4_all '{"fmt": "nvfp4"}'
 pass fp8_all_sim '{"fmt": "fp8"}'
-docker logs hf-r3 > $OUT/serve.log 2>&1; docker rm -f hf-r3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
+docker logs hf-r3 > $OUT/serve.log 2>&1; docker rm -f hf-r3 >/dev/null 2>&1; [ "${RESTART_QFN:-0}" = 1 ] && docker start qfn >/dev/null 2>&1
 echo "$(t) FP4_PTQ_DONE; qfn $(docker inspect -f '{{.State.Status}}' qfn)"

@@ -113,5 +113,5 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1; echo "$(t) quality server NOT healthy"; grep -iE "error|Traceback" $OUT/${TAG}_quality_serve.log | tail -8
   fi
 fi
-docker rm -f hf-r3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
+docker rm -f hf-r3 >/dev/null 2>&1; [ "${RESTART_QFN:-0}" = 1 ] && docker start qfn >/dev/null 2>&1
 echo "$(t) done; qfn: $(docker inspect -f '{{.State.Status}}' qfn)"

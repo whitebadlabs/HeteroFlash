@@ -109,5 +109,5 @@ if [ -n "${HERMES:-}" ]; then   # Hermes-style workload: suite slice, spec-decod
   python3 -c "d=$d1-$d0; a=$a1-$a0; print({'hermes_slice_drafts': d, 'accepted': a, 'committed_per_step': round(1+a/max(d,1),3)})" | tee -a $OUT/hermes_slice_ops.txt
 fi
 sleep 10; docker logs hf-r3 > $OUT/serve.log 2>&1
-docker rm -f hf-r3 >/dev/null 2>&1; docker start qfn >/dev/null 2>&1
+docker rm -f hf-r3 >/dev/null 2>&1; [ "${RESTART_QFN:-0}" = 1 ] && docker start qfn >/dev/null 2>&1
 echo "$(t) traces: $(find $PROF -type f | wc -l) files, $(du -sh $PROF | cut -f1)"; echo "$(t) PROF_DONE; qfn $(docker inspect -f '{{.State.Status}}' qfn)"
