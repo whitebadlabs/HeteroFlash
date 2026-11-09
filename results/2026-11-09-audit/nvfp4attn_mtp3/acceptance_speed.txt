@@ -1,0 +1,12 @@
+{"prose": {"tokens": 400, "s": 14.08, "tok_s": 28.41, "drafts": 183.0, "mean_accepted_per_draft": 1.18, "committed_per_step": 2.18, "per_pos_accept_rate": [0.623, 0.361, 0.197]}}
+{"code": {"tokens": 400, "s": 14.58, "tok_s": 27.44, "drafts": 183.0, "mean_accepted_per_draft": 1.18, "committed_per_step": 2.18, "per_pos_accept_rate": [0.601, 0.372, 0.208]}}
+{"chat": {"tokens": 400, "s": 12.73, "tok_s": 31.43, "drafts": 169.0, "mean_accepted_per_draft": 1.361, "committed_per_step": 2.361, "per_pos_accept_rate": [0.71, 0.408, 0.243]}}
+{"reasoning": {"tokens": 400, "s": 13.38, "tok_s": 29.9, "drafts": 172.0, "mean_accepted_per_draft": 1.32, "committed_per_step": 2.32, "per_pos_accept_rate": [0.616, 0.43, 0.273]}}
+{"tool": {"tokens": 74, "s": 2.77, "tok_s": 26.72, "drafts": 27.0, "mean_accepted_per_draft": 1.704, "committed_per_step": 2.704, "per_pos_accept_rate": [0.889, 0.481, 0.333]}}
+{"profiled_decode64_s": 2.267, "tokens": 64}
+{"profiled_8k_plus32_s": 10.139}
+{"cold_45k_s": 49.07}
+{"cached_45k_plus32_s_profiled": 0.499}
+{"cached_45k_plus32_s_unprofiled": 2.541, "rep": 0, "cached_tokens": null}
+{"cached_45k_plus32_s_unprofiled": 0.327, "rep": 1, "cached_tokens": null}
+{"cached_45k_plus32_s_unprofiled": 0.325, "rep": 2, "cached_tokens": null}
