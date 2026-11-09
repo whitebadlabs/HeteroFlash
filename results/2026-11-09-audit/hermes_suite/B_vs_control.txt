@@ -1,0 +1,18 @@
+== answers_B_cpuq4k_mtp3.jsonl  vs ref answers_control_thinkoff.jsonl
+category                  n       score [95% CI]         ref [95% CI]        diff A-B [95% CI] verdict(margin=0.05)
+reasoning                40  0.950 [0.875,1.000]  0.975 [0.925,1.000]  -0.025 [-0.125,+0.050] inconclusive
+coding                   40  0.825 [0.700,0.925]  0.825 [0.700,0.925]  +0.000 [-0.100,+0.100] inconclusive
+instruction_following    50  0.800 [0.680,0.900]  0.800 [0.680,0.900]  +0.000 [-0.080,+0.080] inconclusive
+tool_calling             50  0.900 [0.820,0.980]  0.900 [0.820,0.980]  +0.000 [+0.000,+0.000] NON-INFERIOR
+multi_turn                8  1.000 [1.000,1.000]  1.000 [1.000,1.000]  +0.000 [+0.000,+0.000] NON-INFERIOR
+MACRO(deterministic)         0.895 [0.854,0.932]                       -0.005 [-0.035,+0.025] NON-INFERIOR
+
+-- ops (answers file) | ref
+category                 req   err  trunc%   gen_tok   ttft50    lat50  tok/s50
+reasoning                 40     0    2.5%     14386     1.96    16.45     20.7 | trunc 2.5% gen 15288 ttft 0.17 tok/s 206.8
+coding                    40     0    2.5%      5659     2.55     7.09     23.5 | trunc 0.0% gen 5873 ttft 0.19 tok/s 216.3
+prose                     40     0   32.5%     29911     1.04    44.46     18.1 | trunc 30.0% gen 28976 ttft 0.14 tok/s 174.7
+instruction_following     50     0    2.0%     20863     1.30    25.84     15.1 | trunc 4.0% gen 20719 ttft 0.14 tok/s 146.7
+tool_calling              50     0    0.0%      4205     6.31     9.94     24.1 | trunc 0.0% gen 4247 ttft 0.25 tok/s 219.2
+multi_turn                66     0    6.1%     20311     0.95    12.31     19.5 | trunc 10.6% gen 19949 ttft 0.13 tok/s 187.1
+total generated tokens: 95335
