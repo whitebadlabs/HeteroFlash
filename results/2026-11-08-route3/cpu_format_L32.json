@@ -1,0 +1,20 @@
+{
+ "layer": 32,
+ "tokens": 2048,
+ "domains": [
+  "code",
+  "instruction_following",
+  "knowledge_qa",
+  "math",
+  "multilingual"
+ ],
+ "rel_err": {
+  "int4_rtn": 0.18936,
+  "int4_mse": 0.14885,
+  "q4_k": 0.10308,
+  "iq2_xxs": 0.50774,
+  "q8_0": 0.00856,
+  "cpu_srv": 0.19015
+ },
+ "s": 2424
+}

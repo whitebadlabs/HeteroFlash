@@ -127,3 +127,44 @@ Layer 45 (MTP) is kept, with IQ2_XXS experts. Size: 86 GB.
   - A better CPU quantizer (imatrix-weighted / MSE scales, or Q4_K blocks) is the obvious next quality lever.
   - That is CPU-only work, with no training.
 - **Prefill.** During the all-remote prefill eval, client wait (911 s) about equals server compute (907 s): transport is hidden, and the CPU is the bottleneck for prefill.
+
+## Runtime v2 mailbox: graph-capturable CPU experts (hecate-style) [M]
+
+`ops/route3/remote_hook/hf_mailbox.cu` replaces the Python socket path:
+
+- A pack kernel writes each layer's routes and hidden rows into pinned, host-mapped mailboxes, with a release flag and device-side sequence counters.
+- A C++ relay thread on the Spark forwards each request to `expert_server`.
+- A wait_add kernel, queued after the GPU's routed and shared experts, spins on the done flag and adds the CPU partial sums.
+- **Unit test** (`mailbox_test.py`): exact against the Python path, and exact under CUDA graph replay.
+
+| decode, 256 tokens, batch 1 (FP8 non-expert, IQ2_XXS GPU experts, int4 RTN CPU experts) | eager Python hook | **mailbox, CUDA graphs** |
+|---|---|---|
+| no CPU experts | 8.85 tok/s | 17.3 tok/s |
+| hottest 64 per layer on CPU (29% of routes) | 7.07 | **16.29** |
+| all experts on CPU | 6.85 | **12.89** |
+
+**Reading.**
+
+- All-on-CPU now costs about 20 ms per token, or 0.47 ms per layer. That is about the CPU expert compute itself; runtime-v1 measured 0.4-0.6 ms per layer, so the fixed overhead is gone.
+- The output text matches the eager all-remote run.
+- This config's quality is the all-remote row above: dNLL +0.028.
+
+## Which 4-bit format should the CPU hold? (`src/cpu_format_check.py`) [M]
+
+Layer 32: routed-output relative error against BF16 on 2,048 real captured tokens (5 domains), gate-weighted top-8:
+
+| format | rel. error |
+|---|---|
+| int4 RTN g128 (current expert_server) | 0.189 |
+| same, plus the server's u8 activation quantization | 0.190 |
+| int4 g128 with MSE-searched scales | 0.149 |
+| **Q4_K with imatrix (llama.cpp)** | **0.103** |
+| IQ2_XXS (Spark GPU copy) | 0.508 |
+| Q8_0 | 0.009 |
+
+**Reading.**
+
+- Activation quantization is negligible; the weight format is the gap.
+- Q4_K + imatrix roughly halves the error of int4 RTN. End to end in llama.cpp, Q4_K experts scored dNLL +0.0045, inside the control bar.
+- Next step: give `expert_server` a Q4_K path, ideally by calling llama.cpp's own CPU `vec_dot_q4_K_q8_K` kernels on the existing Q4_K-imatrix GGUF rows. Then rerun the all-on-CPU quality measurement.
+- Layer 43 was not run; its run was stopped to keep the CPU free for timing.
