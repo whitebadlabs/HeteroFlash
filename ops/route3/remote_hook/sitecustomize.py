@@ -106,12 +106,20 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
         return _mb["ext"]
 
     _MAX_T = int(os.environ.get("HF_REMOTE_MAX_T", "0"))   # hybrid: batches larger than this stay on the GPU experts
+    _SPLIT_POS = int(os.environ.get("HF_REMOTE_SPLIT_POS", "0"))  # quality test: positions < this use the GPU experts
 
     def _mb_select(L, x, w, ids):
         """Pack the first _NSUB 16-token chunks into this layer's mailbox sub-slots; the GPU keeps the rest."""
         if _MAX_T and int(x.shape[0]) > _MAX_T:
             _tl.mb = None
             return w, ids
+        _tl.ids_orig = ids
+        if _SPLIT_POS:                                   # tokens at positions < split stay on the GPU experts
+            pos = getattr(_tl, "positions", None)
+            if pos is not None and pos.shape[0] == ids.shape[0]:
+                import torch
+                ids = torch.where((pos >= _SPLIT_POS).unsqueeze(1), ids, torch.full_like(ids, -1))
+                _tl.split_ids = ids
         ext = _ext()
         rem = _mask_for(L, ids.device)
         T = int(x.shape[0])
@@ -123,10 +131,12 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
                 wg.append(ext.pack((L - _FIRST_MOE) * _NSUB + c, L - _FIRST_MOE, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), rem))
             else:
                 import torch
-                wg.append(w[t0:t1].masked_fill(rem[ids[t0:t1].long()], 0.0))
+                ic = ids[t0:t1].long()
+                wg.append(w[t0:t1].masked_fill((ic >= 0) & rem[ic.clamp(min=0)], 0.0))
         _tl.mb = (L, xb, ids, w, rem, chunks)
         import torch
-        return (wg[0] if len(wg) == 1 else torch.cat(wg, 0)), ids
+        ids_gpu = getattr(_tl, "ids_orig", ids)
+        return (wg[0] if len(wg) == 1 else torch.cat(wg, 0)), ids_gpu
 
     def _mb_finish(mb, out):
         """Wait for each chunk's CPU partial sum (pipelined over _NSUB sub-slots) and add it to the layer output."""
@@ -219,7 +229,20 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
                     f.write(json.dumps({k: _st[k] for k in ("calls", "req", "pairs", "routes", "wait", "server_us")}) + "\n")
             return out
 
-        R.select_experts, M.forward = select_experts, forward
+        if not _st.get("rm_done"):
+            R.select_experts, M.forward = select_experts, forward
+            _st["rm_done"] = True
+        if _SPLIT_POS:
+            gm = sys.modules.get("vllm.models.glm5next.nvidia.model")
+            if gm is not None and hasattr(gm, "Glm5NextModel"):
+                orig_mf = gm.Glm5NextModel.forward
+
+                def model_forward(self, input_ids, positions, *a, **k):
+                    _tl.positions = positions
+                    return orig_mf(self, input_ids, positions, *a, **k)
+                gm.Glm5NextModel.forward = model_forward
+            else:
+                return                                  # retry on a later import until the model module exists
         _st["done"] = True
 
     # HF_REMOTE_EXPERT_MAP=1: skip the CPU's experts on the GPU entirely (b12x route_expert_map with -1 for remote ids,
