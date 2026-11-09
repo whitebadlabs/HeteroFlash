@@ -1,0 +1,221 @@
+<title>HeteroFlash Feasibility Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (decision memo), wide tables scroll inside their own frames; evidence tags in the margin of the text. */
+:root {
+  --bg: #f7f7f4; --surface: #ffffff; --fg: #1d2126; --muted: #5d6670; --rule: #dcdfe2;
+  --accent: #1f5f8b; --m: #2f7d4a; --b: #8a5a00; --h: #6b4fa8; --bad: #b03a2e; --tint: #eef3f6;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15181c; --surface: #1c2025; --fg: #e4e7ea; --muted: #9aa3ad; --rule: #30363d;
+  --accent: #7fb6dc; --m: #6fc48d; --b: #e0b04f; --h: #b9a2ec; --bad: #ef8a7f; --tint: #1f2a33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15181c; --surface: #1c2025; --fg: #e4e7ea; --muted: #9aa3ad; --rule: #30363d;
+  --accent: #7fb6dc; --m: #6fc48d; --b: #e0b04f; --h: #b9a2ec; --bad: #ef8a7f; --tint: #1f2a33; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 860px; margin: 0 auto; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 34px; }
+h1, h2, h3 { font-family: var(--serif); text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: 2.05rem; font-weight: 700; }
+h2 { font-size: 1.45rem; font-weight: 600; padding-top: 6px; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.1rem; font-weight: 600; }
+section { display: flex; flex-direction: column; gap: 12px; }
+p { margin: 0; max-width: 68ch; }
+ul, ol { margin: 0; padding-left: 1.3em; max-width: 70ch; } li { margin: 3px 0; }
+.lede { font-size: 1.05rem; color: var(--muted); max-width: 70ch; }
+.eyebrow { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.meta { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--mono); font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--tint); }
+tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--mono); white-space: nowrap; }
+.tag { font-family: var(--mono); font-size: .68rem; font-weight: 600; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.tm { color: var(--m); } .tb { color: var(--b); } .th { color: var(--h); }
+.pass { color: var(--m); font-weight: 600; } .fail { color: var(--bad); font-weight: 600; }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.formula { font-family: var(--mono); font-size: .88rem; background: var(--tint); border-radius: 4px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+.key { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; color: var(--muted); }
+.alt { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.alt dl { display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: .92rem; }
+.alt dt { color: var(--muted); font-family: var(--mono); font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.alt dd { margin: 0; min-width: 0; }
+@media (max-width: 560px) { .alt dl { grid-template-columns: minmax(0, 1fr); } .alt dt { padding-top: 6px; } h1 { font-size: 1.6rem; } }
+a { color: var(--accent); }
+</style>
+
+<main>
+<header style="display:flex;flex-direction:column;gap:10px">
+  <span class="eyebrow">HeteroFlash · GLM-5.3-Flash on one DGX Spark + workstation CPU</span>
+  <h1>Feasibility report: where the three latency targets stand, and why</h1>
+  <p class="lede">Every claimed limit below is traced to a measurement or to a stated bound. Measured results, bounds derived from measurements, and research hypotheses are tagged separately. Nothing here multiplies independent optimistic speedups.</p>
+  <div class="key"><span><span class="tag tm">M</span> measured on our hardware</span><span><span class="tag tb">B</span> bound derived from measurements</span><span><span class="tag th">H</span> hypothesis or literature estimate</span></div>
+  <p class="meta">2026-11-09 · targets: decode 80 tok/s (stretch 125) · cold 45K TTFT ≤ 10.8 s · cached 45K+32 ≤ 0.2 s · quality non-inferior to the EXL3 Max-Q deployment</p>
+</header>
+
+<section>
+  <h2>Short answer</h2>
+  <div class="verdict">
+    <p><b>Is the fast GPU prefill (config C) compatible with the quality of config B?</b> No, as built. Reading the prompt with 2-bit experts and answering with 4-bit CPU experts measures ΔNLL +0.0209 against the control's +0.0148 <span class="tag tm">M</span>. Prefill precision affects answer quality, so the prompt has to be read with near-decode-precision experts too.</p>
+    <p><b>Can a different precision and placement policy keep quality without the 994 s cold prefill?</b> Partly. The Spark can hold the hottest 216 of 288 experts per layer at about 3.5 bits (about 100 GB), and those cover 90% of routed traffic <span class="tag tm">M</span>. That makes a quality-preserving prefill plausible in the 13–20 s range if the cold 10% runs on a CPU GEMM kernel we have not written yet <span class="tag th">H</span>. It does not get to 10.8 s with the evidence we have.</p>
+    <p><b>Is 80 tok/s reachable?</b> Not under the current architecture. Even if expert compute cost nothing, reading the FP8 attention, shared and dense weights once per verify cycle caps decode at about 40 tok/s (37–43 across our measured prose acceptance) <span class="tag tb">B</span>.</p>
+    <p>4-bit attention plus a stronger drafter, with experts still paid for, reaches only about 40–45 tok/s <span class="tag tb">B</span>. So 80 needs a third change: breaking the per-layer dependency between attention and experts (approximate, quality-risky), or prose acceptance of about 5 committed tokens per step. 4-bit attention itself measured +0.034 nats and would need training to recover <span class="tag tm">M</span>. 125 tok/s is out of reach on this memory bandwidth <span class="tag tb">B</span>.</p>
+  </div>
+</section>
+
+<section>
+  <h2>A. Best-known working configuration</h2>
+  <p>This is the fastest measured setup that meets the EXL3 quality baseline on our proxy eval: all routed experts run on the workstation CPU in Q4_K + imatrix (llama.cpp kernels, mailbox handoff); the Spark GPU runs FP8 attention, shared and dense weights; MTP with 3 draft tokens.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Measure</th><th>Config B (CPU Q4_K experts)</th><th>EXL3 control (2× Max-Q)</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td>ΔNLL / KLD / same top token, balanced 7-domain eval</td><td class="n">+0.0069 / 0.030 / 94.8% <span class="tag tm">M</span></td><td class="n">+0.0148 / 0.042 / 94.0%</td><td>≤ control</td></tr>
+      <tr><td>Per-domain</td><td colspan="2">Better than the control in all 7 domains (knowledge QA +0.023 vs +0.035; long context +0.005 vs +0.022) <span class="tag tm">M</span></td><td>≤ control</td></tr>
+      <tr><td>Hermes regression suite (280 items, user-facing)</td><td>running; scored against the control when done</td><td class="n">macro 0.865 [0.83, 0.90] <span class="tag tm">M</span></td><td>non-inferior</td></tr>
+      <tr><td>Decode, prose, single stream</td><td class="n">15.3–19.5 tok/s (3 runs) <span class="tag tm">M</span></td><td class="n">≈150–250 tok/s per request <span class="tag tm">M</span></td><td class="n">80 (125)</td></tr>
+      <tr><td>Cold 45K first token</td><td class="n fail">994 s <span class="tag tm">M</span></td><td class="n">10.8 s</td><td class="n">≤ 10.8 s</td></tr>
+      <tr><td>Cached 45K + 32 first token</td><td class="n fail">1.17 s <span class="tag tm">M</span></td><td class="n">0.16–0.2 s</td><td class="n">≤ 0.2 s</td></tr>
+      <tr><td>Memory</td><td colspan="3">Spark 117 GiB in use, of which about 80 GB are unused 2-bit expert copies. Workstation: expert server 163 GiB resident out of 246 GiB <span class="tag tm">M</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>The other measured configurations, for reference:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Config</th><th>ΔNLL</th><th>Decode</th><th>Cold 45K</th><th>Cached</th></tr></thead>
+    <tbody>
+      <tr><td>A. GPU only, 2-bit experts, MTP-3</td><td class="n fail">+0.182</td><td class="n">25.7</td><td class="n">38–39 s</td><td class="n">0.36–0.52 s (V2 runner, warm)</td></tr>
+      <tr><td>B. All experts on CPU, Q4_K, MTP-3</td><td class="n pass">+0.0069</td><td class="n">15.3–19.5</td><td class="n">994 s</td><td class="n">1.17 s</td></tr>
+      <tr><td>C. Prompt on GPU 2-bit, answer on CPU Q4_K</td><td class="n fail">+0.0209</td><td class="n">15.3</td><td class="n">42.2 s</td><td class="n">0.54 s</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>B. Feasibility gaps, by phase</h2>
+
+  <h3>Decode</h3>
+  <p><b>What limits it today.</b> The GPU is busy 94% of a profiled 64-token decode <span class="tag tm">M</span>. Per MTP-3 verify cycle (about 81 ms), 61% of GPU time is non-expert matmuls and 34% is MoE experts; every major kernel runs at about 210–223 GB/s, which is the GB10's measured STREAM bandwidth <span class="tag tm">M</span>. Decode is memory-bandwidth-bound. Kernel tuning has little left to gain; the remaining waste is about 8% of decode time spent in unquantized BF16 weights.</p>
+  <p><b>Measured acceptance.</b> Committed tokens per step on our model: 2.1–2.5 at 3 draft tokens, and 2.3–2.7 at 5 (prose 2.29, code 2.46, reasoning 2.68, tool JSON 3.32). The 4th and 5th draft positions are rarely accepted, so k = 5 is slower than k = 3 <span class="tag tm">M</span>. These were measured on the 2-bit target; a better target may raise them somewhat.</p>
+  <div class="formula">decode tok/s ≤ A × BW / (bytes read per verify cycle)
+
+A   committed tokens per cycle           2.1–2.5 at k=3, prose (measured)
+BW  measured GPU memory bandwidth        ≈ 210 GB/s (spec 273)
+fixed bytes per cycle (FP8 attention, shared, dense, lm_head + 3 MTP draft passes)  ≈ 11.8 GB
+expert bytes per cycle = U × 42 layers × bytes per expert
+U   distinct experts per layer, 4-token verify window   22.9 (measured on real routing)</div>
+  <p><b>The bound <span class="tag tb">B</span>.</b> Even with expert compute cost at zero, the fixed path alone takes 11.8 GB / 210 GB/s ≈ 56 ms per cycle. At measured prose acceptance (A = 2.1–2.4) that gives decode ≤ <b>37–43 tok/s</b>, about 40; it would be 49–56 at the 273 GB/s spec. Experts add to this: within a layer the attention output is needed before the experts run, and the experts' output is needed before the next layer, so the GPU and CPU expert work overlaps only with each other, not with the fixed path. With 4-bit-class experts split optimally between GPU (210 GB/s) and CPU (170 GB/s), the cycle is about 56 + 29 + 4 (link) ≈ 89 ms, which is <b>about 27 tok/s</b>. That agrees with the 15–19.5 tok/s we measure once the CPU's below-roofline verify kernels are accounted for.</p>
+  <p><b>What would have to change.</b> 80 tok/s needs at most about 2.6 GB of fixed-path bytes per committed token (today 4.9–5.6 at prose A), and the expert phase largely hidden.</p>
+  <ul>
+    <li>4-bit fixed weights (about 4.9 GB instead of 8.7) plus a DFlash-class drafter (A ≈ 3.5) bring the fixed path to about 40 ms per cycle.</li>
+    <li>But an 8-token verify window touches 38 experts per layer, about 17.5 GB at 3.5 bits. Even split across GPU and CPU, that adds about 46 ms, so the cycle is about 86 ms, or about 41 tok/s (about 44 with 3-bit experts) <span class="tag tb">B</span>.</li>
+    <li>Reaching 80 additionally needs the expert phase overlapped with the next layer's attention (KTransformers-style deferral: approximate, quality-risky, about +25–45% where reported) or a much smaller verify union.</li>
+  </ul>
+  <p>125 tok/s needs about 1.7 GB per committed token, roughly a 3× cut in fixed bytes beyond FP4, which no measured or published method on this class of model supports.</p>
+  <p><b>Fundamental vs not.</b> Fundamental <span class="tag tb">B</span>: memory bandwidth, and the per-layer dependency between attention and experts. Software-dependent: the remaining BF16 weights, draft-head precision, the CPU's verify kernels (measured 140–175 GB/s against about 190 decode), and the drafter. Model-dependent: fixed-weight precision (needs training to stay within quality) and acceptance length.</p>
+
+  <h3>Cold 45K prefill</h3>
+  <p><b>What limits it today.</b> A profiled 8K-token prefill keeps the GPU 99% busy <span class="tag tm">M</span>. It is compute-bound, not limited by transfers or batching. The 2-bit expert kernel unpacks weights to BF16 and runs at about 42 TFLOPS, and the non-expert matmuls at about 63 TFLOPS, both with 16-bit activations. The GB10 measures about 100 TFLOPS BF16, 190–208 FP8 and 356–375 FP4 dense (published measurements). Scaled to 45K this reproduces the measured 38 s.</p>
+  <p><b>Work and floor <span class="tag tb">B</span>.</b> A 45K prompt is about 1.6 PFLOP: 47% routed experts, 26% KDA projections, the rest MLA, shared and dense layers and attention. Floors:</p>
+  <ul>
+    <li>Ideal, at peak: about 4 s.</li>
+    <li>With the best published kernels, FP8 or FP4 activations: about 11–13 s.</li>
+    <li>With today's BF16-math kernels: about 18–20 s.</li>
+  </ul>
+  <p>The best published GLM-5.3-Flash prefill is about 1,600–2,000 tok/s on <i>two</i> Sparks. Our 1,154 tok/s on one already matches or exceeds every published per-GPU rate, and 10.8 s needs 4,170 tok/s.</p>
+  <p><b>The quality constraint <span class="tag tm">M</span>.</b> The prompt has to be read with near-decode-precision experts (+0.014 nats from 2-bit prefill). All 288 experts at about 3.5 bits is about 133 GB, more than the Spark can hold next to everything else. So at control quality, part of every prefill's expert work must run off the GPU. On the CPU today that is far too slow (994 s for all of it). Streaming weights over 10 GbE costs about 1 s per GB.</p>
+  <p><b>Verdict.</b> 10.8 s is not supported by evidence at preserved quality. The defensible target is about 13–20 s, which depends on two kernels we don't have: an FP8-activation MoE kernel for b12x, and a CPU int8 GEMM for the cold experts' prefill tokens <span class="tag th">H</span>.</p>
+
+  <h3>Cached 45K + 32</h3>
+  <p><b>What limits it today <span class="tag tm">M</span>.</b> The time is dominated by recomputing the tail of the prompt since the last KDA state checkpoint, not by the 32 new tokens. vLLM saves recurrent state only on block boundaries of about 4.6–4.9K tokens. Measured times swing between 0.36 and 5.9 s across identical requests. In the profiled cached request the GPU was busy only 52% of the time, so about 250 ms is host-side overhead.</p>
+  <p><b>Floor <span class="tag tb">B</span>.</b> 32 real tokens touch 93 distinct experts per layer (measured on our routing traces; random routing would give 171). At about 3.5-bit precision that is about 43 GB of experts plus 8.7 GB of fixed weights, about 0.25 s on the GPU alone. With the GPU and CPU reading the experts in parallel it is about 0.14–0.17 s. <b>0.2 s is supported by the bound</b>, but only with a heterogeneous split for these 32 tokens plus checkpoint and overhead fixes. Overhead tuning alone won't reach it.</p>
+</section>
+
+<section>
+  <h2>C. Architectural alternatives (three)</h2>
+
+  <div class="alt">
+    <h3>1. Phase-aware expert tiers: hot experts at control-format precision on the GPU, cold on the CPU</h3>
+    <dl>
+      <dt>Mechanism</dt><dd>Put the hottest 216 experts per layer, 90% of routed traffic, on the Spark in EXL3-class 3.5-bit trellis; that is the control's own format, about 100 GB. The coldest 72 go on the CPU in Q4_K. The prompt is read with the same precision as decoding. Removes the memory-versus-prefill-quality conflict and keeps 90% of expert traffic off the CPU.</dd>
+      <dt>Evidence</dt><dd>Coverage of 90% (worst layer 81%), measured on our eval-set routing traces, not on Hermes traffic <span class="tag tm">M</span>. Mailbox handoff exact and graph-safe <span class="tag tm">M</span>. EXL3 weights load on the Spark at 2.96 GiB/layer, but serving them through the native b12x path is unverified <span class="tag tm">M</span>/<span class="tag th">H</span>.</dd>
+      <dt>Quality risk</dt><dd>Low: hot experts identical to the control, cold experts better than the control.</dd>
+      <dt>Work</dt><dd>EXL3 MoE serving on the native image; compact resident weights (the b12x tuner fix); per-layer hot sets; a CPU int8 GEMM for cold prefill tokens. No training.</dd>
+      <dt>Estimate</dt><dd>Decode about 22–27 tok/s (bounded by the fixed path); cold about 13–20 s; cached about 0.2–0.3 s <span class="tag th">H</span>.</dd>
+      <dt>Cheapest falsifier</dt><dd>Serve one EXL3-trellis MoE layer through the native b12x path on the Spark and check it matches the control's output. If b12x cannot run EXL3 experts, this alternative needs a different hot format at about 3.5 bits.</dd>
+      <dt>Novelty</dt><dd>Joint precision and placement exists in Hecate and HetRoute. Doing it under a measured prefill-quality constraint, with a remote Ethernet CPU tier, does not.</dd>
+    </dl>
+  </div>
+
+  <div class="alt">
+    <h3>2. A stronger drafter (DFlash2 block drafter) to raise committed tokens per cycle</h3>
+    <dl>
+      <dt>Mechanism</dt><dd>Divide the fixed-path cost by more committed tokens. A DFlash2 drafter proposes a block of 7 tokens in one pass.</dd>
+      <dt>Evidence</dt><dd>3.68 committed per step, self-reported (thinking on, T = 1, on B300) <span class="tag th">H</span>. On our model the drafter failed to load because it inherits the target's <code>fp8_ds_mla</code> KV-cache dtype, and no non-MLA attention backend supports that. This is a configuration gap, not a dead end <span class="tag tm">M</span>. Verifying 8 tokens touches 38 experts per layer, against 23 for 4 <span class="tag tm">M</span>.</dd>
+      <dt>Quality risk</dt><dd>None: speculative decoding is lossless.</dd>
+      <dt>Work</dt><dd>A drafter KV dtype or backend fix (configuration or a small patch); an FP8 drafter to halve its 3.4 GB read.</dd>
+      <dt>Estimate</dt><dd>Fixed-path ceiling rises from about 40 to about 60 tok/s at A = 3.5 (FP8 drafter) <span class="tag tb">B</span>. With 4-bit experts and the serial expert phase, about 28–33 tok/s <span class="tag tb">B</span>.</dd>
+      <dt>Cheapest falsifier</dt><dd>One boot: get the drafter running, then measure committed tokens per step on prose and the cycle time. Below about 3.0 on prose, this lever cannot carry 80 tok/s even with 4-bit attention.</dd>
+      <dt>Novelty</dt><dd>Low. It is engineering, but required for any path to 80.</dd>
+    </dl>
+  </div>
+
+  <div class="alt">
+    <h3>3. 4-bit fixed weights recovered by logit distillation (QAD)</h3>
+    <dl>
+      <dt>Mechanism</dt><dd>Cut the dominant fixed-path bytes from 8.7 GB to about 4.9 GB by making attention, shared and dense weights 4-bit. Recover the quality with end-to-end KL distillation from the BF16 teacher's output distribution, not with layer-local matching.</dd>
+      <dt>Evidence</dt><dd>4-bit fixed weights cost +0.040 nats, +0.030 of it attention <span class="tag tm">M</span>. NVIDIA's QAD recovers NVFP4 on models up to 49B, but keeps attention in BF16 for hybrid models; no published result for a hybrid like this one <span class="tag th">H</span>. Our QAT pilot used layer-local matching and plateaued; that objective mismatch is a plausible cause <span class="tag th">H</span>.</dd>
+      <dt>Quality risk</dt><dd>High.</dd>
+      <dt>Work</dt><dd>Training on the Max-Q GPUs, plus a distillation pipeline for a 310B model on 192 GB of VRAM (frozen quantized experts, trainable attention scales, cached teacher logits). Multi-day; needs your approval.</dd>
+      <dt>Estimate</dt><dd>Together with alternative 2, the fixed-path ceiling is about 90 tok/s at A = 3.5, but only if experts were free <span class="tag tb">B</span>. With the expert phase paid serially it is about 40–45 <span class="tag tb">B</span>. 80 needs this plus overlapping the expert phase with the next layer's attention, which changes the model's computation.</dd>
+      <dt>Cheapest falsifier</dt><dd>A bounded pilot of at most 8 GPU-hours: 4-bit attention in a block of 8 KDA layers, everything else unchanged. Distil against cached BF16 logits and measure the share of the +0.03 gap recovered on the held-out balanced eval. Below 70% recovery, stop.</dd>
+      <dt>Novelty</dt><dd>Moderate: QAD for hybrid linear-attention MoE is unreported.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2>D. What would be new</h2>
+  <ul>
+    <li><b>Prefill precision is a decode-quality constraint in heterogeneous MoE serving.</b> Measured here: a 2-bit-read context costs +0.014 nats on answers computed at 4-bit, concentrated in knowledge and long-context tasks. KTransformers and Fiddler-style systems prefill on the GPU with whatever weights fit and do not report this effect.</li>
+    <li><b>A remote CPU tier over Ethernet with bandwidth parity.</b> Every surveyed system assumes a same-box CPU over PCIe, or C2C for Hecate. We measured a graph-capturable mailbox at about 0.06 ms per layer over 10 GbE, with CPU expert reads at 165–198 GB/s against 210 for the GPU.</li>
+    <li><b>A decode bound for MoE + MTP on unified-memory GPUs.</b> The fixed path, not the experts, sets the ceiling. This is measured and decomposed on a real hybrid model, and it explains why expert-placement papers' speedups don't transfer here.</li>
+    <li><b>Already established, not new:</b> CPU/GPU expert splitting, precision tiers by popularity (Hecate, HOBBIT), mailbox-style handoff, speculative decoding with MoE union growth (Cascade, EVICT), and expert deferral (KTransformers).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>E. Next experiment</h2>
+  <div class="verdict">
+    <p><b>Get the DFlash2 drafter running on our model and measure acceptance and cycle cost (alternative 2's falsifier).</b></p>
+    <p><b>Why this one.</b> It measures the one term every path to faster decode depends on: committed tokens per cycle. If prose acceptance stays below about 3.0, no combination of 4-bit attention and expert overlap reaches 80, and the multi-day training in alternative 3 would not pay off for that goal. It is lossless, needs no Max-Q time and no training, and costs one boot plus a small fix.</p>
+    <ul>
+      <li><b>Control:</b> the same model and runtime with MTP-3 (measured 2.1–2.5 committed per cycle; 23.7–27.6 tok/s).</li>
+      <li><b>Measurement:</b> per-position acceptance and committed tokens per cycle on prose, code, chat, reasoning and tool prompts; cycle time from a decode profile; Hermes-suite decode throughput.</li>
+      <li><b>Budget:</b> about 3 hours of Spark time; 0 Max-Q GPU-hours.</li>
+      <li><b>Stopping rule:</b> stop if the drafter cannot load with a configuration fix plus a patch of at most about 50 lines (e.g. a BF16 KV cache for the drafter only).</li>
+      <li><b>Go:</b> prose committed ≥ 3.2 per cycle and cycle time ≤ 1.3× the MTP-3 cycle. Adopt the drafter, which is worth about +20–30% decode at preserved quality. That still doesn't put 80 back within reach (see B), so then propose alternative 3's bounded QAD pilot and a deferral quality test together, for your approval.</li>
+      <li><b>No-go:</b> prose committed &lt; 2.8. Report that 80 tok/s is not reachable on this hardware at control quality, and re-scope to alternative 1 with targets of about 25 tok/s, 13–20 s cold and about 0.2–0.3 s cached.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>F. Verdict</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Status</th><th>Claim</th></tr></thead>
+    <tbody>
+      <tr><td class="pass">Achievable today</td><td>Control-level quality on Spark + CPU on the NLL/KLD proxy (config B, ΔNLL +0.0069, all 7 domains better) at 15–19.5 tok/s, but with a 994 s cold prefill and a 1.2 s cached turn. The user-facing Hermes suite for B is still running. Not deployable for Hermes yet.</td></tr>
+      <tr><td><span class="tag tm">M</span> Supported by measurement</td><td>Decode is bandwidth-bound on the fixed path. Prefill is compute-bound on 16-bit math. The cached turn is dominated by checkpoint recompute plus host overhead. Prefill precision matters for answer quality. 90% of expert traffic fits on the GPU at about 3.5 bits.</td></tr>
+      <tr><td><span class="tag th">H</span> Plausible hypothesis</td><td>Alternative 1 reaches about 22–27 tok/s, 13–20 s cold and about 0.2–0.3 s cached at control quality. A cached turn under 0.2 s needs a GPU+CPU split for the new tokens. Alternatives 2 and 3 together reach about 40–45 tok/s with experts paid for.</td></tr>
+      <tr><td class="fail">Unlikely under this architecture</td><td>80 tok/s with FP8 fixed weights (bounded at about 40 even with free experts). 80 tok/s without also overlapping the expert phase with attention (about 41–44 even with 4-bit attention and DFlash). 125 tok/s at all. Cold 10.8 s at preserved quality.</td></tr>
+      <tr><td>Evidence to abandon</td><td>Each pairs a measured result with a threshold:<br>• Alternative 1: if the native b12x path cannot serve 3.5-bit-class hot experts at about 210 GB/s.<br>• The 80 tok/s goal: if DFlash prose acceptance comes in below 2.8.<br>• Alternative 3: if the QAD pilot recovers less than 70% of the 4-bit attention gap.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="meta">Sources: our measurements are in the HeteroFlash repo (results/2026-11-08-route3, results/2026-11-09-audit), and the literature notes with citations are in docs/research/. GB10 throughput, published GLM-5.3-Flash prefill rates, DFlash2 acceptance, QAD and Hecate figures come from those notes.</p>
+</section>
+</main>
