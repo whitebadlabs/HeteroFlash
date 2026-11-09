@@ -12,6 +12,8 @@ COMPAT=${COMPAT:-1}
 OUT=/srv/vllm-research/work/HeteroFlash/results/2026-11-08-spark-exl3; mkdir -p $OUT
 LOG=$OUT/truncated_L${N}_${QUANT}.log
 t() { date -u +%H:%M:%SZ; }
+# qfn (Qwen) backs the Hermes agent: only stop it inside a benchmark window agreed with Carmen.
+if [ "${HF_WINDOW_OK:-}" != "1" ]; then echo "refusing: stopping qfn needs an agreed benchmark window (set HF_WINDOW_OK=1 only inside one)"; exit 3; fi
 docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done   # wait until memory is really released
 echo "$(t) mem before: $(free -g | awk '/^Mem:/{print $3" GiB used"}')"

@@ -38,6 +38,8 @@ if [ $MODE = mtp ]; then
   HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}, \"attention_backend\": \"B12X\"}")
   TAG=${TAG}_mtp${MTP_N:-3}
 fi
+# qfn (Qwen) backs the Hermes agent: only stop it inside a benchmark window agreed with Carmen.
+if [ "${HF_WINDOW_OK:-}" != "1" ]; then echo "refusing: stopping qfn needs an agreed benchmark window (set HF_WINDOW_OK=1 only inside one)"; exit 3; fi
 docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done
 echo "$(t) $TAG: mem before $(free -g | awk '/^Mem:/{print $3}') GiB used"
