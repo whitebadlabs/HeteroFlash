@@ -70,6 +70,46 @@ a { color: var(--accent); }
 </section>
 
 <section>
+  <h2>Update: DFlash2 + FP4 go/no-go</h2>
+  <p><b>Inputs (measured).</b></p>
+  <ul>
+    <li>MTP-3 cycle about 81 ms, with attention-class kernels about 31 ms of it <span class="tag tm">M</span>.</li>
+    <li>NVFP4 decode GEMV 1.7–2.2× faster than FP8 at attention shapes <span class="tag tm">M</span>.</li>
+    <li>Verify-window expert union: 22.7 per layer for MTP-3 (31,416 real windows), 38 for 8 tokens <span class="tag tm">M</span>.</li>
+    <li>CPU expert reads about 170 GB/s on verify windows <span class="tag tm">M</span>.</li>
+    <li>Committed tokens per step: 2.2 on prose, 2.53 on the Hermes slice (MTP-3) <span class="tag tm">M</span>.</li>
+  </ul>
+  <p><b>Model.</b> Cycle time = fixed path + expert phase + about 4 ms of link time, because the expert phase cannot overlap the attention it depends on. Speedups are not multiplied together.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Lever</th><th>Quality</th><th>Cycle effect</th><th>Prose decode at control quality</th></tr></thead>
+    <tbody>
+      <tr><td>Today: config B (CPU Q4_K experts, MTP-3)</td><td class="pass">+0.0069 <span class="tag tm">M</span></td><td>118–150 ms per cycle <span class="tag tm">M</span></td><td class="n">15–19.5 tok/s <span class="tag tm">M</span></td></tr>
+      <tr><td>FP4 attention alone</td><td>+0.0173 against a +0.0148 bar <span class="tag tm">M</span>; needs about 25–50% of its loss recovered</td><td>Saves 13–17 ms per cycle <span class="tag tb">B</span></td><td class="n">17–23 tok/s on B; 26–37 with hot experts on the GPU <span class="tag tb">B</span></td></tr>
+      <tr><td>DFlash2 alone</td><td>Lossless</td><td>Commits about 3.0–3.7 per step (prose unmeasured on our model <span class="tag th">H</span>), but an 8-token window touches 38 experts per layer, about 17.6 GB at 3.5 bits, plus the drafter's reads</td><td class="n">18–22 tok/s on B; 26–32 with hot experts on the GPU <span class="tag tb">B</span></td></tr>
+      <tr><td>DFlash2 + FP4 attention, hot experts on the GPU, GPU/CPU expert split balanced</td><td>Needs the FP4 recovery above</td><td>About 35 + 8 + 46 + 4 ≈ 93 ms per cycle <span class="tag tb">B</span></td><td class="n">32–40 tok/s <span class="tag tb">B</span></td></tr>
+      <tr><td>DSpine-class drafter (needs training for GLM)</td><td>Lossless</td><td>7 per step on code and math; a 16-token window touches about 60 experts per layer</td><td class="n">About 55 on code, about 30 on prose <span class="tag th">H</span></td></tr>
+    </tbody>
+  </table></div>
+  <p><b>What still limits after both.</b> At control-quality expert precision, the expert phase alone is 28–46 ms per cycle, even split perfectly between GPU and CPU. The fixed path is still about 35 ms with FP4 attention. 80 tok/s at A = 3–3.7 needs a cycle of 37–46 ms, which leaves almost nothing for experts. So 80 is not reachable by DFlash2, FP4 or both. Reaching it would take an architectural change in one of three directions:</p>
+  <ul>
+    <li>Fewer expert bytes per token at quality: fewer active experts, or sub-4-bit experts, with trained recovery. The earlier QAT pilot was no-go, and top-6 costs +0.06 untrained.</li>
+    <li>Overlapping the expert phase with the next layer's attention (expert deferral). This changes the model's computation and needs a quality test.</li>
+    <li>More memory bandwidth, which is excluded.</li>
+  </ul>
+  <p>125 tok/s is not reachable by any of these.</p>
+  <div class="verdict">
+    <p><b>Go / no-go.</b></p>
+    <ul>
+      <li><b>FP4 attention: go</b>, without training first. The required recovery is small (25–50%), so a training-free mix that keeps the most sensitive attention layers at FP8 and the rest at NVFP4 may fit the bar. That needs per-layer sensitivity runs on the Spark, and no Max-Q time. A QAD pilot is only needed if that fails.</li>
+      <li><b>DFlash2: defer.</b> It needs a port of the DFlash2-on-Spark patch overlay (a drafter KV group sharing the MLA pages). At control quality it adds about 10–25%, because larger verify windows touch many more experts.</li>
+      <li><b>Drafter training (DFlash2 or DSpine for GLM): no-go for now.</b> Most of the benefit is on code and math, and it still doesn't reach 80 on prose.</li>
+      <li><b>80 tok/s prose: no-go</b> under this architecture, with the bound above.</li>
+      <li><b>Highest-value next build:</b> alternative 1 (hot experts on the GPU at control-format precision, cold on the CPU). It is the one change that improves decode, cold prefill and the cached turn together at preserved quality.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
   <h2>A. Best-known working configuration</h2>
   <p>This is the fastest measured setup that meets the EXL3 quality baseline on our proxy eval: all routed experts run on the workstation CPU in Q4_K + imatrix (llama.cpp kernels, mailbox handoff); the Spark GPU runs FP8 attention, shared and dense weights; MTP with 3 draft tokens.</p>
   <div class="tbl"><table>
@@ -77,7 +117,7 @@ a { color: var(--accent); }
     <tbody>
       <tr><td>ΔNLL / KLD / same top token, balanced 7-domain eval</td><td class="n">+0.0069 / 0.030 / 94.8% <span class="tag tm">M</span></td><td class="n">+0.0148 / 0.042 / 94.0%</td><td>≤ control</td></tr>
       <tr><td>Per-domain</td><td colspan="2">Better than the control in all 7 domains (knowledge QA +0.023 vs +0.035; long context +0.005 vs +0.022) <span class="tag tm">M</span></td><td>≤ control</td></tr>
-      <tr><td>Hermes regression suite (280 items, user-facing)</td><td>running; scored against the control when done</td><td class="n">macro 0.865 [0.83, 0.90] <span class="tag tm">M</span></td><td>non-inferior</td></tr>
+      <tr><td>Hermes regression suite (280 items, user-facing)</td><td>Macro 0.895 against the control's 0.900 on the same items: difference −0.005 [−0.035, +0.025], non-inferior at a 0.05 margin. Long context not run; prose not yet judged <span class="tag tm">M</span></td><td class="n">macro 0.865 [0.83, 0.90] <span class="tag tm">M</span></td><td>non-inferior</td></tr>
       <tr><td>Decode, prose, single stream</td><td class="n">15.3–19.5 tok/s (3 runs) <span class="tag tm">M</span></td><td class="n">≈150–250 tok/s per request <span class="tag tm">M</span></td><td class="n">80 (125)</td></tr>
       <tr><td>Cold 45K first token</td><td class="n fail">994 s <span class="tag tm">M</span></td><td class="n">10.8 s</td><td class="n">≤ 10.8 s</td></tr>
       <tr><td>Cached 45K + 32 first token</td><td class="n fail">1.17 s <span class="tag tm">M</span></td><td class="n">0.16–0.2 s</td><td class="n">≤ 0.2 s</td></tr>
