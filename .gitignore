@@ -8,3 +8,6 @@ data/
 ops/local.env
 results/q1-expert-bits-raw/
 results/glm_mmid_perf_raw.txt
+
+# raw model answers from eval suites (kept outside the repo)
+results/**/answers_*.jsonl
