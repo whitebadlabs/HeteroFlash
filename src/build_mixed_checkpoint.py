@@ -80,7 +80,7 @@ def main():
     ap.add_argument("--shard-gb", type=float, default=4.0)
     ap.add_argument("--imatrix", default="")
     ap.add_argument("--threads", type=int, default=32)
-    ap.add_argument("--fixed", default="bf16", choices=["bf16", "fp8"],
+    ap.add_argument("--fixed", default="bf16", choices=["bf16", "fp8", "fp8_nvfp4attn"],
                     help="fp8: non-expert weights as in the NVIDIA reference recipe (MXFP8 1x32 for KDA q/k/v/o, dense MLP, "
                          "lm_head; FP8_PB_WO 128x128 for MLA projections and shared experts; small projections stay BF16)")
     a = ap.parse_args()
@@ -116,8 +116,12 @@ def main():
     quantized_layers = {}
 
     def fixed_recipe(name):
-        if a.fixed != "fp8" or not name.endswith(".weight"):
+        if a.fixed not in ("fp8", "fp8_nvfp4attn") or not name.endswith(".weight"):
             return None
+        if a.fixed == "fp8_nvfp4attn":
+            m0 = LAYER_RE.search(name)
+            if m0 and re.search(r"\.self_attn\.(q_proj|k_proj|v_proj|o_proj|q_a_proj|q_b_proj|kv_a_proj_with_mqa)\.weight$", name):
+                return "W4A16_NVFP4"
         mod = name[:-len(".weight")]
         if mod == "lm_head":
             return "MXFP8"
@@ -135,9 +139,44 @@ def main():
             return "MXFP8"                                   # KDA projections
         return None
 
+    E2M1 = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0])
+
+    def fused_group(mod):                                    # modules vLLM fuses must share weight_scale_2
+        m1 = re.match(r"(.*\.self_attn)\.(q_proj|k_proj|v_proj)$", mod)
+        if m1:
+            return m1.group(1) + ".qkv"
+        m2 = re.match(r"(.*\.self_attn)\.(q_a_proj|kv_a_proj_with_mqa)$", mod)
+        if m2:
+            return m2.group(1) + ".qkv_a"
+        return mod
+
+    group_amax = {}
+    if a.fixed == "fp8_nvfp4attn":                           # pre-pass: per fused-group amax for the global scale
+        for name, fn in idx.items():
+            if keep(name) and fixed_recipe(name) == "W4A16_NVFP4":
+                with safe_open(os.path.join(a.bf16, fn), "pt") as f:
+                    amax = float(f.get_tensor(name).float().abs().max())
+                g = fused_group(name[:-len(".weight")])
+                group_amax[g] = max(group_amax.get(g, 0.0), amax)
+
     def add_fixed(name, w, recipe):
         mod = name[:-len(".weight")]
         w = w.float()
+        if recipe == "W4A16_NVFP4":                          # ModelOpt NVFP4: 16-blocks, E4M3 block scales, fp32 global
+            O, I = w.shape
+            assert I % 16 == 0, (name, w.shape)
+            gs = group_amax[fused_group(mod)] / (448.0 * 6.0)            # weight_scale_2 = amax / 2688
+            blk = w.view(O, I // 16, 16)
+            bs = (blk.abs().amax(-1) / (6.0 * gs)).clamp(max=448.0).to(torch.float8_e4m3fn)
+            scale = bs.float().clamp_min(1e-12) * gs
+            y = (blk / scale.unsqueeze(-1)).clamp(-6.0, 6.0)
+            code = (y.abs().unsqueeze(-1) - E2M1).abs().argmin(-1).to(torch.uint8) | ((y < 0).to(torch.uint8) << 3)
+            code = code.view(O, I)
+            packed = (code[:, 0::2] | (code[:, 1::2] << 4)).contiguous()
+            add(name, packed); add(mod + ".weight_scale", bs.contiguous())
+            add(mod + ".weight_scale_2", torch.tensor([gs], dtype=torch.float32))
+            quantized_layers[mod] = {"quant_algo": "W4A16_NVFP4", "group_size": 16}
+            return
         if recipe == "MXFP8":                                # vLLM mxfp8_utils._mxfp8_e4m3_quantize_torch semantics
             O, I = w.shape
             blk = w.view(O, I // 32, 32)
