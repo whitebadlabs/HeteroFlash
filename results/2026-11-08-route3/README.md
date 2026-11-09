@@ -168,3 +168,20 @@ Layer 32: routed-output relative error against BF16 on 2,048 real captured token
 - Q4_K + imatrix roughly halves the error of int4 RTN. End to end in llama.cpp, Q4_K experts scored dNLL +0.0045, inside the control bar.
 - Next step: give `expert_server` a Q4_K path, ideally by calling llama.cpp's own CPU `vec_dot_q4_K_q8_K` kernels on the existing Q4_K-imatrix GGUF rows. Then rerun the all-on-CPU quality measurement.
 - Layer 43 was not run; its run was stopped to keep the CPU free for timing.
+
+## MTP speculative decoding works after the draft-backend fix [M]
+
+Config: `--speculative-config '{"method": "mtp", "num_speculative_tokens": 3, "attention_backend": "B12X"}'`, otherwise the FP8 config above (BF16 SSM state, prefix caching on, CUDA graphs). Root cause: `docs/RUNTIME_V2_VLLM_HOOKS.md`.
+
+| measure | FP8, no MTP | **FP8 + MTP-3** |
+|---|---|---|
+| decode (256 tokens, batch 1, essay prompt) | 17.3 tok/s | **25.7 tok/s** (1.48x) |
+| cold 45K TTFT | 39.8 s | 39.0 s |
+| cached 45K+32 | 0.452 s | 0.417 s |
+
+**Reading.**
+
+- The output stays correct.
+- No acceptance-rate breakdown is logged yet.
+- Next: sweep `num_speculative_tokens` (1/2/3/5), and re-measure once the experts are better than 2-bit, which should raise draft acceptance.
+- The fork bug (draft attention backend unconditionally reset to None) is confirmed by this run, so the three-line patch is a valid upstream fix.
