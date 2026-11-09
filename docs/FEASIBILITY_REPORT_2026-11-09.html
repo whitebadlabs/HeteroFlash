@@ -70,6 +70,44 @@ a { color: var(--accent); }
 </section>
 
 <section>
+  <h2>Status, 2026-11-09 evening: measured, blocked, next</h2>
+  <p class="lede">Scope as you set it: the engineering question only. No Qwen work, no new multi-bet roadmap. Every target is shown, including cold and cached TTFT.</p>
+  <h3>What we measured today</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Experiment</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Config B on the Hermes regression suite</td><td>Non-inferior to the EXL3 control: macro 0.895 against 0.900, difference −0.005 [−0.035, +0.025] <span class="tag tm">M</span>. Long context not run; prose not yet judged.</td></tr>
+      <tr><td>FP4 attention, quality by layer group</td><td>MLA layers +0.0063; early KDA layers (0–21) +0.0020; late KDA layers (22–44) +0.0081; lm_head +0.0025. B with all attention in NVFP4: +0.0173 against the +0.0148 bar <span class="tag tm">M</span>.</td></tr>
+      <tr><td>FP4 attention, real checkpoint (W4A16)</td><td>Decode +14–27% (cycle 88.8 → 76.8 ms); <b>cold 45K 37.9 → 49.1 s, worse</b>; cached 0.33 s once warm <span class="tag tm">M</span>.</td></tr>
+      <tr><td>MTP-3 acceptance and expert union</td><td>2.2 committed tokens per step on prose, 2.53 on the Hermes slice; 22.7 experts per layer per verify window <span class="tag tm">M</span>.</td></tr>
+      <tr><td>DFlash2 on our serving stack</td><td>Blocked. The draft cache misaligns the GLM MLA/indexer pages. The only working Spark setup patches a different vLLM base, so porting it is days of work, beyond the approved budget <span class="tag tm">M</span>.</td></tr>
+      <tr><td>DSpine (review only)</td><td>Same cache problem. On prose its 16-token window touches about 56 experts per layer, so it ties DFlash2 (about 25–37 tok/s modelled). It helps on agent and code workloads. Building it needs about $0.5–2k of rented compute plus 1–2 weeks of integration <span class="tag th">H</span>.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Which targets are blocked, and by what</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Target</th><th>Best at quality today</th><th>Blocked by</th><th>Experiment that could remove the block</th></tr></thead>
+    <tbody>
+      <tr><td>Quality ≤ control</td><td class="pass">Met by B: proxy +0.0069, Hermes suite non-inferior</td><td>—</td><td>Score the long-context and prose categories (needs a judge).</td></tr>
+      <tr><td>Decode 80 tok/s</td><td class="n">15–19.5 tok/s</td><td>Memory bandwidth <span class="tag tb">B</span>. Every verify cycle reads the fixed weights (about 35–56 ms) and then the experts (28–46 ms at control precision). The two are serial, because experts wait for attention. Drafters and FP4 together model to about 32–40 tok/s.</td><td><b>An expert-deferral quality test.</b> Let a layer's experts finish one layer late, so the expert phase overlaps the next layer's attention and the cycle becomes the longer of the two instead of their sum. Implementable in our remote hook, training-free, about 1 boot plus 45 min of eval. If it costs ≤ 0.005 nats, decode at quality models to about 45–60 tok/s (NVFP4 + MTP-3/DFlash). That is still short of 80, but it is the only lever that changes the cycle's structure.</td></tr>
+      <tr><td>Cold 45K ≤ 10.8 s</td><td class="n">994 s at quality; 38 s with 2-bit experts (fails quality)</td><td>Two constraints together. Prefill needs near-decode-precision experts (+0.014 nats if not) <span class="tag tm">M</span>, and all experts at about 3.5 bits don't fit on the Spark. GPU prefill is also compute-bound on 16-bit math <span class="tag tm">M</span>. The best published-kernel floor is 11–13 s <span class="tag tb">B</span>.</td><td><b>The hot-expert tier test.</b> Serve one MoE layer of EXL3-format 3.5-bit experts through the Spark's native b12x path and check bandwidth and correctness. If that works, the hottest 216 experts per layer (90% of routes) can be read at control precision on the GPU, which removes most of the prefill CPU work.</td></tr>
+      <tr><td>Cached 45K+32 ≤ 0.2 s</td><td class="n">0.33–0.35 s once warm; first hit 2.5–5.9 s</td><td>Recompute since the last KDA checkpoint on the first follow-up, plus about 250 ms of host-side idle time per request <span class="tag tm">M</span>. The bandwidth floor is about 0.16 s at 2-bit and about 0.25 s at control precision on the GPU alone <span class="tag tb">B</span>.</td><td><b>Software only:</b> checkpoint the KDA state at the end of each request, and remove the host overhead (profile shows the GPU idle 48% of the request). At control precision, 0.2 s also needs the GPU and CPU to read the experts for the 32 new tokens in parallel.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Is any of this novel?</h3>
+  <ul>
+    <li><b>Prefill precision changes answer quality</b> in heterogeneous MoE serving. A 2-bit-read context costs +0.014 nats on 4-bit answers. We found no prior report of this.</li>
+    <li><b>FP4 sensitivity in a hybrid linear-attention MoE is concentrated:</b> in the MLA layers and the late KDA layers. Early KDA layers quantize almost for free. This is a model-specific, measured finding.</li>
+    <li><b>Weight-only FP4 trades prefill for decode</b> on GB10: +14–27% decode, −30% cold prefill. That argues for precision chosen per phase: FP4 weights for decode, FP8 copies for prefill, costing about 3.4 GB of extra memory. As an engineering design this is new; as a concept it is close to existing phase-disaggregation work.</li>
+    <li><b>Not novel:</b> CPU/GPU expert splitting, popularity tiers, mailbox handoff, drafters (DFlash2/DSpine), expert deferral (KTransformers).</li>
+  </ul>
+  <div class="verdict">
+    <p><b>Recommendation: no Max-Q training.</b> Nothing measured shows that training would move the complete system to the targets. FP4 recovery training would buy about +15% decode and makes cold prefill worse; drafter training buys about +10–25% at best on prose.</p>
+    <p><b>Next experiment:</b> the hot-expert tier test (one MoE layer of 3.5-bit EXL3 experts on the Spark's native path). It is the only candidate that addresses cold prefill quality and the decode expert cost together. It needs no Max-Q time and no training.</p>
+  </div>
+</section>
+
+<section>
   <h2>Update: DFlash2 + FP4 go/no-go</h2>
   <p><b>Inputs (measured).</b></p>
   <ul>
