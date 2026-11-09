@@ -291,3 +291,34 @@ The measured 39 s for 2-bit experts (BF16-class math) is about 30% of the BF16 p
 
 - **The 10.8 s cold target is reachable on this GPU only with FP8/FP4 tensor-core expert math at good utilization.** It is a format plus kernel problem with little headroom, not impossible.
 - **The cached turn** (one pass over about 11 GB of weights plus attention over the 45K context) has a floor of roughly 0.05-0.1 s. The 0.2 s target is reachable, and the measured 0.42-0.54 s is overhead.
+
+## Is GPU-prefill + CPU-decode compatible with the passing quality? No [M]
+
+**Setup.** Position-split test (`HF_REMOTE_SPLIT_POS=1024`, remote hook).
+
+- In every 2048-token balanced-eval chunk, positions 0-1023 use the GPU's IQ2_XXS experts, which plays the role of the prompt prefill.
+- Positions 1024-2047 use the CPU's Q4_K + imatrix experts, which plays the role of the decode-time computation.
+- The scorer already scores only positions 1024-2047 (the llama.cpp convention), so this measures the quality of answer tokens given a context built with 2-bit experts.
+
+| config | dNLL | KLD | same-top |
+|---|---|---|---|
+| all experts Q4_K on CPU | +0.0069 +/- 0.0014 | 0.030 | 94.8% |
+| **2-bit prefill, Q4_K answer** | **+0.0209 +/- 0.0019** | **0.050** | **93.0%** |
+| all experts 2-bit | +0.182 | 0.239 | 84.9% |
+| control EXL3 3.5 bpw | +0.0148 | 0.042 | 94.0% |
+
+| domain | 2-bit prefill, Q4_K answer: dNLL | KLD |
+|---|---|---|
+| writing_chat | +0.0114 | 0.024 |
+| knowledge_qa | +0.0544 | 0.076 |
+| math | +0.0108 | 0.037 |
+| code | +0.0322 | 0.048 |
+| multilingual | +0.0075 | 0.053 |
+| instruction_following | -0.0038 | 0.060 |
+| long_context | +0.0363 | 0.054 |
+
+**Reading.**
+
+- Prefill precision matters for answer quality. A 2-bit-expert context costs +0.014 nats on Q4_K-computed answers, so the hybrid fails the control bar (1.41x the control's dNLL).
+- Knowledge and long-context answers suffer most.
+- Experts used during prefill therefore need near-decode precision, which brings back the Spark memory limit.
