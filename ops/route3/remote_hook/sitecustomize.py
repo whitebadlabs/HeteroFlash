@@ -217,6 +217,41 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
         R.select_experts, M.forward = select_experts, forward
         _st["done"] = True
 
+    # HF_REMOTE_EXPERT_MAP=1: skip the CPU's experts on the GPU entirely (b12x route_expert_map with -1 for remote ids,
+    # verified exact within accumulation noise, docs/RUNTIME_V2_VLLM_HOOKS.md) instead of computing them with weight 0.
+    _EMAP = os.environ.get("HF_REMOTE_EXPERT_MAP") == "1"
+    _em = {"done": not _EMAP, "maps": {}}
+
+    def _install_emap():
+        import sys
+        fm = sys.modules.get("b12x.moe.fused_moe")
+        if fm is None or not hasattr(fm, "bind") or not hasattr(fm, "ExecutionCapacity"):
+            return
+        import torch
+        cap_cls, orig_bind = fm.ExecutionCapacity, fm.bind
+
+        def ExecutionCapacity(*a, **k):
+            if not k.get("route_num_experts"):
+                k["route_num_experts"] = 288
+            return cap_cls(*a, **k)
+
+        def bind(plan, **k):
+            L = getattr(_tl, "layer", None)
+            dev = k["topk_ids"].device
+            key = (L if L in _plan_raw else None, dev)
+            m = _em["maps"].get(key)
+            if m is None:
+                g = torch.arange(288, dtype=torch.int32)
+                if key[0] is not None:
+                    rem = torch.zeros(288, dtype=torch.bool); rem[torch.tensor(_plan_raw[key[0]], dtype=torch.long)] = True
+                    g = torch.where(rem, torch.full_like(g, -1), g)
+                m = g.to(dev)
+                _em["maps"][key] = m
+            k["route_expert_map"] = m
+            return orig_bind(plan, **k)
+        fm.ExecutionCapacity, fm.bind = ExecutionCapacity, bind
+        _em["done"] = True
+
     _orig_import = builtins.__import__
 
     def _hook(name, *a, **k):
@@ -224,6 +259,11 @@ if os.environ.get("HF_REMOTE_EXPERTS"):
         if not _st["done"] and name.startswith("vllm"):
             try:
                 _install()
+            except Exception:  # noqa: BLE001
+                pass
+        if not _em["done"] and (name.startswith("b12x") or name.startswith("vllm")):
+            try:
+                _install_emap()
             except Exception:  # noqa: BLE001
                 pass
         return mod

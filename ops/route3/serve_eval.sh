@@ -49,7 +49,7 @@ if [ $MODE != quality ]; then
            -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR)
     if [ -n "${MB:-}" ]; then           # mailbox handoff: graph-capturable, CUDA graphs stay on
       mkdir -p /srv/vllm-research/work/cache/hf_ext
-      SARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext)
+      SARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext -e HF_REMOTE_EXPERT_MAP=${EMAP:-0})
     else
       SV=(--enforce-eager)              # python socket path needs eager mode
     fi
@@ -92,7 +92,7 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     RARGS=(-e PYTHONPATH=/rhook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/route3/remote_hook:/rhook:ro
            -e HF_REMOTE_EXPERTS=/rplan.json -v $REMOTE_PLAN:/rplan.json:ro -e HF_REMOTE_ADDR=$REMOTE_ADDR
            -e HF_REMOTE_STATS=/tr/remote_stats.jsonl)
-    [ -n "${MB:-}" ] && RARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext)
+    [ -n "${MB:-}" ] && RARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext -e HF_REMOTE_EXPERT_MAP=${EMAP:-0})
     rm -f $TR/remote_stats.jsonl
   fi
   if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json "${RARGS[@]}" -v $TR:/tr -v $H/src/trace_hook:/hook:ro \

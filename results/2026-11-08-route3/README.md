@@ -218,3 +218,18 @@ All routed experts on the CPU (Q4_K + imatrix), mailbox, CUDA graphs. Quality as
 | **3** | **19.49 tok/s** |
 
 **Best measured configuration inside the quality bar: 19.5 tok/s.**
+
+### Per-domain quality of the quality-passing config (CPU Q4_K experts) vs the control [M]
+
+| domain | ours dNLL | control dNLL | ours KLD | control KLD | ours same-top | control same-top |
+|---|---|---|---|---|---|---|
+| writing_chat | +0.0026 | +0.0037 | 0.0153 | 0.0166 | 0.953 | 0.949 |
+| knowledge_qa | +0.0227 | +0.0346 | 0.0442 | 0.0652 | 0.949 | 0.937 |
+| math | -0.0030 | +0.0073 | 0.0246 | 0.0312 | 0.957 | 0.951 |
+| code | +0.0175 | +0.0201 | 0.0300 | 0.0392 | 0.972 | 0.972 |
+| multilingual | -0.0002 | +0.0122 | 0.0311 | 0.0495 | 0.942 | 0.932 |
+| instruction_following | +0.0033 | +0.0054 | 0.0370 | 0.0525 | 0.924 | 0.911 |
+| long_context | +0.0051 | +0.0216 | 0.0271 | 0.0421 | 0.937 | 0.922 |
+| overall | +0.0069 | +0.0148 | 0.0300 | 0.0423 | 0.948 | 0.940 |
+
+**Reading.** Better than or equal to the control in every domain, on every metric.
