@@ -1,0 +1,364 @@
+INFO 11-08 15:58:22 [__init__.py:116] Registered model loader `<class 'b12x.integration.vllm.loader.B12xModelLoader'>` with load format `b12x`
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347] 
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347]        █     █     █▄   ▄█
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.1.dev21830+g8244d1c44.d20261015
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347]   █▄█▀ █     █     █     █  model   /m
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:347] 
+(APIServer pid=1) INFO 11-08 15:58:22 [api_utils.py:286] non-default args: {'model_tag': '/m', 'host': '0.0.0.0', 'port': 8095, 'model': '/m', 'trust_remote_code': True, 'dtype': 'bfloat16', 'max_model_len': 8192, 'quantization': 'exl3', 'enforce_eager': True, 'served_model_name': ['t'], 'hf_overrides': {'text_config': {'num_hidden_layers': 20, 'num_nextn_predict_layers': 0}}, 'block_size': 256, 'gpu_memory_utilization': 0.85, 'kv_cache_dtype': 'fp8_ds_mla', 'mamba_ssm_cache_dtype': 'bfloat16', 'max_num_batched_tokens': 2048, 'max_num_seqs': 1}
+(APIServer pid=1) WARNING 11-08 15:58:22 [envs.py:2630] Unknown vLLM environment variable detected: VLLM_BASE_DIR
+(APIServer pid=1) INFO 11-08 15:58:31 [model.py:693] Resolved architecture: Glm5NextForConditionalGeneration
+(APIServer pid=1) INFO 11-08 15:58:31 [model.py:2061] Using max model len 8192
+(APIServer pid=1) INFO 11-08 15:58:33 [cache.py:369] Using fp8_ds_mla data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+(APIServer pid=1) INFO 11-08 15:58:33 [config.py:1047] Mamba cache mode is set to 'align' for Glm5NextForConditionalGeneration by default when prefix caching is enabled
+(APIServer pid=1) INFO 11-08 15:58:33 [exl3.py:102] [mratsim's sm120-turbo r6] path-audit from-config: scope=None bits='mixed_k34_per_tensor' codebook='mcg' rank_sliced=absent r7_block=set glm53_unsliced=False
+(APIServer pid=1) WARNING 11-08 15:58:34 [vllm.py:1799] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(APIServer pid=1) INFO 11-08 15:58:34 [vllm.py:929] Auto-enabling VLLM_USE_BREAKABLE_CUDAGRAPH=1. Set VLLM_USE_BREAKABLE_CUDAGRAPH=0 to opt out.
+(APIServer pid=1) INFO 11-08 15:58:34 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(APIServer pid=1) INFO 11-08 15:58:34 [vllm.py:2032] Cudagraph is disabled under eager mode
+(APIServer pid=1) INFO 11-08 15:58:34 [compilation.py:336] Enabled custom fusions: norm_quant, act_quant
+(APIServer pid=1) [transformers] The following generation flags are not valid and may be ignored: ['top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+(APIServer pid=1) INFO 11-08 15:58:42 [base.py:261] Multi-modal warmup completed in 1.245s
+(APIServer pid=1) INFO 11-08 15:58:43 [base.py:261] Readonly multi-modal warmup completed in 1.431s
+(EngineCore pid=275) INFO 11-08 15:58:45 [__init__.py:116] Registered model loader `<class 'b12x.integration.vllm.loader.B12xModelLoader'>` with load format `b12x`
+(EngineCore pid=275) INFO 11-08 15:58:45 [core.py:124] Initializing a V1 LLM engine (v0.1.dev21830+g8244d1c44.d20261015) with config: model='/m', speculative_config=None, tokenizer='/m', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=8192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=exl3, quantization_config=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=fp8_ds_mla, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=t, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native']), enable_flashinfer_autotune=True, enable_b12x_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', sparse_indexer_topk_backend='auto', linear_backend='auto', linear_backend_per_quant=None)
+(EngineCore pid=275) INFO 11-08 15:58:52 [parallel_state.py:1909] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_26b1a2ada10b437c99e01bea630f6d44 backend=nccl
+(EngineCore pid=275) INFO 11-08 15:58:52 [parallel_state.py:2349] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, ETP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=275) INFO 11-08 15:58:52 [gpu_worker.py:480] Using V2 Model Runner
+(EngineCore pid=275) /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:1300: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:408.)
+(EngineCore pid=275)   return torch._C._cuda_getCurrentBlasHandle()
+(EngineCore pid=275) INFO 11-08 15:58:52 [model_runner.py:424] Loading model from scratch...
+(EngineCore pid=275) INFO 11-08 15:58:53 [cuda.py:611] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=275) INFO 11-08 15:58:53 [mm_encoder_attention.py:372] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=275) WARNING 11-08 15:58:53 [vllm.py:1799] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(EngineCore pid=275) INFO 11-08 15:58:53 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(EngineCore pid=275) INFO 11-08 15:58:53 [vllm.py:2032] Cudagraph is disabled under eager mode
+(EngineCore pid=275) INFO 11-08 15:58:53 [compilation.py:336] Enabled custom fusions: norm_quant, act_quant
+(EngineCore pid=275) INFO 11-08 15:58:53 [exl3.py:102] [mratsim's sm120-turbo r6] path-audit online-overlay: off (model_config.quantization_config is not a QuantizationConfigArgs overlay)
+(EngineCore pid=275) INFO 11-08 15:58:53 [exl3.py:102] [mratsim's sm120-turbo r6] path-audit linear-unquantized: UnquantizedLinearMethod prefix='language_model.model.layers.0.self_attn.in_proj_qkvgfab'
+(EngineCore pid=275) INFO 11-08 15:58:54 [cuda.py:552] Using FLASHINFER_MLA_SPARSE_SM120 attention backend out of potential backends: ['FLASHINFER_MLA_SPARSE_SM120'].
+(EngineCore pid=275) WARNING 11-08 15:58:54 [mla_attention.py:783] Sparse MLA layer has no dense-MHA prefill path; using the top-k MQA path only.
+(EngineCore pid=275) INFO 11-08 15:58:55 [deep_gemm.py:196] deep_gemm not found in site-packages, trying vendored vllm.third_party.deep_gemm
+(EngineCore pid=275) INFO 11-08 15:58:55 [deep_gemm.py:223] DeepGEMM PDL enabled on vllm.third_party.deep_gemm.
+(EngineCore pid=275) INFO 11-08 15:58:55 [deep_gemm.py:136] DeepGEMM E8M0 enabled on current platform.
+(EngineCore pid=275) INFO 11-08 15:58:55 [exl3.py:102] [mratsim's sm120-turbo r6] path-audit moe-exl3: Exl3MoEMethod prefix='language_model.model.layers.3.mlp.experts' r7_graph=False mixed=False
+(EngineCore pid=275) INFO 11-08 15:58:55 [weight_utils.py:1059] Filesystem type for checkpoints: EXT4. Checkpoint size: 145.44 GiB. Available RAM: 101.38 GiB.
+(EngineCore pid=275) INFO 11-08 15:58:55 [weight_utils.py:1089] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre) and the checkpoint size (145.44 GiB) exceeds 90% of available RAM (101.38 GiB).
+(EngineCore pid=275) Loading safetensors checkpoint shards:   0% Completed | 0/120 [00:00<?, ?it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   1% Completed | 1/120 [00:06<13:50,  6.98s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   2% Completed | 3/120 [00:07<03:36,  1.85s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   4% Completed | 5/120 [00:08<02:29,  1.30s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   6% Completed | 7/120 [00:10<02:07,  1.13s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   8% Completed | 9/120 [00:12<01:51,  1.00s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:   9% Completed | 11/120 [00:12<01:14,  1.47it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  10% Completed | 12/120 [00:13<01:30,  1.19it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  12% Completed | 14/120 [00:13<00:58,  1.81it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  12% Completed | 15/120 [00:15<01:17,  1.35it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  14% Completed | 17/120 [00:15<00:49,  2.07it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  16% Completed | 19/120 [00:17<01:03,  1.58it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  17% Completed | 20/120 [00:17<01:06,  1.51it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  18% Completed | 21/120 [00:18<01:09,  1.43it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  19% Completed | 23/120 [00:20<01:10,  1.37it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  22% Completed | 26/120 [00:21<01:00,  1.56it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  23% Completed | 28/120 [00:22<00:43,  2.12it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  24% Completed | 29/120 [00:26<01:54,  1.26s/it]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  27% Completed | 32/120 [00:27<01:04,  1.37it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  30% Completed | 36/120 [00:27<00:34,  2.43it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  34% Completed | 41/120 [00:27<00:18,  4.20it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  38% Completed | 46/120 [00:27<00:11,  6.49it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  42% Completed | 51/120 [00:27<00:07,  9.31it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  47% Completed | 56/120 [00:27<00:05, 12.76it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  50% Completed | 60/120 [00:29<00:11,  5.25it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  52% Completed | 63/120 [00:29<00:09,  6.14it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  55% Completed | 66/120 [00:29<00:07,  7.43it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  59% Completed | 71/120 [00:29<00:04, 10.84it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  64% Completed | 77/120 [00:30<00:02, 15.42it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  69% Completed | 83/120 [00:30<00:01, 20.53it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  73% Completed | 88/120 [00:30<00:01, 23.17it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  77% Completed | 92/120 [00:31<00:03,  7.56it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  80% Completed | 96/120 [00:32<00:02,  9.62it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  84% Completed | 101/120 [00:32<00:01, 12.80it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  88% Completed | 106/120 [00:32<00:00, 15.96it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  92% Completed | 110/120 [00:34<00:01,  6.30it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  94% Completed | 113/120 [00:35<00:01,  4.16it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  96% Completed | 115/120 [00:37<00:01,  2.68it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  98% Completed | 117/120 [00:39<00:01,  2.22it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards:  99% Completed | 119/120 [00:39<00:00,  2.71it/s]
+(EngineCore pid=275) Loading safetensors checkpoint shards: 100% Completed | 120/120 [00:47<00:00,  2.54it/s]
+(EngineCore pid=275) 
+(EngineCore pid=275) INFO 11-08 15:59:42 [default_loader.py:575] Loading weights took 47.31 seconds
+(EngineCore pid=275) INFO 11-08 16:00:00 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.3.mlp.experts: free=38.89GiB alloc=14.82GiB reserved=14.83GiB
+(EngineCore pid=275) INFO 11-08 16:00:00 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.3.mlp.experts: K3(117 gate/102 up/213 down), K4(171 gate/186 up/75 down)
+(EngineCore pid=275) INFO 11-08 16:00:00 [exl3.py:102] [mratsim's sm120-turbo r6] path-audit prepare-r7-fused: R7 fused B12X mixed-Trellis layer=language_model.model.layers.3.mlp.experts
+(EngineCore pid=275) INFO 11-08 16:00:17 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.4.mlp.experts: free=35.82GiB alloc=17.77GiB reserved=17.79GiB
+(EngineCore pid=275) INFO 11-08 16:00:17 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.4.mlp.experts: K3(146 gate/128 up/158 down), K4(142 gate/160 up/130 down)
+(EngineCore pid=275) INFO 11-08 16:00:34 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.5.mlp.experts: free=31.64GiB alloc=20.73GiB reserved=20.76GiB
+(EngineCore pid=275) INFO 11-08 16:00:34 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.5.mlp.experts: K3(152 gate/137 up/143 down), K4(136 gate/151 up/145 down)
+(EngineCore pid=275) INFO 11-08 16:00:51 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.6.mlp.experts: free=27.57GiB alloc=23.69GiB reserved=23.72GiB
+(EngineCore pid=275) INFO 11-08 16:00:51 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.6.mlp.experts: K3(143 gate/134 up/155 down), K4(145 gate/154 up/133 down)
+(EngineCore pid=275) INFO 11-08 16:01:09 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.7.mlp.experts: free=21.08GiB alloc=26.65GiB reserved=26.67GiB
+(EngineCore pid=275) INFO 11-08 16:01:09 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.7.mlp.experts: K3(154 gate/138 up/140 down), K4(134 gate/150 up/148 down)
+(EngineCore pid=275) INFO 11-08 16:01:21 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.8.mlp.experts: free=16.48GiB alloc=29.60GiB reserved=29.63GiB
+(EngineCore pid=275) INFO 11-08 16:01:21 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.8.mlp.experts: K3(153 gate/142 up/137 down), K4(135 gate/146 up/151 down)
+(EngineCore pid=275) INFO 11-08 16:01:38 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.9.mlp.experts: free=11.59GiB alloc=32.56GiB reserved=32.60GiB
+(EngineCore pid=275) INFO 11-08 16:01:38 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.9.mlp.experts: K3(161 gate/149 up/122 down), K4(127 gate/139 up/166 down)
+(EngineCore pid=275) INFO 11-08 16:01:55 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.10.mlp.experts: free=11.76GiB alloc=35.52GiB reserved=35.55GiB
+(EngineCore pid=275) INFO 11-08 16:01:55 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.10.mlp.experts: K3(158 gate/145 up/129 down), K4(130 gate/143 up/159 down)
+(EngineCore pid=275) INFO 11-08 16:02:12 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.11.mlp.experts: free=9.93GiB alloc=38.48GiB reserved=38.51GiB
+(EngineCore pid=275) INFO 11-08 16:02:12 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.11.mlp.experts: K3(167 gate/141 up/124 down), K4(121 gate/147 up/164 down)
+(EngineCore pid=275) INFO 11-08 16:02:28 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.12.mlp.experts: free=7.49GiB alloc=41.43GiB reserved=41.48GiB
+(EngineCore pid=275) INFO 11-08 16:02:28 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.12.mlp.experts: K3(180 gate/146 up/106 down), K4(108 gate/142 up/182 down)
+(EngineCore pid=275) INFO 11-08 16:02:42 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.13.mlp.experts: free=7.78GiB alloc=44.39GiB reserved=44.43GiB
+(EngineCore pid=275) INFO 11-08 16:02:42 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.13.mlp.experts: K3(183 gate/137 up/112 down), K4(105 gate/151 up/176 down)
+(EngineCore pid=275) INFO 11-08 16:02:55 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.14.mlp.experts: free=7.19GiB alloc=47.35GiB reserved=47.37GiB
+(EngineCore pid=275) INFO 11-08 16:02:55 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.14.mlp.experts: K3(177 gate/138 up/117 down), K4(111 gate/150 up/171 down)
+(EngineCore pid=275) INFO 11-08 16:03:07 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.15.mlp.experts: free=6.99GiB alloc=50.31GiB reserved=50.32GiB
+(EngineCore pid=275) INFO 11-08 16:03:07 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.15.mlp.experts: K3(167 gate/142 up/123 down), K4(121 gate/146 up/165 down)
+(EngineCore pid=275) INFO 11-08 16:03:26 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.16.mlp.experts: free=5.91GiB alloc=53.27GiB reserved=53.30GiB
+(EngineCore pid=275) INFO 11-08 16:03:26 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.16.mlp.experts: K3(175 gate/144 up/113 down), K4(113 gate/144 up/175 down)
+(EngineCore pid=275) INFO 11-08 16:03:39 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.17.mlp.experts: free=5.64GiB alloc=56.23GiB reserved=56.27GiB
+(EngineCore pid=275) INFO 11-08 16:03:39 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.17.mlp.experts: K3(184 gate/156 up/92 down), K4(104 gate/132 up/196 down)
+(EngineCore pid=275) INFO 11-08 16:03:52 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.18.mlp.experts: free=8.16GiB alloc=59.18GiB reserved=59.23GiB
+(EngineCore pid=275) INFO 11-08 16:03:52 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.18.mlp.experts: K3(195 gate/146 up/91 down), K4(93 gate/142 up/197 down)
+(EngineCore pid=275) INFO 11-08 16:04:08 [exl3.py:4737] [mratsim's sm120-turbo r6] R7 fused mem language_model.model.layers.19.mlp.experts: free=6.28GiB alloc=62.14GiB reserved=62.20GiB
+(EngineCore pid=275) INFO 11-08 16:04:08 [exl3.py:4752] [mratsim's sm120-turbo r6] R7 fused B12X MoE language_model.model.layers.19.mlp.experts: K3(174 gate/154 up/104 down), K4(114 gate/134 up/184 down)
+(EngineCore pid=275) INFO 11-08 16:04:08 [model_runner.py:456] Model loading took 62.26 GiB memory and 316.184692 seconds
+(EngineCore pid=275) INFO 11-08 16:04:09 [topk_topp_sampler.py:80] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=275) INFO 11-08 16:04:09 [interface.py:1051] Setting attention block size to 4608 tokens to ensure that attention page size is >= mamba page size.
+(EngineCore pid=275) INFO 11-08 16:04:09 [interface.py:1084] Padding mamba page size by 5.11% to ensure that mamba page size and attention page size are exactly equal.
+(EngineCore pid=275) INFO 11-08 16:04:09 [utils.py:407] Using BLNHC KV cache layout.
+(EngineCore pid=275) INFO 11-08 16:04:10 [b12x_prepare.py:573] b12x weights preparation uses 8 compiler workers
+b12x selecting norm.mhc: 0/3 ready, candidates 0/1 prepared, 0 measured, 1 cached, 0 compilations, 0:00
+b12x ready norm.mhc: 3/3 ready, candidates 0/1 prepared, 0 measured, 1 cached, 0 compilations, 0:00
+(EngineCore pid=275) INFO 11-08 16:04:12 [encoder_runner.py:131] Encoder cache will be initialized with a budget of 32242 tokens, and profiled with 1 video items of the maximum feature size.
+(EngineCore pid=275) INFO 11-08 16:04:24 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 117), (4, 186)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:24 [exl3.py:977] [mratsim's sm120-turbo r6] R7 fused MoE scratch arena (worst-case sized): capacity=32 block_m=8 topk=8 max_m_blocks=256
+(EngineCore pid=275) INFO 11-08 16:04:24 [exl3.py:977] [mratsim's sm120-turbo r6] R7 fused MoE scratch arena (worst-case sized): capacity=2048 block_m=64 topk=8 max_m_blocks=540
+(EngineCore pid=275) INFO 11-08 16:04:25 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=10
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=22
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 117), (4, 186)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 146), (4, 160)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 146), (4, 160)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 152), (4, 151)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 152), (4, 151)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 143), (4, 154)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 143), (4, 154)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 154), (4, 150)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 154), (4, 150)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 153), (4, 146)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 153), (4, 146)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 161), (4, 139)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 161), (4, 139)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 158), (4, 143)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 158), (4, 143)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 167), (4, 147)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 167), (4, 147)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 180), (4, 142)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 180), (4, 142)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 183), (4, 151)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 183), (4, 151)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 177), (4, 150)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 177), (4, 150)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 167), (4, 146)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 167), (4, 146)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 175), (4, 144)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 175), (4, 144)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 184), (4, 132)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 184), (4, 132)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 195), (4, 142)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 195), (4, 142)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:3902] [mratsim's sm120-turbo r6] EXL3 mixed Trellis prefill block policy: selected=64 configured=64 explicit=False shape=4096x2048 tiers=((3, 174), (4, 134)) topk=8 sm=12 tile=(128, 128, 32, 512)
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=32 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4138] [mratsim's sm120-turbo r6] EXL3 mixed Trellis route-pack warmup: capacity=2048 variants=0
+(EngineCore pid=275) INFO 11-08 16:04:27 [exl3.py:4149] [mratsim's sm120-turbo r6] EXL3 mixed Trellis runtime planned: tiers=((3, 174), (4, 134)) one-grid decode=32 one-grid prefill=2048/2048 block_m=64 buffers=13.5+504.1 MiB
+(EngineCore pid=275) INFO 11-08 16:04:29 [gpu_worker.py:755] Freed 0.01 GiB before KV cache sizing; non-torch profile increase is -1.22 GiB.
+(EngineCore pid=275) INFO 11-08 16:04:29 [gpu_worker.py:839] Available KV cache memory: 41.36 GiB
+(EngineCore pid=275) INFO 11-08 16:04:29 [kv_cache_utils.py:2850] GPU KV cache size: 729,336 tokens, Maximum concurrency for 8,192 tokens per request: 89.03x
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509] EngineCore failed to start.
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509] Traceback (most recent call last):
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1471, in run_engine_core
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     return func(*args, **kwargs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1228, in __init__
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     super().__init__(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 147, in __init__
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     return func(*args, **kwargs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 365, in _initialize_kv_caches
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     self.model_executor.initialize_from_config(kv_cache_configs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/abstract.py", line 170, in initialize_from_config
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     initialized: list[bool] = self.collective_rpc(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]                               ^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py", line 103, in collective_rpc
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     result = run_method(self.driver_worker, method, args, kwargs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/serial_utils.py", line 510, in run_method
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     return func(*args, **kwargs)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_worker.py", line 1001, in initialize_b12x_tuning_cache
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     return initialize_b12x_tuning_cache(self, kv_cache_configs[self.rank])
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/warmup/b12x_prepare.py", line 632, in initialize_b12x_tuning_cache
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     worker.model_runner.initialize_kv_cache(temporary, is_profiling=True)
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/model_runner.py", line 806, in initialize_kv_cache
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     kv_caches_dict = init_kv_cache(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]                      ^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/attn_utils.py", line 404, in init_kv_cache
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     kv_caches = allocate_kv_cache(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]                 ^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/utils.py", line 446, in allocate_kv_cache
+(EngineCore pid=275) Process EngineCore:
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     views = create_kv_cache_views(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]             ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/kv_cache_interface.py", line 384, in create_kv_cache_views
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509]     raise ValueError(
+(EngineCore pid=275) ERROR 11-08 16:04:29 [core.py:1509] ValueError: The resolved KV cache layout (BLNHC) does not store blocks as dense, unpadded pages (block stride 15114240 != page 3022848), so a manager block cannot be split into 18 kernel blocks of 256 tokens. Reduce --block-size to 256 or set VLLM_KV_CACHE_LAYOUT to a layer-compact layout (e.g. LBNHC).
+(EngineCore pid=275) Traceback (most recent call last):
+(EngineCore pid=275)   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=275)     self.run()
+(EngineCore pid=275)   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+(EngineCore pid=275)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1513, in run_engine_core
+(EngineCore pid=275)     raise e
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1471, in run_engine_core
+(EngineCore pid=275)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=275)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=275)     return func(*args, **kwargs)
+(EngineCore pid=275)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1228, in __init__
+(EngineCore pid=275)     super().__init__(
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 147, in __init__
+(EngineCore pid=275)     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=275)                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=275)     return func(*args, **kwargs)
+(EngineCore pid=275)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 365, in _initialize_kv_caches
+(EngineCore pid=275)     self.model_executor.initialize_from_config(kv_cache_configs)
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/abstract.py", line 170, in initialize_from_config
+(EngineCore pid=275)     initialized: list[bool] = self.collective_rpc(
+(EngineCore pid=275)                               ^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py", line 103, in collective_rpc
+(EngineCore pid=275)     result = run_method(self.driver_worker, method, args, kwargs)
+(EngineCore pid=275)              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/serial_utils.py", line 510, in run_method
+(EngineCore pid=275)     return func(*args, **kwargs)
+(EngineCore pid=275)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_worker.py", line 1001, in initialize_b12x_tuning_cache
+(EngineCore pid=275)     return initialize_b12x_tuning_cache(self, kv_cache_configs[self.rank])
+(EngineCore pid=275)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/warmup/b12x_prepare.py", line 632, in initialize_b12x_tuning_cache
+(EngineCore pid=275)     worker.model_runner.initialize_kv_cache(temporary, is_profiling=True)
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/model_runner.py", line 806, in initialize_kv_cache
+(EngineCore pid=275)     kv_caches_dict = init_kv_cache(
+(EngineCore pid=275)                      ^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/attn_utils.py", line 404, in init_kv_cache
+(EngineCore pid=275)     kv_caches = allocate_kv_cache(
+(EngineCore pid=275)                 ^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/utils.py", line 446, in allocate_kv_cache
+(EngineCore pid=275)     views = create_kv_cache_views(
+(EngineCore pid=275)             ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=275)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/kv_cache_interface.py", line 384, in create_kv_cache_views
+(EngineCore pid=275)     raise ValueError(
+(EngineCore pid=275) ValueError: The resolved KV cache layout (BLNHC) does not store blocks as dense, unpadded pages (block stride 15114240 != page 3022848), so a manager block cannot be split into 18 kernel blocks of 256 tokens. Reduce --block-size to 256 or set VLLM_KV_CACHE_LAYOUT to a layer-compact layout (e.g. LBNHC).
+[rank0]:[W1108 16:04:31.717040777 ProcessGroupNCCL.cpp:1624] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+(APIServer pid=1) INFO 11-08 16:04:34 [utils.py:632] [shutdown] Process manager: send sigterm to process EngineCore
+(APIServer pid=1) Traceback (most recent call last):
+(APIServer pid=1)   File "/usr/local/bin/vllm", line 10, in <module>
+(APIServer pid=1)     sys.exit(main())
+(APIServer pid=1)              ^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/main.py", line 106, in main
+(APIServer pid=1)     args.dispatch_function(args)
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/serve.py", line 184, in cmd
+(APIServer pid=1)     uvloop.run(run_server(args))
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 96, in run
+(APIServer pid=1)     return __asyncio.run(
+(APIServer pid=1)            ^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+(APIServer pid=1)     return runner.run(main)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+(APIServer pid=1)     return self._loop.run_until_complete(task)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "uvloop/loop.pyx", line 1515, in uvloop.loop.Loop.run_until_complete
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 48, in wrapper
+(APIServer pid=1)     return await main
+(APIServer pid=1)            ^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 176, in run_server
+(APIServer pid=1)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 190, in run_server_worker
+(APIServer pid=1)     async with build_async_engine_client(
+(APIServer pid=1)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1)     return await anext(self.gen)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 58, in build_async_engine_client
+(APIServer pid=1)     async with build_async_engine_client_from_engine_args(
+(APIServer pid=1)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1)     return await anext(self.gen)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 94, in build_async_engine_client_from_engine_args
+(APIServer pid=1)     async_llm = AsyncLLM.from_vllm_config(
+(APIServer pid=1)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/async_llm.py", line 238, in from_vllm_config
+(APIServer pid=1)     return cls(
+(APIServer pid=1)            ^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/async_llm.py", line 172, in __init__
+(APIServer pid=1)     self.engine_core = EngineCoreClient.make_async_mp_client(
+(APIServer pid=1)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(APIServer pid=1)     return func(*args, **kwargs)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 163, in make_async_mp_client
+(APIServer pid=1)     return AsyncMPClient(
+(APIServer pid=1)            ^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(APIServer pid=1)     return func(*args, **kwargs)
+(APIServer pid=1)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 1096, in __init__
+(APIServer pid=1)     super().__init__(
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 681, in __init__
+(APIServer pid=1)     with launch_core_engines(
+(APIServer pid=1)   File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+(APIServer pid=1)     next(self.gen)
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1253, in launch_core_engines
+(APIServer pid=1)     wait_for_engine_startup(
+(APIServer pid=1)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1333, in wait_for_engine_startup
+(APIServer pid=1)     raise RuntimeError(
+(APIServer pid=1) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
