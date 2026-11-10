@@ -8,7 +8,7 @@
 set -u
 M=$1; TAG=$2; MODE=${3:-both}
 H=/srv/vllm-research/work/HeteroFlash; IMG=${IMG:-local/hf-spark-native:1}
-OUT=$H/results/2026-11-08-route3; mkdir -p $OUT
+OUT=${HF_OUT:-$H/results/2026-11-08-route3}; mkdir -p $OUT
 TR=/srv/vllm-research/work/cache/route3_traces/$TAG
 REF=/srv/vllm-research/models/gguf/kld/base_q8_0_bal.kld
 t() { date -u +%H:%M:%SZ; }

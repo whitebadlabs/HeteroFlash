@@ -9,8 +9,9 @@
 #   status | log | results | list      read-only
 # Never stops or restarts other containers: refuses to start if any container is running.
 set -u
+export DOCKER_HOST=unix:///var/run/docker.sock   # system daemon holds the serving image (agents defaults to its rootless daemon)
 H=/srv/vllm-research/work/HeteroFlash; W=/srv/vllm-research/work/cache/codex_bench
-OUT=$H/results/2026-11-08-route3; LOCK=$W/lock; LOG=$W/current.log
+OUT=$W/out; LOCK=$W/lock; LOG=$W/current.log
 read -r -a A <<< "${SSH_ORIGINAL_COMMAND:-${*:-}}"
 cmd=${A[0]:-help}
 case "$cmd" in
@@ -34,7 +35,7 @@ tag="codex_${cfg}_mtp${n}_${kv}_v2r${v2}_$(date -u +%m%d%H%M)"
 echo "$tag" > $W/running
 setsid bash -c "
   cd $H
-  HF_WINDOW_OK=1 RESTART_QFN=0 SKIP_LONG=1 MTP_N=$n KV_LAYOUT=$kv V2RUNNER=$v2 timeout 3600 bash ops/route3/serve_eval.sh $M $tag mtp > $LOG 2>&1
+  HF_OUT=$OUT HF_WINDOW_OK=1 RESTART_QFN=0 SKIP_LONG=1 MTP_N=$n KV_LAYOUT=$kv V2RUNNER=$v2 timeout 3600 bash ops/route3/serve_eval.sh $M $tag mtp > $LOG 2>&1
   { echo \"config=$cfg mtp_n=$n kv=$kv v2runner=$v2\"; grep -h decode_tok_s $OUT/${tag}_mtp${n}_speed.txt 2>/dev/null || echo 'no result (see log)'; } > $W/$tag.result
   docker rm -f hf-r3 >/dev/null 2>&1; rm -f $W/running
 " 9>&- </dev/null >/dev/null 2>&1 &
