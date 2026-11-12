@@ -1,6 +1,7 @@
 #!/bin/bash
 # Route 3: serve a full BF16-derived MIXED_PRECISION checkpoint on the Spark (Spark-native vLLM + b12x) and measure it.
-#   serve_eval.sh MODEL_DIR TAG [speed|quality|both|mtp]   (mtp: speed only, MTP speculative decoding, MTP_N tokens)
+#   serve_eval.sh MODEL_DIR TAG [speed|quality|both|mtp|serve]   (mtp: speed only, MTP speculative decoding, MTP_N tokens;
+#   serve: start the MTP server with chat template + parsers on 127.0.0.1:8095 and leave it running)
 # speed:   CUDA graphs on, no hook; decode tok/s (256 tokens), cold 45K TTFT, cached 45K+32 turn (prefix cache).
 # quality: eager + logits hook; balanced eval (42 x 2048 tokens) scored against the Q8_0 BF16-proxy reference,
 #          same tokens and KLD definition as the EXL3 control measurement (src/control_kld.py).
@@ -34,7 +35,7 @@ start() {   # start <extra docker args> -- <extra vllm args>
 HFO=()
 [ -n "${NO_MTP:-}" ] && HFO=(--hf-overrides '{"text_config": {"num_nextn_predict_layers": 0}}')
 SPEC=()
-if [ $MODE = mtp ]; then
+if [ $MODE = mtp ] || [ $MODE = serve ]; then
   HFO=(); SPEC=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}, \"attention_backend\": \"B12X\"}")
   TAG=${TAG}_mtp${MTP_N:-3}
 fi
@@ -44,7 +45,7 @@ docker stop qfn >/dev/null 2>&1
 for i in $(seq 40); do [ "$(free -g | awk '/^Mem:/{print $7}')" -ge 100 ] && break; sleep 3; done
 echo "$(t) $TAG: mem before $(free -g | awk '/^Mem:/{print $3}') GiB used"
 if [ $MODE != quality ]; then
-  SARGS=(); SV=()
+  SARGS=(); SV=(); CHAT=()
   if [ -n "${EAGER:-}" ]; then SV=(--enforce-eager); fi
   if [ -n "${REMOTE_PLAN:-}" ]; then   # runtime-v2 decode speed: remote-expert hook, short prompts only
     SARGS=(-e PYTHONPATH=/rhook -v $H/ops/route3/remote_hook:/rhook:ro -e HF_REMOTE_EXPERTS=/rplan.json
@@ -56,7 +57,12 @@ if [ $MODE != quality ]; then
       SV=(--enforce-eager)              # python socket path needs eager mode
     fi
   fi
-  if start "${SARGS[@]}" -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}" "${SV[@]}" ${SPEED_EXTRA:-}; then
+  if [ $MODE = serve ]; then   # interactive: control chat template, GLM reasoning + tool-call parsers
+    SARGS+=(-v /srv/vllm-research/work/cache/control_chat_template.jinja:/tmpl.jinja:ro)
+    CHAT=(--reasoning-parser glm45 --tool-call-parser glm47 --enable-auto-tool-choice --chat-template /tmpl.jinja --default-chat-template-kwargs.reasoning_effort=high)
+  fi
+  if start "${SARGS[@]}" -- --max-model-len 65536 --max-num-batched-tokens 8192 "${SPEC[@]}" "${SV[@]}" "${CHAT[@]}" ${SPEED_EXTRA:-}; then
+    if [ $MODE = serve ]; then docker logs hf-r3 > $OUT/${TAG}_serve.log 2>&1; echo "$(t) SERVING on 127.0.0.1:8095"; exit 0; fi
     docker logs hf-r3 > $OUT/${TAG}_speed.log 2>&1
     echo "$(t) speed server healthy; mem $(free -g | awk '/^Mem:/{print $3}') GiB used"
     SKIP_LONG=${SKIP_LONG:-} python3 -I - <<'PY' | tee $OUT/${TAG}_speed.txt
