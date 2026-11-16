@@ -109,6 +109,55 @@ Not found (asked for, absent): measured Spark ib_write_lat, FP8/NVFP4-activation
   - An 8-CCD part is the only hardware lever that raises the decode ceiling inside the charter (R7, +18% [modeled]).
   - **Do not buy on spec:** first measure STREAM on a 64-core Zen 5 Threadripper PRO (cloud or borrowed).
 
+### C2. Cheapest link that still meets cold 45K ≤ 10.8 s (added after Carmen's 14:05 answer: no purchase for now unless streaming absolutely needs it)
+
+**Workload.**
+- The Spark keeps ~200 hot experts per layer resident in control format. The memory budget is ~89 GiB for experts [D, not boot-validated].
+- The other 88 per layer stream in per prefill as Q4_K: 52.3 GB per cold 45K prompt [D].
+- The stream must finish inside the GPU compute time it overlaps with. That compute is 11-13 s with best-published kernels, and ≤ 10.8 s only with NVFP4-activation expert kernels [D from V]. So the link must carry 52 GB in ≲ 10 s, about 5+ GB/s effective, and preferably with slack.
+
+**Workstation side.**
+- Board: ASUS Pro WS WRX90E-SAGE SE.
+- Onboard: Intel X710 2x10GBASE-T, one port on the direct 10G link, one on the LAN [M, lspci].
+- At least two PCIe slots are empty [M, sysfs]. Physical clearance beside the two dual-slot GPUs needs checking by hand.
+- Every candidate card below is PCIe Gen3 and fits a Gen5 x16/x8 slot.
+
+**Spark side.**
+- ConnectX-7 firmware lists 25/40/50/100GbE, with 50/100GbE in both NRZ and PAM4 modes [V, NVIDIA CX-7 firmware release notes].
+- Forum reports say a 100G QSFP28 DAC and a 40G link both came up on a Spark [V, forum anecdote].
+- No report pairs a Spark with a ConnectX-4 specifically.
+
+| Option | Card price [V, listings, Nov 2026, undated] | Effective GB/s [A] | Cold-set stream time [modeled] | Meets ≤ 10.8 s? |
+|---|---|---|---|---|
+| Existing 10 GbE | $0 | 1.15 [M] | 45.5 s | **No** |
+| ConnectX-4 Lx 25GbE | ~$30-60 (Carmen's figure; not re-checked) | ~2.9 | ~18 s | **No** |
+| ConnectX-3 Pro 40GbE (QSFP+) | price not found | ~4.4 | ~11.9 s | **No**: the stream alone exceeds 10.8 s |
+| ConnectX-4 Lx 50GbE (MCX4131A-GCAT) | ~$94-129 used | ~5.6 | ~9.3 s | Only on paper. No slack against 11-13 s compute, and 50G-CR2 interop with CX-7 is unverified. |
+| **ConnectX-4 100GbE (MCX416A-CCAT dual / MCX415A single)** | **~$150-270** (new-old-stock ~$150, used ~$185-270) | ~11 (PCIe Gen3 x16 ≈ 12.5 max; Spark rail ~109 Gbit/s [V]) | **~4.8 s** | **Yes**: off the critical path, with ~2x slack |
+| ConnectX-6 Dx 100GbE | ~$430-900 used | ~11 | ~4.8 s | Yes, at 2-5x the price |
+
+Cable: 1 m passive QSFP28 100G DAC (MCP1600-C001-compatible), ~$23-35 [V, Optcore / Naddod listings]. Passive copper is safer than optics on the Spark [V, forum].
+
+**Can more Spark-resident experts at lower precision avoid streaming?**
+- To fit all 12,096 experts in ~96 GB, prefill copies must average ≤ ~2.5-2.6 bpw [D].
+- Reading the prompt with 2-bit experts already costs +0.014 nats on the answers [M]. A ~2.6 bpw prefill copy is unmeasured; a linear interpolation [A] puts it near +0.008. Added to config B's +0.0069, that reaches the +0.0148 bar and leaves nothing for the decode-side FP4 mix.
+- It also costs decode about 25% [modeled]: the GPU's share of decode experts would have to come from those low-bit copies or move to the CPU.
+- **Verdict: not a reliable route to 10.8 s at control quality.** It can be measured cheaply (an IQ2_M/IQ2_S ~2.6 bpw GPU prefill copy with Q4_K CPU decode, as in config C). That test needs the workstation CPU to requantize from the BF16 GGUF, and is queued after the sweep.
+
+**Recommendation.**
+- **Buy:** one ConnectX-4 100GbE card (MCX416A-CCAT or MCX415A-CCAT) plus a 1 m QSFP28 passive DAC, about **$175-300 in total**.
+- **Modeled cold 45K TTFT:** 11-13 s with best-published kernels. ~10.8 s needs NVFP4-activation expert kernels as well. The link is then not on the critical path.
+- **Without a card,** the best modeled cold TTFT at control quality is ~45 s (10 GbE stream-bound).
+- **Not yet:** buy only after the Spark-only staging experiment (Bet 3, step 1) shows a one-layer staged prefill ≥ 120 TFLOPS. Until then the link is not the bottleneck.
+
+**Workstation CPU bandwidth (Carmen: Q3 yes, ≤ ~$20 rental).**
+- No hourly rental of a 64-core Threadripper PRO 9000WX was found.
+- The one bare-metal offer found (ip-projects.de, 9985WX) is €658/month with a setup fee for 1-month terms. Its example 64 GB RAM would not populate 8 channels anyway.
+- **Proposed instead, free:** once the workstation is free, measure read bandwidth pinned to 1, 2, 3 and 4 CCDs of the existing 9975WX.
+  - If bandwidth scales ~linearly per CCD (~62 GB/s each [D, 250/4]) and is not DRAM-saturated at 4 CCDs, an 8-CCD part should reach its DRAM limit. That is roughly 330-350 GB/s (85% of 410 GB/s spec) [A].
+  - If 4 CCDs already saturate, the upgrade buys nothing.
+- No rental is needed unless that result is ambiguous.
+
 ## D. Ranked bets
 
 Ranking = expected movement of a target × probability, per unit of cost. All throughput numbers are modeled from the rungs in `results/2026-11-16-cycle/gap_model.json` unless marked [M].
@@ -164,7 +213,7 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
   3. After purchase: the streamed-prefill prototype.
 - **Success:** a one-layer staged prefill ≥ 120 TFLOPS effective; a modeled full TTFT ≤ 13 s from measured per-layer parts.
 - **Budget:** ~2 days Spark; the purchase below.
-- **Approvals:** **yes, a hardware purchase**: ConnectX-6 Dx 100GbE (or CX-7) + QSFP DAC for the workstation, ~$450-1,400.
+- **Approvals:** a hardware purchase, **declined for now (2026-11-16)**. The cheapest adequate link is a ConnectX-4 100GbE card + QSFP28 DAC, ~$175-300 (section C2). It is requested only after step 1 shows the kernels make the link the bottleneck.
 
 ### Bet 4: Union-aware routing, so the model cooperates with the verify window
 
@@ -186,7 +235,10 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
   3. Only if the δ curve shows ≥ 25% union cut at ≤ +0.004 nats: a bounded router fine-tune.
 - **Success:** a Pareto point with U cut ≥ 25% at ≤ +0.004 nats.
 - **Budget:** step 1 is ~1 day Spark. Step 3 needs Max-Q GPU time beyond the approved QAT pilot, which is 5.31 of 8 GPU-h used and closed no-go.
-- **Approvals:** step 3 only, needs Carmen's explicit go.
+- **Approvals:** step 3 is **approved conditionally (Carmen, 2026-11-16)**.
+  - Condition: step 1 must show ≥ 25% fewer distinct experts per window at ≤ +0.004 nats.
+  - A protocol with a GPU-hour budget and a stop rule is pre-registered in docs/ before any training.
+  - It starts only after the workstation sweep ends and the workstation is declared free.
 
 ### Bet 5: Cached turn ≤ 0.2 s (software)
 
