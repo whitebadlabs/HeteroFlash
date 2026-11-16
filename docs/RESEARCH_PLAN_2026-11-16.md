@@ -261,6 +261,94 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
   - possibly the CPU bandwidth upgrade.
 - 125 tok/s is not reached by any modeled combination (needs ≤ 3.0-3.7 GB per committed token).
 
+## F. Evaluation design for the paper
+
+This is a research project aimed at a paper, not only an engineering target. The plan above is organised by targets. This section organises the same work by claims, benchmarks, baselines and ablations, so every result lands on a frontier and can be compared.
+
+### F1. Scientific question and candidate claims
+
+**Question (charter).** On the quality-latency frontier, does hardware-aware *joint* adaptation of MoE expert weights, precision and placement beat *independently* optimised compression plus scheduling?
+
+**Candidate primary claims.** Each is falsifiable, and each is tied to the bet that tests it.
+
+- **C1 (system, Bet 1).** On a unified-memory GPU plus a remote CPU over Ethernet, an exact per-layer split of both fixed and expert weights moves the decode frontier beyond any expert-only placement at equal quality. The two memory systems stream concurrently instead of in series.
+  - Test: measured tok/s at equal dNLL against the best expert-only split.
+- **C2 (model-system co-design, Bet 4).** Making routing aware of the speculative verify window (causal stickiness, then a trained router) cuts expert bytes per committed token at smaller quality cost than lowering expert precision for the same byte saving.
+  - Test: frontier of dNLL against bytes per committed token. Two curves share the axes: union-aware routing vs uniform or mixed lower-bit experts.
+  - This is the claim that answers the charter's question directly.
+- **C3 (precision as a phase constraint, measured).** The prompt must be read at near-decode expert precision.
+  - Measured: 2-bit prefill with 4-bit answers costs +0.014 nats (config C).
+  - Consequence: placement can't simply use low-bit prefill copies to save memory. This is the reason cold TTFT needs streamed weights (Bet 3, C2 of the link analysis).
+- **C4 (bound).** At batch 1, expert bytes per committed token barely amortise with speculation (measured unions U(4) = 22.7, U(8) = 38).
+  - Consequence: above ~40 tok/s on this hardware class, drafter quality matters less than routing locality.
+
+### F2. Benchmarks (fixed before final runs)
+
+**Quality**
+- **Balanced 7-domain eval:** dNLL, KLD and same-top-1 against the BF16 proxy (Q8_0), reported per domain.
+  - **Upgrade before the paper:** a BF16-logit reference on a subset, to bound the proxy's own error.
+  - Fix the eval-size resolution: SE ~0.004 nats at 40K tokens, so the confirmatory set is ~400K tokens.
+- **Task accuracy on a fixed suite:**
+  - the Hermes regression suite (280 items, already scored for control and B);
+  - plus public tasks with fixed prompts and seeds: GSM8K-style math, HumanEval/MBPP-style code, knowledge QA (MMLU-Pro subset), IFEval-style instruction following.
+- **Long-context quality at 45K:** a needle/retrieval set plus long-document QA at 16K/32K/45K. This is where prefill precision (C3) should show.
+
+**Latency (batch 1, single stream, fixed decoding settings)**
+- Decode tok/s, with p50/p95 ITL, committed tokens per cycle, and per-position acceptance, on prose, chat, code, reasoning and tool workloads (`ops/r16/cycle_client.py`).
+- Cold TTFT at 8K/16K/32K/45K.
+- Cached TTFT at 45K + {16, 32, 64, 128, 256}, with first-hit and warm cases reported separately (`src/ttft_bench.py`, `docs/TTFT_PROTOCOL.md`).
+- A sweep over context length for decode (KV/state growth).
+
+**Cost axes**
+- Bytes read per committed token, split by fixed, draft and expert terms, from headers plus measured unions (`src/cycle_bytes.py`).
+- Link bytes per token and per prefill, and link bandwidth used.
+- Energy per token (J): the Spark from its power telemetry, the workstation from the existing 5-minute GPU/CPU power log. Report only if the sampling resolution allows a per-run integral; otherwise mark it not measured.
+- Memory footprint per device.
+
+### F3. Baselines
+
+1. **Control:** the original GLM-5.3-Flash, EXL3 3.5 bpw, on 2x Max-Q with vLLM. This is the quality and latency reference (measured: 151 tok/s, 11.1 s cold, 0.156 s cached, dNLL +0.0148).
+2. **Initial deployment:** llama.cpp RPC (E2E-v0 over 1 GbE, E2E-v1 over 10 GbE), measured.
+3. **Independent compression plus default scheduling:** the best compression alone, deployed with the stock engine's own offload policy and no co-design. That means config A/B-style checkpoints under stock vLLM CPU offload, or llama.cpp `-ot` expert offload, on the same hardware.
+4. **Best published CPU-offload systems that can run the model:**
+   - KTransformers / SGLang-kt (supports CPU experts; check GLM-5.3-Flash support);
+   - llama.cpp/ik_llama.cpp with expert offload.
+   - All run local-CPU style: same box over PCIe is impossible here, so each runs with its CPU tier on the workstation, or is reported as not runnable with the reason.
+   - Remote-CPU support over Ethernet is itself part of what we compare.
+
+Community single-Spark checkpoints remain background only (charter); they are not baselines.
+
+### F4. Ablations (each contribution isolated, same checkpoint and settings)
+
+| Ablation | Off | On | Metric |
+|---|---|---|---|
+| Dual-memory split (C1) | expert-only split (fixed path on GPU) | exact fixed + expert split | tok/s and cycle anatomy at equal quality |
+| Link for the split | 10 GbE busy-poll (measured) | RDMA (if a link is ever bought), otherwise modeled only, labelled | cycle sync time |
+| Byte diet: draft head | full lm_head in drafts | FR-Spec draft head | acceptance, cycle ms |
+| Byte diet: FP4 mix | FP8 fixed | KDA 0-21 + lm_head NVFP4 | dNLL, cycle ms |
+| Byte diet: expert format | Q4_K everywhere | control-format GPU share + Q4_K CPU | dNLL, bytes per token |
+| Union-aware routing (C2) | stock | sticky β sweep; trained router | U4, dNLL frontier, acceptance |
+| Expert precision (C2 comparator) | 4-bit | 3-bit-class at the same byte saving | dNLL at equal bytes per token |
+| Prefill precision (C3) | prompt read at decode precision | prompt read with 2-bit / ~2.6-bit copies | per-domain dNLL, long-context accuracy |
+| Link speed for cold prefill | 10G measured | 25/50/100G modeled from measured per-layer parts; measured if hardware appears | cold TTFT, stream share |
+
+### F5. Reporting rules
+
+- **Frontiers, not single points.** Quality (dNLL / task score) against each latency axis, and against bytes per committed token. Every treatment is a curve where a knob exists: β, λ, precision mix, split fraction.
+- **Uncertainty.** Paired bootstrap 95% CIs over prompts (`src/paired_analysis.py`). Run-to-run spread for speed, with ≥ 3 boots per configuration (MTP decode has already shown 15.3-19.5 tok/s spread).
+- **Fixed seeds, fixed prompts, fixed decoding settings,** recorded with every result. Model revisions and checkpoint hashes are logged.
+- **Pre-registration.** Each confirmatory comparison gets a protocol in `docs/` before its runs, as the QAT pilot and the union-router pilot did. Exploratory runs are labelled exploratory.
+- **Labels.** Measured [M], derived [D], modeled, vendor-claimed [V]. Modeled numbers never appear in the results tables, only in a separate projections table.
+
+### F6. Results that matter even if negative
+
+- **The network is not the bottleneck at the expert-only structure:** 2-4% of the cycle (A2). This contradicts the common assumption that Ethernet-attached CPU tiers are latency-bound.
+- **125 tok/s is unreachable on this hardware class at control quality** (A4 bound), with the bound decomposed into measured terms.
+- **Speculation barely amortises expert bytes at batch 1** (C4). This explains why drafter gains reported on dense models don't transfer.
+- **Prefill precision constrains placement** (C3).
+- **Layer-local QAT recovers only 15-58% at 3 bits** (QAT pilot, measured), while end-to-end methods remain open.
+- **If union-aware routing fails** (no ≥ 25% union cut at ≤ +0.004 nats), that is a clean negative answer to the co-design question at this scale: compression and scheduling then can't be beaten by routing adaptation, and the paper reports where the frontier sits.
+
 ## E. Today's measurement (Bet 1, step 1): cycle anatomy of the fastest GPU-only runtime
 
 **Run.** 2026-11-16, Spark only, one boot.
