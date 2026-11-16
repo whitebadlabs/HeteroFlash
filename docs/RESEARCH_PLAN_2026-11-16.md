@@ -17,7 +17,7 @@ The README headline (6.46 tok/s, 838 s cold, 3.10 s cached) is the first llama.c
 | E2E-v0 | llama.cpp RPC, 1 GbE, Q4_K experts on layers 24-44 remote | 6.46 [M] | 838 s [M] | 3.10 s [M] | not measured |
 | E2E-v1 | direct 10 GbE link, GPU placement fixed | 10.5; 17.0 with MTP [M] | 223 s [M] | 0.68 s [M] | not measured |
 | Config A | own runtime (Spark-native vLLM), GPU-only, FP8 fixed weights, 2-bit experts, MTP-3 | 25.0-25.7 [M] | 37.9-39.0 s [M] | 0.35-0.42 s warm [M] | +0.182 (fails) [M] |
-| Config A, model runner V2 | same, V2 runner (delegated run, 2026-11-10, single run) | 34.79 [M] | not run | not run | +0.182 (fails) |
+| Config A, model runner V2 | same, V2 runner. 2026-11-10 delegated single run: 34.79. **Not reproduced on 2026-11-16** (section E). | 27.0-28.1 [M, 3 reps] | 41.6 s [M] | 0.37-0.40 s warm [M] | +0.182 (fails) |
 | Config B | all routed experts on the workstation CPU in Q4_K + imatrix, mailbox handoff, MTP-3 | 15.3-19.5 [M] | 994 s [M] | 1.17 s [M] | **+0.0069** (passes) [M] |
 | Config C | prompt read with GPU 2-bit experts, answer with CPU Q4_K | 15.3 [M] | 42.2 s [M] | 0.54 s [M] | +0.0209 (fails) [M] |
 
@@ -263,4 +263,44 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
 
 ## E. Today's measurement (Bet 1, step 1): cycle anatomy of the fastest GPU-only runtime
 
-RESULTS_PLACEHOLDER
+**Run.** 2026-11-16, Spark only, one boot.
+- Build: `full_iq2xxs_fp8` (FP8 fixed weights, IQ2_XXS experts, MTP layer kept). Settings: MTP-3, `VLLM_USE_V2_MODEL_RUNNER=1`, CUDA graphs, BLHNC KV layout.
+- Script: `ops/r16/cycle_anatomy.sh`. Raw data: `results/2026-11-16-cycle/v2_fp8_mtp3/client.jsonl`.
+- GPU-only diagnostic of the runtime; its quality fails the bar by construction.
+
+**Decode, with spec-decode counters per request [M]:**
+
+| Workload | tok/s | Committed per cycle | ms per cycle | Accept rate, positions 1/2/3 |
+|---|---|---|---|---|
+| Essay (serve_eval benchmark), rep 0/1/2 | 27.37 / 28.13 / 27.03 | 2.31 / 2.42 / 2.33 | 84.3 / 85.9 / 86.1 | ~0.71-0.77 / 0.40-0.45 / 0.16-0.20 |
+| Prose, 400 tokens | 25.59 | 2.25 | 88.3 | 0.68 / 0.37 / 0.20 |
+| Chat | 25.30 | 2.19 | 86.9 | 0.65 / 0.39 / 0.15 |
+| Code | 24.62 | 2.20 | 89.8 | 0.61 / 0.40 / 0.20 |
+| Reasoning | 28.06 | 2.49 | 89.1 | 0.66 / 0.49 / 0.34 |
+
+**Profiled 64-token decode: per-cycle GPU anatomy [M]** (`v2_fp8_mtp3_decode64_cycle.json`; 28 cycles, 2.25 committed per cycle).
+- **88.6 ms GPU-busy per cycle, 98% busy.** Runtime/host overhead is about 2%.
+- Dense GEMMs (verify fixed path + 3 draft passes): **58.6 ms**. Against the 11.8 GB header byte count that is **~201 GB/s** [D].
+- Routed-expert kernels: **32.0 ms**, against ~6.24 GB, i.e. **~195 GB/s** [D].
+- KDA, MLA/DSA, norms and sampling: about 5 ms in total.
+
+**Cold and cached [M]:**
+- Cold 45K: 41.6 s.
+- Cached 45K+32: 1.30 s (profiled), then 6.79, 0.40 and 0.37 s.
+  - The first unprofiled follow-up again recomputes from the last KDA block checkpoint, as on the V1 runner (5.2 s on 11-09).
+  - The profiled cached turn is GPU-busy only 36% of a 746 ms span; 179 ms of the 267 ms GPU time is the W4A16 MoE prefill kernel on the recomputed tail.
+
+**What this settles:**
+1. **The 58.5 ms fixed path is now measured, not inferred.** It was earlier inferred from a 34% MoE-share assumption; the measurement is 58.6 ms. Every term in the cycle runs at the GB10's streaming bandwidth.
+   - So no runtime trick on the GPU alone moves decode much: overhead is about 2%.
+   - Decode speed comes only from fewer bytes per committed token (Bets 2 and 4) or a second memory system reading in parallel (Bet 1).
+   - The gap model's GPU bandwidth of 0.208 TB/s matches the measured ~0.20.
+2. **The V2 runner does not change the ceiling.** Same essay benchmark: 27.0-28.1 tok/s today against 25.67 on V1 (11-08), a +5-10% runner effect.
+   - The 34.79 tok/s single run of 11-10 is not reproduced. It is treated as unreplicated and is not used for planning.
+3. **The cached-turn problem is unchanged.** Bet 5 remains a software fix: checkpoint the KDA state at request end, and remove host idle. Its first measurement on this build is next.
+4. **Implication for the bets.** Bet 1's case strengthens: the GPU half is purely bandwidth-bound, so every byte moved to the workstation's own memory comes off the critical path one for one. The draft path's 3 × 0.95 GB is measured inside the 58.6 ms, so Bet 2's draft diet is sized correctly.
+
+**Next (Spark, running):**
+- Bet 4 step 1, the training-free sticky-routing β sweep (`ops/r16/sticky_sweep.sh`): β ∈ {0, 0.05, 0.02, 0.1}, W = 3, on the balanced eval.
+- It reports dNLL against the Q8 proxy and the 4-token-window union, stock against sticky, per β.
+- The router pilot (`docs/UNION_ROUTER_PILOT_PROTOCOL.md`) starts only if the gate passes, and only after the workstation is free.
