@@ -1,0 +1,153 @@
+{
+ "ckpt": "full_iq2xxs_fp8",
+ "k_draft": 3,
+ "union_per_layer": 22.7,
+ "label": "bytes from safetensors headers [M]; read model per pass is stated in the docstring [model]",
+ "mla_layers": [
+  3,
+  7,
+  11,
+  15,
+  19,
+  23,
+  27,
+  31,
+  35,
+  39,
+  43,
+  45
+ ],
+ "n_moe_layers": 42,
+ "mean_routed_expert_MB": 6.488,
+ "stored_GB": {
+  "attn_o_or_kda": 5.684,
+  "dense_mlp": 0.467,
+  "dsa_indexer": 0.164,
+  "embeddings": 1.269,
+  "final_norm_other": 0.0,
+  "lm_head": 0.654,
+  "mhc": 0.071,
+  "mla_attn": 0.738,
+  "mtp:attn_o_or_kda": 0.067,
+  "mtp:dsa_indexer": 0.015,
+  "mtp:mla_attn": 0.067,
+  "mtp:norms": 0.0,
+  "mtp:other": 0.067,
+  "mtp:routed_experts": 1.869,
+  "mtp:router": 0.002,
+  "mtp:shared_experts": 0.025,
+  "norms": 0.001,
+  "other": 0.0,
+  "routed_experts": 78.48,
+  "router": 0.099,
+  "shared_experts": 1.057,
+  "vision": 1.127
+ },
+ "dtypes": {
+  "attn_o_or_kda": [
+   "BF16",
+   "F32",
+   "F8_E4M3",
+   "U8"
+  ],
+  "dense_mlp": [
+   "F8_E4M3",
+   "U8"
+  ],
+  "dsa_indexer": [
+   "BF16"
+  ],
+  "embeddings": [
+   "BF16"
+  ],
+  "final_norm_other": [
+   "BF16"
+  ],
+  "lm_head": [
+   "F8_E4M3",
+   "U8"
+  ],
+  "mhc": [
+   "BF16",
+   "F32"
+  ],
+  "mla_attn": [
+   "BF16",
+   "F32",
+   "F8_E4M3"
+  ],
+  "mtp:attn_o_or_kda": [
+   "F32",
+   "F8_E4M3"
+  ],
+  "mtp:dsa_indexer": [
+   "BF16"
+  ],
+  "mtp:mla_attn": [
+   "BF16",
+   "F32",
+   "F8_E4M3"
+  ],
+  "mtp:norms": [
+   "BF16"
+  ],
+  "mtp:other": [
+   "BF16"
+  ],
+  "mtp:routed_experts": [
+   "U8"
+  ],
+  "mtp:router": [
+   "BF16",
+   "F32"
+  ],
+  "mtp:shared_experts": [
+   "F32",
+   "F8_E4M3"
+  ],
+  "norms": [
+   "BF16"
+  ],
+  "routed_experts": [
+   "U8"
+  ],
+  "router": [
+   "BF16",
+   "F32"
+  ],
+  "shared_experts": [
+   "F32",
+   "F8_E4M3"
+  ],
+  "vision": [
+   "BF16"
+  ]
+ },
+ "verify_fixed_GB_by_component": {
+  "kda_attn": 4.946,
+  "mla_attn": 1.477,
+  "shared_experts": 1.057,
+  "lm_head": 0.654,
+  "dense_mlp": 0.467,
+  "dsa_indexer": 0.164,
+  "router": 0.099,
+  "mhc": 0.071,
+  "norms": 0.001,
+  "other": 0.0
+ },
+ "verify_fixed_GB": 8.936,
+ "verify_experts_GB": 6.186,
+ "draft_pass_GB": {
+  "mtp_nonexpert": 0.244,
+  "mtp_8_experts": 0.052,
+  "lm_head": 0.654,
+  "total": 0.95
+ },
+ "cycle_GB": 17.972,
+ "cycle_ms_at_GBps": {
+  "200": 89.9,
+  "222": 81.0,
+  "243": 74.0,
+  "273": 65.8
+ }
+}

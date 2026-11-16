@@ -1,0 +1,349 @@
+{
+ "inputs": {
+  "F_verify_fp8_GB": {
+   "value": 8.936,
+   "label": "M",
+   "source": "results/2026-11-16-cycle/bytes_full_iq2xxs_fp8_k3.json (safetensors headers)"
+  },
+  "draft_pass_GB": {
+   "value": 0.95,
+   "label": "M",
+   "source": "same; MTP non-expert 0.244 + 8 MTP experts 0.052 + lm_head 0.654"
+  },
+  "lm_head_GB": {
+   "value": 0.654,
+   "label": "M",
+   "source": "same"
+  },
+  "kda_0_21_GB": {
+   "value": 2.47,
+   "label": "D",
+   "source": "half of KDA attention bytes 4.946 (17 of 34 KDA layers are in 0-21)"
+  },
+  "q4k_expert_MB": {
+   "value": 14.16,
+   "label": "M",
+   "source": "GGUF tensor table"
+  },
+  "exl3_expert_MB": {
+   "value": 11.3,
+   "label": "M",
+   "source": "hottier README (control format)"
+  },
+  "U4": {
+   "value": 22.7,
+   "label": "M",
+   "source": "MTP-3 verify-window expert union, 31,416 windows"
+  },
+  "U8": {
+   "value": 38.0,
+   "label": "M",
+   "source": "8-token window union (committed windows; real verify windows may be larger)"
+  },
+  "A_mtp3_prose": {
+   "value": 2.217,
+   "label": "M",
+   "source": "audit mtp3_harness, prose"
+  },
+  "A_mtp3_hermes": {
+   "value": 2.532,
+   "label": "M",
+   "source": "audit Hermes slice"
+  },
+  "A_block_drafter": {
+   "value": 3.5,
+   "label": "A",
+   "source": "block drafter on prose; DFlash2 self-reports 3.68 with thinking on [V]"
+  },
+  "BWg": {
+   "value": 0.208,
+   "label": "D",
+   "source": "TB/s effective; 17.97 GB per V1 MTP-3 cycle / 86.4 ms (25.67 tok/s at A=2.217)"
+  },
+  "BWc_verify": {
+   "value": 0.17,
+   "label": "M",
+   "source": "TB/s; Q4_K expert server on 4-token windows, 165-175 GB/s"
+  },
+  "BWc_upgrade": {
+   "value": 0.25,
+   "label": "A",
+   "source": "TB/s; hypothetical 8-CCD Threadripper PRO; no measured STREAM found, spec peak 410 [V]"
+  },
+  "net_exchange_10g_ms": {
+   "value": 0.11,
+   "label": "M",
+   "source": "busy-poll mailbox network p50 at T=4 over 10 GbE"
+  },
+  "net_exchange_rdma_ms": {
+   "value": 0.015,
+   "label": "A",
+   "source": "RoCE small message; no Spark ib_write_lat found, one unverified 1.7 us report [V]"
+  },
+  "fr_spec_draft_head_frac": {
+   "value": 0.25,
+   "label": "V",
+   "source": "FR-Spec: draft lm_head compute -75%, verification uses full vocab (arXiv 2502.14856)"
+  },
+  "dflash_drafter_GB": {
+   "value": 1.7,
+   "label": "A",
+   "source": "FP8 block drafter read once per cycle"
+  }
+ },
+ "BWg_used": 0.208,
+ "decode_rungs_MODELED": [
+  {
+   "rung": "R0 config B: fixed on GPU, all experts on CPU (Q4_K), MTP-3, 10G [measured 15.3-19.5]",
+   "fixed_GB": 8.94,
+   "draft_GB": 2.85,
+   "experts_GB": 13.5,
+   "A": 2.217,
+   "mode": "cpu_experts",
+   "cycle_ms": 140.7,
+   "tok_s": 15.8,
+   "quality": "config B (+0.0069 [M])"
+  },
+  {
+   "rung": "R1 balanced expert split GPU/CPU, fixed path GPU only",
+   "fixed_GB": 8.94,
+   "draft_GB": 2.85,
+   "experts_GB": 13.5,
+   "A": 2.217,
+   "mode": "split_experts",
+   "cycle_ms": 97.0,
+   "tok_s": 22.9,
+   "quality": "config B (+0.0069 [M])"
+  },
+  {
+   "rung": "R2 Bet1 dual-memory exact split, 10G",
+   "fixed_GB": 8.94,
+   "draft_GB": 2.85,
+   "experts_GB": 13.5,
+   "A": 2.217,
+   "mode": "dual_memory",
+   "cycle_ms": 83.0,
+   "tok_s": 26.7,
+   "quality": "config B (+0.0069 [M])"
+  },
+  {
+   "rung": "R3 Bet1 dual-memory, RDMA link",
+   "fixed_GB": 8.94,
+   "draft_GB": 2.85,
+   "experts_GB": 13.5,
+   "A": 2.217,
+   "mode": "dual_memory",
+   "cycle_ms": 74.4,
+   "tok_s": 29.8,
+   "quality": "config B (+0.0069 [M])"
+  },
+  {
+   "rung": "R4 + draft diet (FR-Spec draft head)",
+   "fixed_GB": 8.94,
+   "draft_GB": 1.38,
+   "experts_GB": 13.5,
+   "A": 2.173,
+   "mode": "dual_memory",
+   "cycle_ms": 67.3,
+   "tok_s": 32.3,
+   "quality": "config B (+0.0069 [M]), lossless"
+  },
+  {
+   "rung": "R5 + training-free FP4 mix (KDA 0-21 + lm_head) + half the experts in control format",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.38,
+   "experts_GB": 12.14,
+   "A": 2.173,
+   "mode": "dual_memory",
+   "cycle_ms": 60.0,
+   "tok_s": 36.2,
+   "quality": "+0.0069 +0.0045 = +0.0114 if additive [D]; bar +0.0148"
+  },
+  {
+   "rung": "R5h same, Hermes-slice acceptance",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.38,
+   "experts_GB": 12.14,
+   "A": 2.481,
+   "mode": "dual_memory",
+   "cycle_ms": 60.0,
+   "tok_s": 41.4,
+   "quality": "as R5"
+  },
+  {
+   "rung": "R6 + block drafter A=3.5 (8-token window, U=38)",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.7,
+   "experts_GB": 20.32,
+   "A": 3.5,
+   "mode": "dual_memory",
+   "cycle_ms": 83.2,
+   "tok_s": 42.1,
+   "quality": "as R5; lossless"
+  },
+  {
+   "rung": "R7 + workstation CPU with 250 GB/s (hypothetical upgrade)",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.7,
+   "experts_GB": 20.32,
+   "A": 3.5,
+   "mode": "dual_memory",
+   "cycle_ms": 70.3,
+   "tok_s": 49.8,
+   "quality": "as R5"
+  },
+  {
+   "rung": "R8 + QAD: fixed weights NVFP4 except ~1.5 GB (needs Max-Q training)",
+   "fixed_GB": 5.56,
+   "draft_GB": 1.7,
+   "experts_GB": 20.32,
+   "A": 3.5,
+   "mode": "dual_memory",
+   "cycle_ms": 66.0,
+   "tok_s": 53.0,
+   "quality": "unknown; FP4-attention PTQ +0.0173 [M] needs 25-50% recovery"
+  },
+  {
+   "rung": "S  R5h with verify union U4=16.0 (union-aware routing, hypothetical)",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.38,
+   "experts_GB": 8.55,
+   "A": 2.481,
+   "mode": "dual_memory",
+   "cycle_ms": 50.5,
+   "tok_s": 49.1,
+   "quality": "unknown; must be measured"
+  },
+  {
+   "rung": "S  R8 stack with U8 scaled by 0.70",
+   "fixed_GB": 5.56,
+   "draft_GB": 1.7,
+   "experts_GB": 14.32,
+   "A": 3.5,
+   "mode": "dual_memory",
+   "cycle_ms": 52.9,
+   "tok_s": 66.1,
+   "quality": "unknown"
+  },
+  {
+   "rung": "S  R5h with verify union U4=12.0 (union-aware routing, hypothetical)",
+   "fixed_GB": 7.52,
+   "draft_GB": 1.38,
+   "experts_GB": 6.42,
+   "A": 2.481,
+   "mode": "dual_memory",
+   "cycle_ms": 44.8,
+   "tok_s": 55.3,
+   "quality": "unknown; must be measured"
+  },
+  {
+   "rung": "S  R8 stack with U8 scaled by 0.53",
+   "fixed_GB": 5.56,
+   "draft_GB": 1.7,
+   "experts_GB": 10.74,
+   "A": 3.5,
+   "mode": "dual_memory",
+   "cycle_ms": 45.1,
+   "tok_s": 77.6,
+   "quality": "unknown"
+  }
+ ],
+ "bytes_budget_for_targets": {
+  "BWc=0.17": {
+   "aggregate_GBps": 378,
+   "GB_per_committed_token_at_80": 4.72,
+   "GB_per_committed_token_at_125": 3.02
+  },
+  "BWc=0.25": {
+   "aggregate_GBps": 458,
+   "GB_per_committed_token_at_80": 5.72,
+   "GB_per_committed_token_at_125": 3.66
+  }
+ },
+ "cold_prefill_MODELED": {
+  "cold_set_GB_per_prefill_q4k": 52.3,
+  "rows": [
+   {
+    "link": "10GbE [M] 1.15 GB/s",
+    "compute": "today's BF16-math kernels [D]",
+    "stream_s": 45.5,
+    "ttft_s": [
+     45.5,
+     45.5
+    ]
+   },
+   {
+    "link": "10GbE [M] 1.15 GB/s",
+    "compute": "best published FP8/FP4 kernels [D from V]",
+    "stream_s": 45.5,
+    "ttft_s": [
+     45.5,
+     45.5
+    ]
+   },
+   {
+    "link": "10GbE [M] 1.15 GB/s",
+    "compute": "+ NVFP4 non-expert [D from V]",
+    "stream_s": 45.5,
+    "ttft_s": [
+     45.5,
+     45.5
+    ]
+   },
+   {
+    "link": "1x100G RoCE [V ~109 Gbit/s] ~11 GB/s",
+    "compute": "today's BF16-math kernels [D]",
+    "stream_s": 4.8,
+    "ttft_s": [
+     18,
+     20
+    ]
+   },
+   {
+    "link": "1x100G RoCE [V ~109 Gbit/s] ~11 GB/s",
+    "compute": "best published FP8/FP4 kernels [D from V]",
+    "stream_s": 4.8,
+    "ttft_s": [
+     11,
+     13
+    ]
+   },
+   {
+    "link": "1x100G RoCE [V ~109 Gbit/s] ~11 GB/s",
+    "compute": "+ NVFP4 non-expert [D from V]",
+    "stream_s": 4.8,
+    "ttft_s": [
+     11,
+     11.5
+    ]
+   },
+   {
+    "link": "2x100G both rails [V 185-190 Gbit/s] ~22 GB/s",
+    "compute": "today's BF16-math kernels [D]",
+    "stream_s": 2.4,
+    "ttft_s": [
+     18,
+     20
+    ]
+   },
+   {
+    "link": "2x100G both rails [V 185-190 Gbit/s] ~22 GB/s",
+    "compute": "best published FP8/FP4 kernels [D from V]",
+    "stream_s": 2.4,
+    "ttft_s": [
+     11,
+     13
+    ]
+   },
+   {
+    "link": "2x100G both rails [V 185-190 Gbit/s] ~22 GB/s",
+    "compute": "+ NVFP4 non-expert [D from V]",
+    "stream_s": 2.4,
+    "ttft_s": [
+     11,
+     11.5
+    ]
+   }
+  ]
+ }
+}
