@@ -1,0 +1,142 @@
+{
+ "trace": "dp0_pp0_tp0_dcp0_ep0_rank0.1794867019640278986.pt.trace.json.gz",
+ "cycles": 28.0,
+ "span_ms": 2534.6,
+ "gpu_busy_ms": 2479.8,
+ "busy_frac": 0.978,
+ "ms_per_cycle_wall": 90.52,
+ "ms_per_cycle_busy": 88.57,
+ "ms_per_cycle_by_cat": {
+  "dense_gemm": 58.58,
+  "moe_experts": 32.0,
+  "kda_linear_attn": 1.54,
+  "attn_mla_dsa": 1.25,
+  "norm_act_elem": 1.17,
+  "other": 1.14,
+  "sample_logits": 0.02
+ },
+ "top_kernels": {
+  "norm_act_elem": [
+   [
+    "void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bfloat162,",
+    0.478
+   ],
+   [
+    "void at::native::vectorized_elementwise_kernel<4, at::native",
+    0.169
+   ],
+   [
+    "void at::native::index_elementwise_kernel<128, 4, at::native",
+    0.157
+   ],
+   [
+    "void vllm::rms_norm_kernel<c10::BFloat16, 8, 2, true>(c10::B",
+    0.082
+   ]
+  ],
+  "other": [
+   [
+    "void per_token_group_quant_8bit_kernel<c10::BFloat16, c10::F",
+    0.884
+   ],
+   [
+    "_decode_update_kernel",
+    0.089
+   ],
+   [
+    "memcpy32_post",
+    0.027
+   ],
+   [
+    "_prepare_c4_decode_metadata_kernel",
+    0.026
+   ]
+  ],
+  "sample_logits": [
+   [
+    "_compute_local_logits_stats_kernel",
+    0.012
+   ],
+   [
+    "_resample_kernel",
+    0.003
+   ],
+   [
+    "_get_num_sampled_and_rejected_kernel",
+    0.003
+   ],
+   [
+    "_combine_sampled_and_draft_tokens_kernel",
+    0.002
+   ]
+  ],
+  "dense_gemm": [
+   [
+    "kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKernel_obje",
+    35.228
+   ],
+   [
+    "kernel_cutlass_kernel_b12xgemmblockscaled_block_fp8_gemvBloc",
+    11.882
+   ],
+   [
+    "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616g",
+    7.283
+   ],
+   [
+    "kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPostPrePartialKe",
+    1.087
+   ]
+  ],
+  "attn_mla_dsa": [
+   [
+    "_pack_topk_routes_sort_kernel",
+    0.53
+   ],
+   [
+    "_pack_topk_routes_small_prefix_kernel",
+    0.325
+   ],
+   [
+    "kernel_cutlass_kernel_pertok_b12xattention_sharedmlakernelUn",
+    0.166
+   ],
+   [
+    "kernel_cutlass_kernel_b12xattentiondsa_indexerfused_indexerD",
+    0.082
+   ]
+  ],
+  "moe_experts": [
+   [
+    "kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kernelW4A16F",
+    31.675
+   ],
+   [
+    "void vllm::moe::single_group_topk::detail::single_group_topk",
+    0.223
+   ],
+   [
+    "kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kernelW4A16T",
+    0.103
+   ]
+  ],
+  "kda_linear_attn": [
+   [
+    "_packed_sequential_kda_decode_kernel",
+    1.137
+   ],
+   [
+    "_causal_conv1d_update_kernel",
+    0.293
+   ],
+   [
+    "_gated_rmsnorm_kernel",
+    0.074
+   ],
+   [
+    "checkpoint_mamba_states_kernel",
+    0.029
+   ]
+  ]
+ }
+}

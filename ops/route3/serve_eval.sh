@@ -103,6 +103,11 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     [ -n "${MB:-}" ] && RARGS+=(-e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext -e HF_REMOTE_EXPERT_MAP=${EMAP:-0} -e HF_REMOTE_MAX_T=${MAX_T:-0} -e HF_REMOTE_SPLIT_POS=${SPLIT_POS:-0})
     rm -f $TR/remote_stats.jsonl
   fi
+  if [ -n "${STICKY_BETA:-}" ]; then   # Bet 4 step 1 (2026-11-16): causal window-sticky routing, chained before the logits hook
+    RARGS=(-e PYTHONPATH=/shook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/r16/sticky_hook:/shook:ro
+           -e HF_STICKY_BETA=$STICKY_BETA -e HF_STICKY_W=${STICKY_W:-3} -e HF_STICKY_STATS=/tr/sticky_stats.json -e HF_FQ_NO_RESTORE=1)
+    rm -f $TR/sticky_stats.json
+  fi
   if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json "${RARGS[@]}" -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
        -- --enforce-eager --max-model-len 4096 --max-num-batched-tokens 2048; then
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1
@@ -113,6 +118,7 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     docker rm -f hf-r3 >/dev/null 2>&1
     echo "$(t) logits files: $(ls $TR/raw/logits_*.npy 2>/dev/null | wc -l)"
     [ -s $TR/remote_stats.jsonl ] && { tail -1 $TR/remote_stats.jsonl; cp $TR/remote_stats.jsonl $OUT/${TAG}_remote_stats.jsonl; }
+    [ -s $TR/sticky_stats.json ] && { cat $TR/sticky_stats.json; echo; cp $TR/sticky_stats.json $OUT/${TAG}_sticky_stats.json; }
     docker run --rm -v $H:/h -v $TR:/tr -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG -I /h/src/control_kld.py compare \
       /ref/$(basename $REF) /tr/raw /h/data/q_eval_balanced_v1.manifest.json /h/results/2026-11-08-route3/${TAG}_vs_q8_bal.json 2>&1 | tail -3
   else
