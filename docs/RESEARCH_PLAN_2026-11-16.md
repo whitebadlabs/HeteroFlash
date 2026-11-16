@@ -227,7 +227,7 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
 - **Expected:**
   - U4 22.7 → 16 lifts the R5h rung from ~41 to ~49 tok/s [modeled];
   - with the full stack (R8) and U scaled by 0.53, ~78 tok/s [modeled].
-  - **This is the only modeled path that reaches the 80 goal.**
+  - Status 2026-11-16: the training-free step **failed its gate** (E2).
 - **Changes:** the expert term.
 - **Experiments:**
   1. Spark-only: δ sweep of window-sticky routing on the GPU-only build. Measure U per window (the union hook exists) and dNLL vs its own baseline.
@@ -255,7 +255,7 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
 
 - **Without training or purchases (Bets 1, 2, 5):** decode ~36 prose / ~41 Hermes; cached ~0.2 s; cold ~18-20 s (needs Bet 3's kernels, but not the link, for the resident part).
 - **With the link (Bet 3):** cold 11-13 s.
-- **80 tok/s needs Bet 4 to work**, and likely also:
+- **80 tok/s:** the training-free form of Bet 4 failed its gate (E2), so no measured path reaches 80 yet. It would need a trained union-aware router (not triggered by the pre-registered gate) or a larger expert-byte cut, together with:
   - fixed-path NVFP4 via QAD (Max-Q training);
   - a block drafter;
   - possibly the CPU bandwidth upgrade.
@@ -388,7 +388,40 @@ Community single-Spark checkpoints remain background only (charter); they are no
 3. **The cached-turn problem is unchanged.** Bet 5 remains a software fix: checkpoint the KDA state at request end, and remove host idle. Its first measurement on this build is next.
 4. **Implication for the bets.** Bet 1's case strengthens: the GPU half is purely bandwidth-bound, so every byte moved to the workstation's own memory comes off the critical path one for one. The draft path's 3 × 0.95 GB is measured inside the 58.6 ms, so Bet 2's draft diet is sized correctly.
 
-**Next (Spark, running):**
-- Bet 4 step 1, the training-free sticky-routing β sweep (`ops/r16/sticky_sweep.sh`): β ∈ {0, 0.05, 0.02, 0.1}, W = 3, on the balanced eval.
-- It reports dNLL against the Q8 proxy and the 4-token-window union, stock against sticky, per β.
-- The router pilot (`docs/UNION_ROUTER_PILOT_PROTOCOL.md`) starts only if the gate passes, and only after the workstation is free.
+### E2. Bet 4 step 1: training-free causal window-sticky routing [M]
+
+**Setup.**
+- Build and runner: the same GPU-only FP8 build, run eagerly through the quality pipeline.
+- Hook: `ops/r16/sticky_hook`, chained before the logits capture.
+- Eval: balanced eval, 41,943 tokens, scored against the Q8_0 BF16 proxy.
+- Routing change: token i gets a bonus β for experts the previous W = 3 tokens picked under stock routing. It is causal and non-recursive.
+- U4 = distinct experts per 4-token window, measured over the eval prefill.
+- Summary file: `results/2026-11-16-cycle/sticky/sticky_sweep_summary.json`.
+
+| β | U4 stock → sticky | Union cut | Picks changed | dNLL (SE) | Δ vs β = 0 | KLD | Same top-1 |
+|---|---|---|---|---|---|---|---|
+| 0 (control) | 21.85 → 21.85 | 0% | 0% | +0.1832 (0.0042) | 0 | 0.239 | 84.9% |
+| 0.02 | 21.85 → 20.00 | 8.5% | 10.1% | +0.1859 (0.0042) | +0.0027 | 0.242 | 84.7% |
+| 0.05 | 21.87 → 18.06 | 17.4% | 22.2% | +0.1972 (0.0044) | +0.0140 | 0.254 | 84.3% |
+| 0.10 | 21.89 → 16.53 | 24.5% | 33.8% | +0.2226 (0.0046) | +0.0394 | 0.281 | 83.4% |
+
+- **Hook validity.** β = 0 reproduces the stock build's +0.182 [M, 11-08] with 0 changed picks.
+- **Gate (pre-registered): ≥ 25% union cut at ≤ +0.004 nats. NOT MET.**
+  - At +0.0027 the cut is only 8.5%.
+  - A ~25% cut costs about +0.039, roughly 10x the allowance.
+  - So the bounded router pilot is **not triggered**, per `docs/UNION_ROUTER_PILOT_PROTOCOL.md`.
+- **Caveats.**
+  - The costs are relative to a 2-bit-expert build; the cost on config B is unmeasured.
+  - SEs are per configuration (unpaired), so the small-β difference is near resolution.
+  - A constant bonus is the crudest form of union-awareness. A trained router could sit on a better curve, but this result gives no evidence that it would.
+- **Comparator for claim C2 (from existing measurements).**
+  - IQ3_XXS PTQ cuts expert bytes ~35% (4.5 → 3.06 bpw) at about +0.05 nats on config B (≈ +0.00118 per layer × 42 [M, QAT addendum]).
+  - Training-free stickiness cuts ~25% for +0.039 here, a similar cost per byte saved.
+  - **The training-free form is not better than lowering precision.** That is an informative negative for the co-design claim at the training-free level.
+- **Modeled decode effect at the allowed quality cost** (8.5% union cut): about +2 tok/s on the R5h rung (~41 → ~43). Bet 4 drops from "the only path to 80" to unproven. 80 tok/s at control quality now has no modeled training-free path.
+
+**Next:**
+- **Bet 5 (Spark):** KDA checkpoint at request end, plus host-idle removal on the cached turn.
+- **Bet 2 (Spark):** FR-Spec draft head.
+- **Bet 1 workstation microbenchmarks:** when the workstation is free.
+- **Per-CCD bandwidth on the workstation's own CPU:** replaces the cloud rental.

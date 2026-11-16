@@ -1,0 +1,8 @@
+{"label": "[M] GPU-only full_iq2xxs_fp8 build (diagnostic; quality relative to its own beta=0), balanced eval 41,943 tokens vs Q8_0 BF16 proxy; causal window-sticky routing W=3; U4 = distinct experts per 4-token window (stride 4) over eval prefill",
+ "rows": [
+  {"beta": 0.0,  "U4_stock": 21.847, "U4_sticky": 21.847, "U4_ratio": 1.000, "changed_pick_frac": 0.000, "dnll": 0.1832, "dnll_se": 0.0042, "kld": 0.2385, "same_top": 0.8487, "d_dnll_vs_beta0": 0.0},
+  {"beta": 0.02, "U4_stock": 21.848, "U4_sticky": 19.999, "U4_ratio": 0.915, "changed_pick_frac": 0.101, "dnll": 0.1859, "dnll_se": 0.0042, "kld": 0.2421, "same_top": 0.8470, "d_dnll_vs_beta0": 0.0027},
+  {"beta": 0.05, "U4_stock": 21.865, "U4_sticky": 18.064, "U4_ratio": 0.826, "changed_pick_frac": 0.222, "dnll": 0.1972, "dnll_se": 0.0044, "kld": 0.2541, "same_top": 0.8432, "d_dnll_vs_beta0": 0.0140},
+  {"beta": 0.1,  "U4_stock": 21.892, "U4_sticky": 16.527, "U4_ratio": 0.755, "changed_pick_frac": 0.338, "dnll": 0.2226, "dnll_se": 0.0046, "kld": 0.2814, "same_top": 0.8335, "d_dnll_vs_beta0": 0.0394, "note": "totals from the run log; vs_q8 json lost to a full disk"}],
+ "gate": ">=25% U4 cut at <= +0.004 nats: NOT MET (at +0.0027 the cut is 8.5%; 24.5% costs +0.039)",
+ "se_note": "dnll_se is per-config, unpaired; the paired difference SE is smaller but not computed here"}

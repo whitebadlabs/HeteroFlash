@@ -1,0 +1,10 @@
+22:47:01Z r16_sticky_b0.02_w3: mem before 8 GiB used
+22:58:04Z quality server healthy; scoring
+{"chunk": 39, "prompt_tokens": 2048}
+{"chunk": 40, "prompt_tokens": 2048}
+23:02:02Z logits files: 82
+{"beta": 0.02, "W": 3, "calls": 1800, "windows4": 900096, "U4_stock": 21.848, "U4_sticky": 19.999, "U4_ratio": 0.9154, "changed_pick_frac": 0.1006}
+{"chunk": 39, "domain": "long_context", "kld": 0.3179941177368164, "dnll": 0.2644999921321869}
+{"chunk": 40, "domain": "long_context", "kld": 0.36387836933135986, "dnll": 0.25186872482299805}
+{"tokens": 41943, "kld_mean": 0.2421126663684845, "kld_p99": 3.0906858444213867, "dnll_mean": 0.18585912883281708, "dnll_se": 0.004236489167979892, "same_top": 0.8470066785812378}
+23:03:11Z done; qfn: exited

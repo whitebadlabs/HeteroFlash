@@ -1,0 +1,11 @@
+23:03:11Z r16_sticky_b0.1_w3: mem before 7 GiB used
+23:14:30Z quality server healthy; scoring
+{"chunk": 39, "prompt_tokens": 2048}
+{"chunk": 40, "prompt_tokens": 2048}
+23:18:12Z logits files: 82
+{"beta": 0.1, "W": 3, "calls": 1800, "windows4": 900096, "U4_stock": 21.892, "U4_sticky": 16.527, "U4_ratio": 0.755, "changed_pick_frac": 0.3378}
+cp: error copying '/srv/vllm-research/work/cache/route3_traces/r16_sticky_b0.1_w3/sticky_stats.json' to '/srv/vllm-research/work/HeteroFlash/results/2026-11-16-cycle/sticky/r16_sticky_b0.1_w3_sticky_stats.json': No space left on device
+{"chunk": 39, "domain": "long_context", "kld": 0.3974878489971161, "dnll": 0.36161893606185913}
+{"chunk": 40, "domain": "long_context", "kld": 0.4468213617801666, "dnll": 0.3445289134979248}
+{"tokens": 41943, "kld_mean": 0.28138554096221924, "kld_p99": 3.5305652618408203, "dnll_mean": 0.22262752056121826, "dnll_se": 0.004618349067955545, "same_top": 0.8335121273994446}
+23:19:22Z done; qfn: exited
