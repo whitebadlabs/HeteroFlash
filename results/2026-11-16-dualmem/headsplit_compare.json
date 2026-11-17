@@ -1,0 +1,26 @@
+{
+ "kda": {
+  "ref_split_vs_ref_unsplit (decomposition, fp32)": 1.0667145033949055e-06,
+  "gpu_only_rt_vs_ref (runtime's own error)": 0.0051729753613471985,
+  "split_rt_fp32_exchange_vs_ref": 0.005171242635697126,
+  "split_rt_bf16_exchange_vs_ref": 0.0054795085452497005,
+  "split_rt_fp32_exchange_vs_gpu_only": 0.0023390967398881912,
+  "split_rt_bf16_exchange_vs_gpu_only": 0.002860650420188904,
+  "cpu_half_c_vs_ref_half": 0.005169611889868975,
+  "gpu_half_vs_ref_half": 0.005237710662186146,
+  "last4_split_bf16_vs_gpu_only": 0.0028626066632568836,
+  "output_rms": 0.0045729088596999645
+ },
+ "mla": {
+  "ref_split_vs_ref_unsplit (decomposition, fp32)": 7.848487371120427e-07,
+  "gpu_only_rt_vs_ref (runtime's own error)": 0.004077221732586622,
+  "split_rt_fp32_exchange_vs_ref": 0.004136144649237394,
+  "split_rt_bf16_exchange_vs_ref": 0.0045070829801261425,
+  "split_rt_fp32_exchange_vs_gpu_only": 0.0024810016620904207,
+  "split_rt_bf16_exchange_vs_gpu_only": 0.0029731777030974627,
+  "cpu_half_c_vs_ref_half": 0.003880844684317708,
+  "gpu_half_vs_ref_half": 0.0038942540995776653,
+  "last4_split_bf16_vs_gpu_only": 0.003018057206645608,
+  "output_rms": 0.2339209020137787
+ }
+}

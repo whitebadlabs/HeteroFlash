@@ -133,3 +133,33 @@ headers [M]. Every phase balanced; 91 phases (45 x 2 + lm_head).
   imbalance per step (the GPU can hold only a hot subset of the 171 GB Q4_K expert set, so per-step balance needs dynamic
   assignment over replicated hot experts) [A]; CUDA-graph segmentation cost in the real runtime.
 - The DRAM efficiency an 8-CCD part would reach (only the per-CCD linearity is measured).
+
+## 6. Step 4: head-split exactness on real weights [M] (`bench/dualmem/headsplit.py`, `hf_gemv_lib.c`, `headsplit_compare.json`, `headsplit_controls.txt`)
+Real FP8 weights of KDA layer 4 and MLA layer 3 (full_iq2xxs_fp8: MXFP8 E8M0-32 for KDA, FP32 128x128 block scales for MLA,
+BF16 kv_b and small projections). Inputs: 36 tokens, RMS-normalised embedding rows of fixed pseudo-random token ids
+(not real layer residuals) [A]. KDA runs token by token from a zero state (conv, bounded gate lb = -5, L2-normed q/k, delta
+rule, sigmoid-gated o_norm), following the vLLM glm5next code. MLA runs causal attention over the 36 tokens; DSA top-k
+2048 selects all of them, so the indexer is not exercised.
+- Spark GPU: heads 0-31 (torch). Workstation CPU: heads 32-63 through the C kernels on the checkpoint's own bytes
+  (MXFP8 + a new FP32-block-scale FP8 kernel + BF16). Partials are summed; replicated ops (f_a/g_a; q_a, kv_a + norms) run on both sides.
+- "rt" = runtime-like numerics: bf16 activations at op boundaries, fp32 accumulation and recurrence. "ref" = fp32 throughout.
+
+| rel. L2 over [36, 4096] | KDA L4 | MLA L3 |
+|---|---|---|
+| split vs unsplit, both fp32 (is the decomposition exact?) | 1.1e-6 | 7.8e-7 |
+| GPU-only rt vs fp32 ref (the runtime's own error) | 5.17e-3 | 4.08e-3 |
+| split rt vs fp32 ref, fp32 partial exchange | 5.17e-3 | 4.14e-3 |
+| split rt vs fp32 ref, bf16 partial exchange | 5.48e-3 | 4.51e-3 |
+| split rt vs GPU-only rt, fp32 / bf16 exchange | 2.34e-3 / 2.86e-3 | 2.48e-3 / 2.97e-3 |
+| control: GPU + GPU split (no CPU) vs GPU-only rt | 2.34e-3 | 2.45e-3 |
+| CPU C half vs GPU half, same heads | 6.8e-4 | 1.16e-3 |
+
+- **The split is exact in math (1e-6) and as accurate as the GPU-only path** against the fp32 reference: 1.00x (KDA) and 1.01x
+  (MLA) of the GPU-only error with fp32 partials; 1.06x / 1.11x with bf16 partials.
+- **The pre-stated criterion "split vs GPU-only <= 1e-3" is NOT met (2.3-3.0e-3)**, but the control shows why: splitting the same
+  heads across two GPU runs, with no CPU involved, gives the same 2.3-2.5e-3. It is the bf16 rounding of the outputs
+  (partials rounded separately vs one rounded sum), not the CPU kernels. The criterion was below bf16 output resolution.
+  Proposed replacement: split error vs the fp32 reference <= 1.1x the GPU-only error. Met with fp32 exchange; bf16 exchange is
+  at the edge for MLA (1.11x).
+- Recommendation: exchange fp32 partials (64 KB at T = 4; measured swap 79-82 us vs 50-62 us at 32 KB with EEE off, about +2.5 ms
+  per cycle), or verify bf16 exchange end to end on dNLL. Per-layer error is not the quality metric; the balanced-eval dNLL is.

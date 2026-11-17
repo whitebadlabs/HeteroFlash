@@ -443,3 +443,6 @@ Full write-up: `results/2026-11-16-dualmem/README.md`.
 - **Modeled from these measured parts,** as the link is configured now (EEE on): 22.5-25.7 tok/s.
 - **With EEE off:** ~26-28 tok/s at config-B quality with drafts on the GPU, and ~28-31 with the draft passes split too. Config B measures 15.3-19.5. This agrees with R2/R3.
 - **Next:** head-split exactness on real weights (step 4), then the runtime.
+- **Step 4 done (2026-11-17):** real KDA layer 4 and MLA layer 3 split by heads (GPU 0-31, workstation CPU C kernels 32-63). The decomposition is exact (1e-6 in fp32). With fp32 partials, the split is as accurate as GPU-only against the fp32 reference (1.00x / 1.01x).
+  - The pre-stated "<= 1e-3 vs GPU-only" is not met (2.3-3.0e-3). A GPU+GPU split with no CPU gives the same 2.3-2.5e-3, so this is bf16 output rounding. The criterion is replaced by "<= 1.1x GPU-only error vs fp32".
+  - Details: results/2026-11-16-dualmem/README.md section 6.
