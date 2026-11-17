@@ -1,0 +1,8 @@
+kda_small_bf16_f0.5 fmt=bf16 T=1 threads=32 layer_MB=4.72 pool_GB=2.12 mats=128x4096,128x4096,64x4096,4096x128,4096x128 p50_us=26.6 mean_us=26.7 p90_us=27.0 GBps_p50=177.5
+mla_f0.5_fp8 fmt=fp8 T=1 threads=32 layer_MB=56.23 pool_GB=2.25 mats=1536x4096,512x4096,8192x1536,4096x8192 p50_us=236.7 mean_us=237.6 p90_us=241.8 GBps_p50=237.5
+mla_f0.5_bf16 fmt=bf16 T=1 threads=32 layer_MB=30.67 pool_GB=2.15 mats=16384x512,4096x1536,128x4096,32x4096 p50_us=129.4 mean_us=129.9 p90_us=132.5 GBps_p50=237.0
+dense_mlp_f0.5 fmt=fp8 T=1 threads=32 layer_MB=77.86 pool_GB=2.10 mats=6144x4096,6144x4096,4096x6144 p50_us=320.4 mean_us=321.6 p90_us=326.3 GBps_p50=243.0
+kda_small_bf16_f0.5 fmt=bf16 T=4 threads=32 layer_MB=4.72 pool_GB=2.12 mats=128x4096,128x4096,64x4096,4096x128,4096x128 p50_us=29.4 mean_us=29.6 p90_us=29.9 GBps_p50=160.4
+mla_f0.5_fp8 fmt=fp8 T=4 threads=32 layer_MB=56.23 pool_GB=2.25 mats=1536x4096,512x4096,8192x1536,4096x8192 p50_us=245.4 mean_us=246.6 p90_us=250.7 GBps_p50=229.1
+mla_f0.5_bf16 fmt=bf16 T=4 threads=32 layer_MB=30.67 pool_GB=2.15 mats=16384x512,4096x1536,128x4096,32x4096 p50_us=136.8 mean_us=137.4 p90_us=140.7 GBps_p50=224.1
+dense_mlp_f0.5 fmt=fp8 T=4 threads=32 layer_MB=77.86 pool_GB=2.10 mats=6144x4096,6144x4096,4096x6144 p50_us=329.3 mean_us=330.3 p90_us=334.1 GBps_p50=236.4

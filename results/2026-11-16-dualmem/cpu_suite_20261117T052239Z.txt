@@ -1,0 +1,37 @@
+# Tue Nov 17 05:22:39 AM UTC 2026 maxq gov=powersave epp=balance_performance
+membw ccds=1 smt=0 threads=8 63.4
+membw ccds=2 smt=0 threads=16 124.7
+membw ccds=3 smt=0 threads=24 187.3
+membw ccds=4 smt=0 threads=32 251.2
+membw ccds=1 smt=1 threads=16 61.8
+membw ccds=2 smt=1 threads=32 122.5
+membw ccds=3 smt=1 threads=48 182.1
+membw ccds=4 smt=1 threads=64 239.3
+membw spread2perCCD threads=8 244.9
+membw spread4perCCD threads=16 248.6
+membw 1ccd4cores threads=4 62.4
+kda_f0.5_ccds=1 fmt=fp8 T=4 threads=8 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=1134.2 mean_us=1134.8 p90_us=1138.1 GBps_p50=61.0
+kda_f0.5_ccds=2 fmt=fp8 T=4 threads=16 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=580.6 mean_us=580.5 p90_us=583.6 GBps_p50=119.2
+kda_f0.5_ccds=3 fmt=fp8 T=4 threads=24 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=401.3 mean_us=402.8 p90_us=404.7 GBps_p50=172.5
+kda_f0.5_ccds=4 fmt=fp8 T=4 threads=32 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=293.3 mean_us=295.0 p90_us=299.6 GBps_p50=235.9
+kda_f0.5 fmt=fp8 T=1 threads=32 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=286.5 mean_us=287.5 p90_us=291.4 GBps_p50=241.5
+kda_f0.25 fmt=fp8 T=1 threads=32 layer_MB=34.60 pool_GB=1.18 mats=2048x4096,2048x4096,2048x4096,4096x2048 p50_us=144.9 mean_us=145.3 p90_us=148.9 GBps_p50=238.9
+kda_small_bf16_f0.5 fmt=bf16 T=1 threads=32 layer_MB=4.72 pool_GB=0.16 mats=128x4096,128x4096,64x4096,4096x128,4096x128 p50_us=12.5 mean_us=12.8 p90_us=14.8 GBps_p50=377.9
+mla_f0.5_fp8 fmt=fp8 T=1 threads=32 layer_MB=56.23 pool_GB=0.62 mats=1536x4096,512x4096,8192x1536,4096x8192 p50_us=209.1 mean_us=210.9 p90_us=220.2 GBps_p50=268.9
+mla_f0.5_bf16 fmt=bf16 T=1 threads=32 layer_MB=30.67 pool_GB=0.34 mats=16384x512,4096x1536,128x4096,32x4096 p50_us=95.8 mean_us=97.1 p90_us=103.2 GBps_p50=320.0
+dense_mlp_f0.5 fmt=fp8 T=1 threads=32 layer_MB=77.86 pool_GB=0.23 mats=6144x4096,6144x4096,4096x6144 p50_us=183.9 mean_us=187.2 p90_us=197.7 GBps_p50=423.3
+shared_exp_f0.5 fmt=fp8 T=1 threads=32 layer_MB=12.98 pool_GB=0.54 mats=1024x4096,1024x4096,4096x1024 p50_us=50.8 mean_us=51.3 p90_us=52.5 GBps_p50=255.5
+shared_exp_full fmt=fp8 T=1 threads=32 layer_MB=25.95 pool_GB=1.09 mats=2048x4096,2048x4096,4096x2048 p50_us=104.1 mean_us=104.5 p90_us=106.6 GBps_p50=249.4
+lm_head_f0.5 fmt=fp8 T=1 threads=32 layer_MB=327.11 pool_GB=1.96 mats=77440x4096 p50_us=1306.7 mean_us=1306.4 p90_us=1310.2 GBps_p50=250.3
+kda_f0.5 fmt=fp8 T=4 threads=32 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=292.8 mean_us=294.1 p90_us=299.1 GBps_p50=236.4
+kda_f0.25 fmt=fp8 T=4 threads=32 layer_MB=34.60 pool_GB=1.18 mats=2048x4096,2048x4096,2048x4096,4096x2048 p50_us=147.3 mean_us=148.0 p90_us=151.1 GBps_p50=234.9
+kda_small_bf16_f0.5 fmt=bf16 T=4 threads=32 layer_MB=4.72 pool_GB=0.16 mats=128x4096,128x4096,64x4096,4096x128,4096x128 p50_us=16.4 mean_us=17.1 p90_us=20.5 GBps_p50=288.5
+mla_f0.5_fp8 fmt=fp8 T=4 threads=32 layer_MB=56.23 pool_GB=0.62 mats=1536x4096,512x4096,8192x1536,4096x8192 p50_us=215.7 mean_us=217.8 p90_us=223.2 GBps_p50=260.7
+mla_f0.5_bf16 fmt=bf16 T=4 threads=32 layer_MB=30.67 pool_GB=0.34 mats=16384x512,4096x1536,128x4096,32x4096 p50_us=98.7 mean_us=99.1 p90_us=103.6 GBps_p50=310.9
+dense_mlp_f0.5 fmt=fp8 T=4 threads=32 layer_MB=77.86 pool_GB=0.23 mats=6144x4096,6144x4096,4096x6144 p50_us=186.9 mean_us=189.4 p90_us=198.5 GBps_p50=416.6
+shared_exp_f0.5 fmt=fp8 T=4 threads=32 layer_MB=12.98 pool_GB=0.54 mats=1024x4096,1024x4096,4096x1024 p50_us=52.8 mean_us=53.1 p90_us=55.7 GBps_p50=246.0
+shared_exp_full fmt=fp8 T=4 threads=32 layer_MB=25.95 pool_GB=1.09 mats=2048x4096,2048x4096,4096x2048 p50_us=106.7 mean_us=109.3 p90_us=110.9 GBps_p50=243.1
+lm_head_f0.5 fmt=fp8 T=4 threads=32 layer_MB=327.11 pool_GB=1.96 mats=77440x4096 p50_us=1334.3 mean_us=1335.6 p90_us=1347.7 GBps_p50=245.1
+kda_f0.5_64thr fmt=fp8 T=4 threads=64 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=299.0 mean_us=299.5 p90_us=302.6 GBps_p50=231.4
+kda_f0.5_16cores_2ccd fmt=fp8 T=4 threads=16 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=587.6 mean_us=587.8 p90_us=589.8 GBps_p50=117.8
+# done Tue Nov 17 05:23:39 AM UTC 2026
