@@ -1,0 +1,48 @@
+Adaptive RX: on  TX: on rx-usecs:	50 tx-usecs:	50 
+20:33:12Z round 1 kdaoff cD
+{"run": "f1_coal_kdaoff_cD_r1", "essay_completions": {"tok_s": 19.44, "per_rep_tok_s": [19.44], "committed_per_step": 2.349, "ms_per_cycle": 120.8, "requests": 1}, "chat4": {"tok_s": 21.59, "per_rep_tok_s": [21.59], "committed_per_step": 2.627, "ms_per_cycle": 121.7, "requests": 4}, "hermes": {"tok_s": 25.21, "per_rep_tok_s": [25.21], "committed_per_step": 3.125, "ms_per_cycle": 124.0, "requests": 10}}
+20:36:15Z round 1 k4_kdaoff cD
+{"run": "f1_coal_k4_kdaoff_cD_r1", "essay_completions": {"tok_s": 36.49, "per_rep_tok_s": [36.49], "committed_per_step": 3.821, "ms_per_cycle": 104.7, "requests": 1}, "chat4": {"tok_s": 24.75, "per_rep_tok_s": [24.75], "committed_per_step": 2.454, "ms_per_cycle": 99.2, "requests": 4}, "hermes": {"tok_s": 29.7, "per_rep_tok_s": [29.7], "committed_per_step": 2.985, "ms_per_cycle": 100.5, "requests": 10}}
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+20:38:49Z round 1 kdaoff c0
+{"run": "f1_coal_kdaoff_c0_r1", "essay_completions": {"tok_s": 20.98, "per_rep_tok_s": [20.98], "committed_per_step": 2.349, "ms_per_cycle": 111.9, "requests": 1}, "chat4": {"tok_s": 23.24, "per_rep_tok_s": [23.24], "committed_per_step": 2.623, "ms_per_cycle": 112.9, "requests": 4}, "hermes": {"tok_s": 26.39, "per_rep_tok_s": [26.39], "committed_per_step": 3.126, "ms_per_cycle": 118.4, "requests": 10}}
+20:41:40Z round 1 k4_kdaoff c0
+{"run": "f1_coal_k4_kdaoff_c0_r1", "essay_completions": {"tok_s": 40.65, "per_rep_tok_s": [40.65], "committed_per_step": 3.821, "ms_per_cycle": 94.0, "requests": 1}, "chat4": {"tok_s": 26.79, "per_rep_tok_s": [26.79], "committed_per_step": 2.413, "ms_per_cycle": 90.1, "requests": 4}, "hermes": {"tok_s": 32.81, "per_rep_tok_s": [32.81], "committed_per_step": 3.01, "ms_per_cycle": 91.7, "requests": 10}}
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+20:44:02Z round 1 kdaoff c0
+{"run": "f1_coal_kdaoff_c0_r2", "essay_completions": {"tok_s": 20.97, "per_rep_tok_s": [20.97], "committed_per_step": 2.349, "ms_per_cycle": 112.0, "requests": 1}, "chat4": {"tok_s": 23.32, "per_rep_tok_s": [23.32], "committed_per_step": 2.636, "ms_per_cycle": 113.0, "requests": 4}, "hermes": {"tok_s": 26.38, "per_rep_tok_s": [26.38], "committed_per_step": 3.112, "ms_per_cycle": 118.0, "requests": 10}}
+20:46:56Z round 1 k4_kdaoff c0
+{"run": "f1_coal_k4_kdaoff_c0_r2", "essay_completions": {"tok_s": 40.65, "per_rep_tok_s": [40.65], "committed_per_step": 3.821, "ms_per_cycle": 94.0, "requests": 1}, "chat4": {"tok_s": 26.52, "per_rep_tok_s": [26.52], "committed_per_step": 2.385, "ms_per_cycle": 89.9, "requests": 4}, "hermes": {"tok_s": 32.47, "per_rep_tok_s": [32.47], "committed_per_step": 2.99, "ms_per_cycle": 92.1, "requests": 10}}
+netlink error: Invalid argument
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+20:49:19Z round 1 kdaoff cD
+{"run": "f1_coal_kdaoff_cD_r2", "essay_completions": {"tok_s": 20.96, "per_rep_tok_s": [20.96], "committed_per_step": 2.349, "ms_per_cycle": 112.1, "requests": 1}, "chat4": {"tok_s": 23.7, "per_rep_tok_s": [23.7], "committed_per_step": 2.685, "ms_per_cycle": 113.3, "requests": 4}, "hermes": {"tok_s": 26.32, "per_rep_tok_s": [26.32], "committed_per_step": 3.116, "ms_per_cycle": 118.4, "requests": 10}}
+20:52:09Z round 1 k4_kdaoff cD
+{"run": "f1_coal_k4_kdaoff_cD_r2", "essay_completions": {"tok_s": 40.71, "per_rep_tok_s": [40.71], "committed_per_step": 3.821, "ms_per_cycle": 93.9, "requests": 1}, "chat4": {"tok_s": 26.42, "per_rep_tok_s": [26.42], "committed_per_step": 2.381, "ms_per_cycle": 90.1, "requests": 4}, "hermes": {"tok_s": 32.47, "per_rep_tok_s": [32.47], "committed_per_step": 2.981, "ms_per_cycle": 91.8, "requests": 10}}
+netlink error: Invalid argument
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+20:54:33Z round 2 kdaoff cD
+{"run": "f1_coal_kdaoff_cD_r3", "essay_completions": {"tok_s": 21.0, "per_rep_tok_s": [21.0], "committed_per_step": 2.349, "ms_per_cycle": 111.8, "requests": 1}, "chat4": {"tok_s": 23.02, "per_rep_tok_s": [23.02], "committed_per_step": 2.606, "ms_per_cycle": 113.2, "requests": 4}, "hermes": {"tok_s": 26.37, "per_rep_tok_s": [26.37], "committed_per_step": 3.121, "ms_per_cycle": 118.4, "requests": 10}}
+20:57:25Z round 2 k4_kdaoff cD
+{"run": "f1_coal_k4_kdaoff_cD_r3", "essay_completions": {"tok_s": 40.52, "per_rep_tok_s": [40.52], "committed_per_step": 3.821, "ms_per_cycle": 94.3, "requests": 1}, "chat4": {"tok_s": 26.39, "per_rep_tok_s": [26.39], "committed_per_step": 2.388, "ms_per_cycle": 90.5, "requests": 4}, "hermes": {"tok_s": 32.63, "per_rep_tok_s": [32.63], "committed_per_step": 2.997, "ms_per_cycle": 91.9, "requests": 10}}
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+20:59:48Z round 2 kdaoff c0
+{"run": "f1_coal_kdaoff_c0_r3", "essay_completions": {"tok_s": 20.98, "per_rep_tok_s": [20.98], "committed_per_step": 2.349, "ms_per_cycle": 111.9, "requests": 1}, "chat4": {"tok_s": 23.45, "per_rep_tok_s": [23.45], "committed_per_step": 2.649, "ms_per_cycle": 113.0, "requests": 4}, "hermes": {"tok_s": 26.4, "per_rep_tok_s": [26.4], "committed_per_step": 3.118, "ms_per_cycle": 118.1, "requests": 10}}
+21:02:39Z round 2 k4_kdaoff c0
+{"run": "f1_coal_k4_kdaoff_c0_r3", "essay_completions": {"tok_s": 40.76, "per_rep_tok_s": [40.76], "committed_per_step": 3.821, "ms_per_cycle": 93.7, "requests": 1}, "chat4": {"tok_s": 27.1, "per_rep_tok_s": [27.1], "committed_per_step": 2.443, "ms_per_cycle": 90.1, "requests": 4}, "hermes": {"tok_s": 32.66, "per_rep_tok_s": [32.66], "committed_per_step": 2.997, "ms_per_cycle": 91.8, "requests": 10}}
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+21:05:01Z round 2 kdaoff c0
+{"run": "f1_coal_kdaoff_c0_r4", "essay_completions": {"tok_s": 20.95, "per_rep_tok_s": [20.95], "committed_per_step": 2.349, "ms_per_cycle": 112.1, "requests": 1}, "chat4": {"tok_s": 23.46, "per_rep_tok_s": [23.46], "committed_per_step": 2.653, "ms_per_cycle": 113.1, "requests": 4}, "hermes": {"tok_s": 26.33, "per_rep_tok_s": [26.33], "committed_per_step": 3.112, "ms_per_cycle": 118.2, "requests": 10}}
+21:07:54Z round 2 k4_kdaoff c0
+{"run": "f1_coal_k4_kdaoff_c0_r4", "essay_completions": {"tok_s": 40.69, "per_rep_tok_s": [40.69], "committed_per_step": 3.821, "ms_per_cycle": 93.9, "requests": 1}, "chat4": {"tok_s": 27.32, "per_rep_tok_s": [27.32], "committed_per_step": 2.462, "ms_per_cycle": 90.1, "requests": 4}, "hermes": {"tok_s": 32.91, "per_rep_tok_s": [32.91], "committed_per_step": 3.036, "ms_per_cycle": 92.2, "requests": 10}}
+netlink error: Invalid argument
+Adaptive RX: off  TX: off rx-usecs:	0 tx-usecs:	0 
+21:10:14Z round 2 kdaoff cD
+{"run": "f1_coal_kdaoff_cD_r4", "essay_completions": {"tok_s": 21.01, "per_rep_tok_s": [21.01], "committed_per_step": 2.349, "ms_per_cycle": 111.8, "requests": 1}, "chat4": {"tok_s": 23.11, "per_rep_tok_s": [23.11], "committed_per_step": 2.627, "ms_per_cycle": 113.7, "requests": 4}, "hermes": {"tok_s": 26.27, "per_rep_tok_s": [26.27], "committed_per_step": 3.115, "ms_per_cycle": 118.6, "requests": 10}}
+21:13:07Z round 2 k4_kdaoff cD
+{"run": "f1_coal_k4_kdaoff_cD_r4", "essay_completions": {"tok_s": 40.67, "per_rep_tok_s": [40.67], "committed_per_step": 3.821, "ms_per_cycle": 93.9, "requests": 1}, "chat4": {"tok_s": 26.53, "per_rep_tok_s": [26.53], "committed_per_step": 2.385, "ms_per_cycle": 89.9, "requests": 4}, "hermes": {"tok_s": 32.66, "per_rep_tok_s": [32.66], "committed_per_step": 2.995, "ms_per_cycle": 91.7, "requests": 10}}
+COAL_DONE
+netlink error: Invalid argument
+Adaptive RX: off  TX: off
+rx-usecs:	0
+tx-usecs:	0
