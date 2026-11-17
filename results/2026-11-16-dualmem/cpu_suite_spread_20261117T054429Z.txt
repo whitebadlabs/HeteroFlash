@@ -1,0 +1,2 @@
+kda_f0.5_16cores_spread4perCCD fmt=fp8 T=4 threads=16 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=336.5 mean_us=335.9 p90_us=340.7 GBps_p50=205.7
+kda_f0.5_8cores_spread2perCCD fmt=fp8 T=4 threads=8 layer_MB=69.21 pool_GB=2.35 mats=4096x4096,4096x4096,4096x4096,4096x4096 p50_us=447.3 mean_us=447.1 p90_us=453.5 GBps_p50=154.7

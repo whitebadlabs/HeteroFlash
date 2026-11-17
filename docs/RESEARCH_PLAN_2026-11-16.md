@@ -430,13 +430,16 @@ Community single-Spark checkpoints remain background only (charter); they are no
 
 Full write-up: `results/2026-11-16-dualmem/README.md`.
 - **Simultaneity: yes.** Spark GPU 239.7 GB/s alone and while the workstation streams; workstation CPU 251.2 GB/s alone and while the Spark GPU + Arm stream.
-  - Correction to M0: the Spark Arm CPU takes ~33 GB/s *from* the GPU (GPU 239.7 → 202). It adds no bandwidth during decode.
+  - Correction to M0: the Spark Arm CPU takes ~26-33 GB/s *from* the GPU (GPU 239.7 → 202-210). A no-DRAM control (busy threads on a cache-resident buffer) keeps the GPU at 238.5, so this is memory arbitration. The Arm adds no bandwidth during decode.
 - **Step 2:** workstation FP8 GEMV in the checkpoint's exact E4M3 + E8M0 format, T = 1-4, reads at 229-246 GB/s at every split shape (attention, MLP, shared expert, lm_head). The modeled value was 170.
 - **Per-CCD (Q2):** 63 / 125 / 187 / 251 GB/s on 1-4 CCDs. That is linear, ~63 GB/s per CCD link, and not DRAM-bound (peak 358 at DDR5-5600).
-  - An 8-CCD part would be DRAM-limited, not CCD-limited: ~305-350 GB/s [A: efficiency unmeasured].
+  - An 8-CCD part would be DRAM-limited, not CCD-limited, giving ~305-350 GB/s.
+  - This holds only **if it keeps the same per-CCD link rate** [A]. That rate and the DRAM efficiency are not measured; confirm the rate before any purchase.
 - **Step 3:** the 90-swap loop at T = 4 costs 4.5-5.6 ms per cycle with Energy-Efficient Ethernet off, and 15-18 ms with NIC defaults.
   - The "~300 us idle-gap penalty" of 2026-11-08 was EEE low-power idle (Spark LPI timer 115 us). No heartbeat is needed once EEE is off.
 - **Prototype:** a full 90-phase cycle of split layers, real FP8 kernels on both sides, swaps over the real link.
   - 56.7 ms against 100.1 ms GPU-only on the same 20.8 GB: **1.77x, 366 GB/s effective** (EEE off; 1.45x with NIC defaults).
-- **Modeled from these measured parts:** ~26-28 tok/s at config-B quality with drafts on the GPU, and ~28-31 with the draft passes split too. Config B measures 15.3-19.5. This agrees with R2/R3.
+  - Scope: one verify pass with FP8 stand-in experts and no drafts. This is a memory-read speedup, not a tok/s gain.
+- **Modeled from these measured parts,** as the link is configured now (EEE on): 22.5-25.7 tok/s.
+- **With EEE off:** ~26-28 tok/s at config-B quality with drafts on the GPU, and ~28-31 with the draft passes split too. Config B measures 15.3-19.5. This agrees with R2/R3.
 - **Next:** head-split exactness on real weights (step 4), then the runtime.

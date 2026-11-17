@@ -17,9 +17,13 @@ Coordinated start by epoch time; 1 s windows; per-window epoch stamps prove the 
 - Workstation CPU (32 cores pinned, 8 GB buffer): **251.2 GB/s alone, 251.2 GB/s while the Spark GPU and Spark Arm both stream** (leg C).
 - Spark Arm CPU (20 threads) + Spark GPU, same LPDDR5X (legs B, C): Arm 101.5 GB/s alone -> **32.8** together;
   GPU 239.7 -> **202.0-202.4** together (-16%). Sum ~235 GB/s, i.e. one shared pool.
-  - **This contradicts the M0 note** ("GPU loses nothing", Arm 17-19 GB/s). With a plain read stream the Arm takes
-    ~33 GB/s *from* the GPU. So the Spark's Arm cores add no bandwidth during decode; the split must not use them
-    for weight streaming.
+  - Controls (legs D, E): 20 busy Arm threads on a 512 KB cache-resident buffer (no DRAM traffic) leave the GPU at
+    **238.5 GB/s**, so the drop is memory arbitration, not the GPU launcher losing its core. 16 Arm threads (4 cores
+    free) streaming DRAM: Arm 83.9 -> 26.3, GPU 239.7 -> **210.3** (-12%).
+  - **This contradicts the M0 note** ("GPU loses nothing", Arm 17-19 GB/s). That used a different Arm kernel (NEON
+    expert GEMV) and a 1 GiB GPU buffer, so it is not like for like. With a plain read stream the Arm takes ~26-33 GB/s
+    *from* the GPU. So the Spark's Arm cores add no bandwidth during decode; the split must not use them for weight
+    streaming.
 
 ## 2. Workstation CPU GEMV at split shapes [M] (`bench/dualmem/gemv_cpu.c`, `cpu_suite.sh`, `cpu_suite_*.txt`)
 Formats: **fp8** = the checkpoint's own E4M3 weights + E8M0 32-block scales, decoded on the fly to bf16 with the scale
@@ -48,12 +52,16 @@ matrix, weights cycled over >= 2 GB of distinct copies (pools under ~0.6 GB were
 Read stream pinned by L3 group (CCD k = cores 8k..8k+7):
 - 1 / 2 / 3 / 4 CCDs, 8 cores each: **63.4 / 124.7 / 187.3 / 251.2 GB/s** (SMT 16/CCD: 61.8 / 122.5 / 182.1 / 239.3).
 - FP8 GEMV, same pinning: 61.0 / 119.2 / 172.5 / 235.9 GB/s.
-- 4 cores on one CCD: 62.4. 8 cores spread 2 per CCD: 244.9. 16 cores spread 4 per CCD: 248.6.
+- 4 cores on one CCD: 62.4. 8 cores spread 2 per CCD: 244.9. 16 cores spread 4 per CCD: 248.6 (read stream).
+  FP8 GEMV with the same spread: 8 cores 154.7, 16 cores 205.7, 32 cores 235.9 (the E4M3 decode needs cores; the read alone does not).
+  M0's "thread scaling roughly linear in cores" was close-pinning onto fewer CCDs.
 - So the limit is **~63 GB/s per CCD (the CCD's fabric link), perfectly linear to 4 CCDs**, not DRAM.
   4 x 63 = 251 against a DRAM peak of 8 x 5600 MT/s x 8 B = 358 GB/s [D] (70%).
-- Implication [D/A]: an 8-CCD part on the same board would not be CCD-limited (8 x 63 = 504 > DRAM). It would hit the DRAM
-  ceiling: at ~85-90% of 358 that is ~305-320 GB/s with these DIMMs, ~350 with DDR5-6400 [A: efficiency not measured here].
-  That is +20-40% CPU-side bandwidth. The linear curve answers Q2 without a rental; the efficiency figure is the open part.
+- Implication, **conditional on [A]: an 8-CCD part keeps the same ~63 GB/s per-CCD link** (link width per CCD can differ by
+  SKU; not measured here). Then it would not be CCD-limited (8 x 63 = 504 > DRAM) and would hit the DRAM ceiling: at ~85-90%
+  of 358 that is ~305-320 GB/s with these DIMMs, ~350 with DDR5-6400 [A: DRAM efficiency not measured]. That would be +20-40%
+  CPU-side bandwidth. Measured: the 9975WX is fabric-limited, not DRAM-limited. Before any purchase, the per-CCD link rate of
+  the candidate SKU is the fact to confirm.
 
 ## 3. Link exchange loop [M] (`bench/dualmem/phase_swap.c`, `link_suite.sh`, `link_eee_*.txt`)
 Symmetric swap per phase (both sides compute, send their partial, receive the other's), 90 phases per cycle, 150 cycles,
@@ -65,7 +73,8 @@ busy-poll spin recv (mode 1) unless noted. Overhead = per-phase time minus compu
 | defaults + 20 us heartbeat, compute 50-300 us | 62-110 us | 98-122 us | 119-177 us |
 | **EEE off** (both NICs), compute 150-300 us | 34-38 us | 62-63 us | |
 | **EEE off + workstation RX coalescing off** | 30 us | 50 us | 79 us |
-| blocking recv (no busy-poll), any state | 200-360 us | 190-300 us | 225-360 us |
+| blocking recv (no busy-poll), NIC defaults | 200-304 us | 246-303 us | 284-363 us |
+| blocking recv, EEE off (with or without coalescing) | 144-211 us | 87-209 us | 107-226 us |
 
 - **Surprise: the ~300 us "idle-gap penalty" from 2026-11-08 is Energy-Efficient Ethernet.** Both 10GBASE-T NICs had EEE
   active (Spark r8127 Tx LPI timer 115 us). Any quiet gap longer than that puts the link into low-power idle, and waking it
@@ -94,7 +103,10 @@ Each side runs its half of every layer on its own memory, then the two swap a 4 
 | split, NIC defaults (EEE on) | 69.0 | 301 | 195 + 10 us |
 
 - **Measured speedup from reading both memories: 1.77x (EEE + coalescing off), 1.71x (EEE off), 1.45x (defaults)** on the same bytes.
-- `proto_full_t32_transitional_nic.txt` (67.6 ms) was taken while the NICs were half-restored (EEE "enabled - inactive", coalescing off); kept for completeness, not used.
+- `proto_full_t32_transitional_nic.txt` (67.6 ms) was taken while the NICs were half-restored (coalescing off; EEE reported
+  "enabled - inactive" just before and "active" again minutes later, so its EEE state during the run is unverified); kept, not used.
+- **Scope of the prototype:** it emulates one verify pass (45 layers, T = 4) with FP8 stand-in experts and no draft passes.
+  The 1.77x is a memory-read speedup on equal bytes, not a tok/s gain; tok/s is modeled in section 5.
 - The composition rule used below (per-phase max of the two sides + per-phase swap) predicts 55.8 ms for this run against
   56.7 ms measured (within 2%) [D].
 - GPU-side cost per exchange: sync + 8-32 KB D2H ~10 us; the eager launch of 4-21 large kernels per phase still streamed at
