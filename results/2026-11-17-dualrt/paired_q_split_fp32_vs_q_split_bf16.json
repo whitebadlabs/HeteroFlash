@@ -1,0 +1,10 @@
+{
+ "A": "/c/cap_q_split_fp32",
+ "B": "/c/cap_q_split_bf16",
+ "tokens": 41943,
+ "paired_dnll_B_minus_A": -0.0007240459090098739,
+ "paired_dnll_se": 0.000782104189100154,
+ "kld_A_B_mean": 0.00925974640995264,
+ "kld_A_B_p99": 0.117579884827137,
+ "same_top1": 0.9703407004744534
+}

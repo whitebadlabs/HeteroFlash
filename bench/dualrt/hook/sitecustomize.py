@@ -318,8 +318,11 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         import torch
         if _cap["id"] is None or not _cap["rows"]:
             return
-        allr = torch.cat(_cap["rows"], 0)
-        _cap["log"].append((_cap["id"], int(allr.shape[0])))
+        # chunked prefill emits, per 16-token step, the prompt-logprob rows (T > 1) and one sampling row (T = 1, a
+        # throw-away for partial prefills): keep the multi-row calls only, in order = prompt positions 0..2047.
+        rows = [r for r in _cap["rows"] if r.shape[0] > 1]
+        allr = torch.cat(rows, 0) if rows else torch.zeros(0)
+        _cap["log"].append((_cap["id"], int(allr.shape[0]), len(_cap["rows"]), len(rows)))
         if allr.shape[0] >= 2047:
             _cap["n"] += 1
             np.save(os.path.join(_CAP, f"logits_{os.getpid()}_{_cap['n']:05d}.npy"), allr[1024:2047].numpy())

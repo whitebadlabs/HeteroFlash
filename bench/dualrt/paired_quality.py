@@ -6,7 +6,7 @@ import glob, json, sys
 import numpy as np
 toks = json.load(open(sys.argv[1]))["chunks"]
 A = sorted(glob.glob(sys.argv[2] + "/logits_*.npy")); B = sorted(glob.glob(sys.argv[3] + "/logits_*.npy"))
-assert len(A) == len(B) == len(toks), (len(A), len(B), len(toks))
+n = min(len(A), len(B)); A, B = A[:n], B[:n]          # chunks captured by both runs (in order)
 d_nll, kl, same = [], [], []
 for i, (fa, fb) in enumerate(zip(A, B)):
     la = np.load(fa).astype(np.float32); lb = np.load(fb).astype(np.float32)

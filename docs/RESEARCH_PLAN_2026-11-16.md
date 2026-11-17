@@ -484,3 +484,13 @@ Full write-up: `results/2026-11-16-dualmem/README.md`.
 5. Quality: balanced eval at small batched-token windows (so the decode-size split path is exercised; exchange counters asserted nonzero), paired per-token dNLL and direct KLD against the unsplit config-B run on the same windows, fp32 vs bf16 partial exchange, plus a repeat of the unsplit run for the floor.
 
 **Gating fact found while planning.** The section-5 composition assumed a GPU Q4_K expert kernel at the IQ2 kernel's 195 GB/s ([A] in `dualmem_compose_2026_11_16.py`). b12x has no Q4_K path and cannot address a compact hot subset (route geometry fixed at 288 experts per layer, 11-08), and the GPU's IQ2 copies fail the quality bar (+0.12 to +0.18). So M1 needs its own GPU Q4_K kernel over a compact resident pool; it is written in `hook/hf_drt.cu`.
+
+### E5. Bet 1 step 5 result: the split inside the real runtime (2026-11-17) [M]
+
+Full write-up: `results/2026-11-17-dualrt/README.md`. Code: `bench/dualrt/`, `runtime/expert_server_gguf.c` (fp32 replies, HFD1 dense rows, keep-alive tolerant).
+- **Built:** routed experts split by expert with per-step rebalancing (GPU Q4_K kernel over a 112-120/layer resident pool of the same GGUF bytes, IQ2 copies freed after startup), lm_head split by vocabulary, KDA q/k/v split by head; all exchanges in-graph through the mailbox; run-time switches and balance rule.
+- **Measured, NIC defaults (+ software keep-alive), 3 reps, same session:** essay 22.8 / chat 22.1 / Hermes 23.0 tok/s vs config B 16.6 / 15.4 / 18.0. Cycle time 1.21-1.26x shorter (148.5 -> 120.6 ms essay); the rest of the tok/s gain is acceptance, not attributed.
+- **Quality (16-token batches, balanced eval):** split bf16 +0.0044 (SE 0.0014), KLD 0.027, same top-1 95.1%; split fp32 +0.0051 / 0.026 / 95.0%; unsplit +0.0037 / 0.028 / 94.9%; paired split bf16 - unsplit +0.0007 (SE 0.0008), fp32 - bf16 +0.0007 (SE 0.0008, n.s.). Inside the control bar (+0.0148).
+- **Gate (>= 25 tok/s measured at config-B quality) not met:** 22.8 at defaults, 24.1 with EEE temporarily off (1 rep).
+- **Why below the model (26-31):** each exchange costs ~0.32-0.36 ms beyond compute (request/reply, two sequential transfers, relay hops) x ~80 per cycle; the KDA split does not pay at that cost; the GPU takes 12.1 of the 12.5 resident experts per window, so more resident memory or a better hot set is the expert-side lever.
+- **Next:** symmetric swap or fused requests (one exchange per layer phase), relay hop timestamps, KDA split on/off repeated comparison, CPU-side KDA state only if the exchange cost drops.

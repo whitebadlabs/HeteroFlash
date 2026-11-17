@@ -13,4 +13,7 @@ for i, ids in enumerate(chunks):
     urllib.request.urlopen(r, timeout=7200).read()
     print(f"chunk {i + 1}/{len(chunks)} {time.time() - t0:.0f} s", flush=True)
 open(os.path.join(cap, "capture.cur"), "w").write("stop")
+# one more (uncaptured) request so the hook sees "stop" and flushes the last chunk
+r = urllib.request.Request(url, data=json.dumps({"model": "GLM-5.3-Flash", "prompt": "Hi", "max_tokens": 1}).encode(), headers={"Content-Type": "application/json"})
+urllib.request.urlopen(r, timeout=600).read()
 time.sleep(3)

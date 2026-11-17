@@ -249,6 +249,7 @@ void mb_init(int64_t slots, std::string host, int64_t port, int64_t flags) {
   cudaDeviceSynchronize();
   sock_fd = socket(AF_INET, SOCK_STREAM, 0);
   int one = 1; setsockopt(sock_fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+  { int us = 50; setsockopt(sock_fd, SOL_SOCKET, SO_BUSY_POLL, &us, sizeof us); }   // kernel busy-poll on the reply path
   sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = htons((uint16_t)port); inet_pton(AF_INET, host.c_str(), &a.sin_addr);
   if (connect(sock_fd, (sockaddr *)&a, sizeof a)) throw std::runtime_error("connect expert_server");
   relay_run = true;

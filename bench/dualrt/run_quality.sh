@@ -23,6 +23,6 @@ touch $OUT/${TAG}_stats.json.req; sleep 5
 docker logs hf-drt > $OUT/${TAG}_serve.log 2>&1; docker rm -f hf-drt >/dev/null 2>&1
 cp $CAP/capture_rows.json $OUT/${TAG}_capture_rows.json 2>/dev/null
 echo "$(date -u +%H:%M:%SZ) logits files: $(ls $CAP/logits_*.npy 2>/dev/null | wc -l)"
-docker run --rm -v $H:/h -v $CAP:/cap -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG -I /h/src/control_kld.py compare \
+docker run --rm -v $H:/h -v $CAP:/cap -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG /h/bench/dualrt/compare_q8.py \
   /ref/$(basename $REF) /cap /h/data/q_eval_balanced_v1.manifest.json /h/results/2026-11-17-dualrt/${TAG}_vs_q8_bal.json 2>&1 | tail -3
 echo "$(date -u +%H:%M:%SZ) DONE $TAG"
