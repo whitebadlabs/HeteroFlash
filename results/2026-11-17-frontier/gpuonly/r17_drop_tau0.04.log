@@ -1,1 +1,10 @@
 15:30:36Z r17_drop_tau0.04: mem before 7 GiB used
+15:41:53Z quality server healthy; scoring
+{"chunk": 39, "prompt_tokens": 2048}
+{"chunk": 40, "prompt_tokens": 2048}
+15:45:41Z logits files: 82
+{"K": 8, "TAU": 0.04, "renorm": false, "calls": 1800, "windows4": 835584, "U4_stock": 21.856, "U4_drop": 20.912, "U4_ratio": 0.9568, "kept_per_token": 7.666, "dropped_weight_frac": 0.0103}
+{"chunk": 39, "domain": "long_context", "kld": 0.3234943449497223, "dnll": 0.263801246881485}
+{"chunk": 40, "domain": "long_context", "kld": 0.37628838419914246, "dnll": 0.2692050635814667}
+{"tokens": 41943, "kld_mean": 0.2442033737897873, "kld_p99": 3.137202501296997, "dnll_mean": 0.18797937035560608, "dnll_se": 0.004268641931046908, "same_top": 0.8478649854660034}
+15:46:50Z done; qfn: exited

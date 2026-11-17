@@ -1,3 +1,5 @@
 15:14:47Z start r17_drop_base (K=8 TAU=0 renorm=0)
 15:30:36Z done r17_drop_base: {"chunk": 40, "domain": "long_context", "kld": 0.37014758586883545, "dnll": 0.25910115242004395} {"tokens": 41943, "kld_mean": 0.238580584526062, "kld_p99": 3.061109781265259, "dnll_mean": 0.1825682520866394, "dnll_se": 0.004222028049806949, "same_top": 0.8489140272140503} 15:30:35Z done; qfn: exited 
 15:30:36Z start r17_drop_tau0.04 (K=8 TAU=0.04 renorm=0)
+15:46:50Z done r17_drop_tau0.04: {"chunk": 40, "domain": "long_context", "kld": 0.37628838419914246, "dnll": 0.2692050635814667} {"tokens": 41943, "kld_mean": 0.2442033737897873, "kld_p99": 3.137202501296997, "dnll_mean": 0.18797937035560608, "dnll_se": 0.004268641931046908, "same_top": 0.8478649854660034} 15:46:50Z done; qfn: exited 
+15:46:50Z start r17_drop_tau0.08 (K=8 TAU=0.08 renorm=0)

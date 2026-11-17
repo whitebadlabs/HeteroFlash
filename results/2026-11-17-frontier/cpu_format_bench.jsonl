@@ -1,0 +1,20 @@
+{"what": "real GGUF rows, layer 40, expert_server_gguf_v5 bench, 11 distinct experts, 32 Zen5 threads, 40 reps, 2 runs", "label": "M"}
+{"type": "q4_K", "ntok": 1, "mean_us": [748.7, 723.4]}
+{"type": "q4_K", "ntok": 2, "mean_us": [809.3, 808.5]}
+{"type": "iq3_xxs", "ntok": 1, "mean_us": [641.4, 649.8]}
+{"type": "iq3_xxs", "ntok": 2, "mean_us": [1195.1, 1195.8]}
+{"type": "iq3_s", "ntok": 1, "mean_us": [765.8, 765.3]}
+{"type": "iq3_s", "ntok": 2, "mean_us": [1486.7, 1488.7]}
+{"type": "iq2_s", "ntok": 1, "mean_us": [521.7, 514.6]}
+{"type": "iq2_s", "ntok": 2, "mean_us": [925.8, 923.2]}
+{"what": "synthetic random weights quantized in memory (runtime/kq_bench.c), 11 experts rotated over 24 sets, 40 reps; speed only", "label": "M"}
+{"type": "q4_K", "ntok": 1, "MB_per_expert": 14.16, "mean_us": 801.8}
+{"type": "q4_K", "ntok": 2, "MB_per_expert": 14.16, "mean_us": 954.1}
+{"type": "q3_K", "ntok": 1, "MB_per_expert": 10.81, "mean_us": 607.9}
+{"type": "q3_K", "ntok": 2, "MB_per_expert": 10.81, "mean_us": 654.3}
+{"type": "q2_K", "ntok": 1, "MB_per_expert": 8.26, "mean_us": 416.5}
+{"type": "q2_K", "ntok": 2, "MB_per_expert": 8.26, "mean_us": 451.2}
+{"type": "iq3_xxs", "ntok": 1, "MB_per_expert": 9.63, "mean_us": 615.4}
+{"type": "iq3_xxs", "ntok": 2, "MB_per_expert": 9.63, "mean_us": 1161.0}
+{"type": "iq2_s", "ntok": 1, "MB_per_expert": 8.06, "mean_us": 527.5}
+{"note": "later synthetic rows (iq2_s ntok 2, q5_K) overlapped the Q3_K quantization run and are discarded"}
