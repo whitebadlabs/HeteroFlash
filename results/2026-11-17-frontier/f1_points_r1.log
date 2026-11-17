@@ -1,0 +1,47 @@
+EEE-start
+EEE settings for enP7s7:
+	EEE status: enabled - active
+	Tx LPI: 115 (us)
+lok@maxq: Permission denied (publickey,password).
+19:09:21Z round 1 point base
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "8 0 0", "alt": "none", "mailbox_decode": {"req": 59766, "per_req": [14.9, 904.1, 1336.5]}, "dense_req": {"req": 54020, "per_req": [336.9, 870.8]}, "alt_requests": 0, "assign": {"windows": 59640, "U": 23.24, "gpu": 12.14, "resident_in_union": 12.47}}
+{"run": "f1_base_r1", "essay_completions": {"tok_s": 20.82, "per_rep_tok_s": [20.82], "committed_per_step": 2.667, "ms_per_cycle": 128.1, "requests": 1}, "chat4": {"tok_s": 19.49, "per_rep_tok_s": [19.49], "committed_per_step": 2.632, "ms_per_cycle": 135.0, "requests": 4}, "hermes": {"tok_s": 18.35, "per_rep_tok_s": [18.35], "committed_per_step": 3.086, "ms_per_cycle": 168.2, "requests": 10}}
+19:13:01Z round 1 point kdaoff
+{"gates": "1 0 0", "ab": "0.7 -1", "drop": "8 0 0", "alt": "none", "mailbox_decode": {"req": 60270, "per_req": [14.9, 898.8, 1337.0]}, "dense_req": {"req": 5808, "per_req": [1078.1, 1730.6]}, "alt_requests": 0, "assign": {"windows": 60270, "U": 23.25, "gpu": 12.19, "resident_in_union": 12.53}}
+{"run": "f1_kdaoff_r1", "essay_completions": {"tok_s": 19.49, "per_rep_tok_s": [19.49], "committed_per_step": 2.349, "ms_per_cycle": 120.5, "requests": 1}, "chat4": {"tok_s": 21.71, "per_rep_tok_s": [21.71], "committed_per_step": 2.614, "ms_per_cycle": 120.4, "requests": 4}, "hermes": {"tok_s": 24.95, "per_rep_tok_s": [24.95], "committed_per_step": 3.106, "ms_per_cycle": 124.5, "requests": 10}}
+19:16:02Z round 1 point frs
+{"gates": "1 1 1", "ab": "0.7 -1", "drop": "8 0 0", "alt": "none", "mailbox_decode": {"req": 70098, "per_req": [15.1, 916.9, 1350.9]}, "dense_req": {"req": 58432, "per_req": [278.0, 810.9]}, "alt_requests": 0, "assign": {"windows": 70098, "U": 23.31, "gpu": 12.04, "resident_in_union": 12.36}}
+{"run": "f1_frs_r1", "essay_completions": {"tok_s": 18.27, "per_rep_tok_s": [18.27], "committed_per_step": 2.246, "ms_per_cycle": 122.9, "requests": 1}, "chat4": {"tok_s": 18.49, "per_rep_tok_s": [18.49], "committed_per_step": 2.346, "ms_per_cycle": 126.9, "requests": 4}, "hermes": {"tok_s": 19.5, "per_rep_tok_s": [19.5], "committed_per_step": 2.515, "ms_per_cycle": 129.0, "requests": 10}}
+19:19:41Z round 1 point frs_kdaoff
+{"gates": "1 0 1", "ab": "0.7 -1", "drop": "8 0 0", "alt": "none", "mailbox_decode": {"req": 70224, "per_req": [15.1, 913.7, 1366.3]}, "dense_req": {"req": 1689, "per_req": [1341.8, 2188.1]}, "alt_requests": 0, "assign": {"windows": 70224, "U": 23.28, "gpu": 12.04, "resident_in_union": 12.35}}
+{"run": "f1_frs_kdaoff_r1", "essay_completions": {"tok_s": 19.33, "per_rep_tok_s": [19.33], "committed_per_step": 2.265, "ms_per_cycle": 117.2, "requests": 1}, "chat4": {"tok_s": 20.38, "per_rep_tok_s": [20.38], "committed_per_step": 2.374, "ms_per_cycle": 116.5, "requests": 4}, "hermes": {"tok_s": 20.72, "per_rep_tok_s": [20.72], "committed_per_step": 2.489, "ms_per_cycle": 120.1, "requests": 10}}
+19:23:05Z round 1 point alt15q3k
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "8 0 0", "alt": "26,27,28,29,30,31,33,34,36,38,40,41,42,43,44", "mailbox_decode": {"req": 60732, "per_req": [14.9, 881.0, 1332.6]}, "dense_req": {"req": 55016, "per_req": [336.4, 882.3]}, "alt_requests": 21690, "assign": {"windows": 60732, "U": 23.18, "gpu": 12.1, "resident_in_union": 12.44}}
+{"run": "f1_alt15q3k_r1", "essay_completions": {"tok_s": 19.67, "per_rep_tok_s": [19.67], "committed_per_step": 2.535, "ms_per_cycle": 128.9, "requests": 1}, "chat4": {"tok_s": 19.69, "per_rep_tok_s": [19.69], "committed_per_step": 2.568, "ms_per_cycle": 130.5, "requests": 4}, "hermes": {"tok_s": 23.27, "per_rep_tok_s": [23.27], "committed_per_step": 3.096, "ms_per_cycle": 133.1, "requests": 10}}
+19:26:21Z round 1 point tau0.08
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "8 0.08 0", "alt": "none", "mailbox_decode": {"req": 61572, "per_req": [10.5, 648.7, 1106.2]}, "dense_req": {"req": 55776, "per_req": [335.3, 900.3]}, "alt_requests": 0, "assign": {"windows": 61572, "U": 16.38, "gpu": 8.6, "resident_in_union": 9.05}}
+{"run": "f1_tau0.08_r1", "essay_completions": {"tok_s": 19.15, "per_rep_tok_s": [19.15], "committed_per_step": 2.306, "ms_per_cycle": 120.5, "requests": 1}, "chat4": {"tok_s": 21.65, "per_rep_tok_s": [21.65], "committed_per_step": 2.568, "ms_per_cycle": 118.6, "requests": 4}, "hermes": {"tok_s": 25.29, "per_rep_tok_s": [25.29], "committed_per_step": 3.069, "ms_per_cycle": 121.3, "requests": 10}}
+19:29:22Z round 1 point k6
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "6 0 0", "alt": "none", "mailbox_decode": {"req": 60354, "per_req": [11.3, 698.1, 1162.1]}, "dense_req": {"req": 54674, "per_req": [335.7, 928.6]}, "alt_requests": 0, "assign": {"windows": 60354, "U": 17.69, "gpu": 9.22, "resident_in_union": 9.64}}
+{"run": "f1_k6_r1", "essay_completions": {"tok_s": 26.74, "per_rep_tok_s": [26.74], "committed_per_step": 3.413, "ms_per_cycle": 127.6, "requests": 1}, "chat4": {"tok_s": 20.84, "per_rep_tok_s": [20.84], "committed_per_step": 2.536, "ms_per_cycle": 121.6, "requests": 4}, "hermes": {"tok_s": 24.42, "per_rep_tok_s": [24.42], "committed_per_step": 3.029, "ms_per_cycle": 124.1, "requests": 10}}
+19:32:24Z round 1 point k5
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "5 0 0", "alt": "none", "mailbox_decode": {"req": 60522, "per_req": [9.5, 597.6, 1042.6]}, "dense_req": {"req": 54826, "per_req": [335.5, 929.0]}, "alt_requests": 0, "assign": {"windows": 60522, "U": 14.87, "gpu": 7.69, "resident_in_union": 8.15}}
+{"run": "f1_k5_r1", "essay_completions": {"tok_s": 29.03, "per_rep_tok_s": [29.03], "committed_per_step": 3.413, "ms_per_cycle": 117.6, "requests": 1}, "chat4": {"tok_s": 21.71, "per_rep_tok_s": [21.71], "committed_per_step": 2.536, "ms_per_cycle": 116.8, "requests": 4}, "hermes": {"tok_s": 26.04, "per_rep_tok_s": [26.04], "committed_per_step": 3.081, "ms_per_cycle": 118.3, "requests": 10}}
+19:35:19Z round 1 point k4
+{"gates": "1 1 0", "ab": "0.7 -1", "drop": "4 0 0", "alt": "none", "mailbox_decode": {"req": 62832, "per_req": [7.9, 502.1, 934.0]}, "dense_req": {"req": 56916, "per_req": [335.1, 882.1]}, "alt_requests": 0, "assign": {"windows": 62832, "U": 11.91, "gpu": 6.0, "resident_in_union": 6.52}}
+{"run": "f1_k4_r1", "essay_completions": {"tok_s": 24.46, "per_rep_tok_s": [24.46], "committed_per_step": 2.813, "ms_per_cycle": 115.0, "requests": 1}, "chat4": {"tok_s": 22.23, "per_rep_tok_s": [22.23], "committed_per_step": 2.435, "ms_per_cycle": 109.5, "requests": 4}, "hermes": {"tok_s": 27.42, "per_rep_tok_s": [27.42], "committed_per_step": 2.986, "ms_per_cycle": 108.9, "requests": 10}}
+19:38:09Z round 1 point combo_frs_kdaoff_alt15
+{"gates": "1 0 1", "ab": "0.7 -1", "drop": "8 0 0", "alt": "26,27,28,29,30,31,33,34,36,38,40,41,42,43,44", "mailbox_decode": {"req": 71694, "per_req": [15.0, 884.2, 1341.0]}, "dense_req": {"req": 1724, "per_req": [1340.7, 2193.5]}, "alt_requests": 25605, "assign": {"windows": 71694, "U": 23.35, "gpu": 12.13, "resident_in_union": 12.45}}
+{"run": "f1_combo_frs_kdaoff_alt15_r1", "essay_completions": {"tok_s": 20.21, "per_rep_tok_s": [20.21], "committed_per_step": 2.37, "ms_per_cycle": 117.3, "requests": 1}, "chat4": {"tok_s": 19.52, "per_rep_tok_s": [19.52], "committed_per_step": 2.273, "ms_per_cycle": 116.5, "requests": 4}, "hermes": {"tok_s": 20.66, "per_rep_tok_s": [20.66], "committed_per_step": 2.46, "ms_per_cycle": 119.1, "requests": 10}}
+19:41:36Z round 1 point combo_frs_kdaoff_alt15_k6
+{"gates": "1 0 1", "ab": "0.7 -1", "drop": "6 0 0", "alt": "26,27,28,29,30,31,33,34,36,38,40,41,42,43,44", "mailbox_decode": {"req": 71526, "per_req": [11.5, 689.8, 1151.5]}, "dense_req": {"req": 1720, "per_req": [1341.3, 2196.4]}, "alt_requests": 25545, "assign": {"windows": 71526, "U": 17.72, "gpu": 9.1, "resident_in_union": 9.49}}
+{"run": "f1_combo_frs_kdaoff_alt15_k6_r1", "essay_completions": {"tok_s": 34.92, "per_rep_tok_s": [34.92], "committed_per_step": 3.938, "ms_per_cycle": 112.8, "requests": 1}, "chat4": {"tok_s": 20.87, "per_rep_tok_s": [20.87], "committed_per_step": 2.219, "ms_per_cycle": 106.3, "requests": 4}, "hermes": {"tok_s": 22.58, "per_rep_tok_s": [22.58], "committed_per_step": 2.421, "ms_per_cycle": 107.2, "requests": 10}}
+19:44:44Z round 1 point combo_frs_kdaoff_alt15_k4
+{"gates": "1 0 1", "ab": "0.7 -1", "drop": "4 0 0", "alt": "26,27,28,29,30,31,33,34,36,38,40,41,42,43,44", "mailbox_decode": {"req": 74298, "per_req": [7.9, 486.0, 919.0]}, "dense_req": {"req": 1786, "per_req": [1341.2, 2184.2]}, "alt_requests": 26535, "assign": {"windows": 74298, "U": 11.93, "gpu": 6.01, "resident_in_union": 6.52}}
+{"run": "f1_combo_frs_kdaoff_alt15_k4_r1", "essay_completions": {"tok_s": 26.09, "per_rep_tok_s": [26.09], "committed_per_step": 2.485, "ms_per_cycle": 95.3, "requests": 1}, "chat4": {"tok_s": 23.09, "per_rep_tok_s": [23.09], "committed_per_step": 2.168, "ms_per_cycle": 93.9, "requests": 4}, "hermes": {"tok_s": 25.41, "per_rep_tok_s": [25.41], "committed_per_step": 2.429, "ms_per_cycle": 95.6, "requests": 10}}
+19:47:37Z POINTS_DONE
+EEE-end
+EEE settings for enP7s7:
+	EEE status: enabled - active
+	Tx LPI: 115 (us)
+lok@maxq: Permission denied (publickey,password).

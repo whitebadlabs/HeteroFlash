@@ -11,10 +11,21 @@ P=(
  "alt15q3k|1 1 0|8 0 0|$ALT15"
  "tau0.08|1 1 0|8 0.08 0|none"
  "k6|1 1 0|6 0 0|none"
+ "k5|1 1 0|5 0 0|none"
+ "k4|1 1 0|4 0 0|none"
  "combo_frs_kdaoff_alt15|1 0 1|8 0 0|$ALT15"
+ "combo_frs_kdaoff_alt15_k6|1 0 1|6 0 0|$ALT15"
+ "combo_frs_kdaoff_alt15_k4|1 0 1|4 0 0|$ALT15"
+ "k6_kdaoff|1 0 0|6 0 0|none"
+ "k5_kdaoff|1 0 0|5 0 0|none"
+ "k4_kdaoff|1 0 0|4 0 0|none"
+ "tau0.08_kdaoff|1 0 0|8 0.08 0|none"
+ "k6tau0.08_kdaoff|1 0 0|6 0.08 0|none"
+ "alt15_k4_kdaoff|1 0 0|4 0 0|$ALT15"
 )
-[ -n "${POINTS:-}" ] && P=("${POINTS[@]}")
-for r in $(seq ${ROUNDS:-3}); do
+# POINTS_ONLY="name1 name2": run only these points (e.g. the non-dominated ones in later rounds); R0: first round number
+if [ -n "${POINTS_ONLY:-}" ]; then Q=(); for p in "${P[@]}"; do [[ " $POINTS_ONLY " == *" ${p%%|*} "* ]] && Q+=("$p"); done; P=("${Q[@]}"); fi
+for r in $(seq ${R0:-1} $(( ${R0:-1} + ${ROUNDS:-3} - 1 ))); do
   for p in "${P[@]}"; do
     IFS='|' read N G D A <<< "$p"
     echo "$(date -u +%H:%M:%SZ) round $r point $N"
