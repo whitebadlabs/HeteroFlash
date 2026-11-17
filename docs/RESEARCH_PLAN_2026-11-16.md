@@ -446,3 +446,6 @@ Full write-up: `results/2026-11-16-dualmem/README.md`.
 - **Step 4 done (2026-11-17):** real KDA layer 4 and MLA layer 3 split by heads (GPU 0-31, workstation CPU C kernels 32-63). The decomposition is exact (1e-6 in fp32). With fp32 partials, the split is as accurate as GPU-only against the fp32 reference (1.00x / 1.01x).
   - The pre-stated "<= 1e-3 vs GPU-only" is not met (2.3-3.0e-3). A GPU+GPU split with no CPU gives the same 2.3-2.5e-3, so this is bf16 output rounding. The criterion is replaced by "<= 1.1x GPU-only error vs fp32".
   - Details: results/2026-11-16-dualmem/README.md section 6.
+- **Draft passes split (prototype, NIC defaults):** 3 passes take 7.5 ms split vs 12.7 ms GPU-only on the same bytes (1.69x). The modeled value was 8.7 ms.
+  - Estimate at defaults: ~25.9 tok/s with split drafts, ~31 with EEE off (measured parts, modeled composition).
+- **Next:** real layer math in the runtime: 91 graph segments, KDA state and MLA latent KV on the CPU side, dynamic expert assignment. Then a measured end-to-end decode and a dNLL check of bf16 vs fp32 partial exchange.

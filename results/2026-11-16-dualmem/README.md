@@ -163,3 +163,23 @@ rule, sigmoid-gated o_norm), following the vLLM glm5next code. MLA runs causal a
   at the edge for MLA (1.11x).
 - Recommendation: exchange fp32 partials (64 KB at T = 4; measured swap 79-82 us vs 50-62 us at 32 KB with EEE off, about +2.5 ms
   per cycle), or verify bf16 exchange end to end on dNLL. Per-layer error is not the quality metric; the balanced-eval dNLL is.
+
+## 7. Split draft passes, prototype [M] (`bench/dualmem/run_draft.sh`, `proto_draft3_default_nic.txt`)
+Three MTP draft passes at T = 1, NIC at defaults (EEE on; Carmen has not decided on EEE). Per pass and per side:
+- phase A = MTP attention half plus eh_proj half, with q_a/kv_a replicated (105 MB);
+- phase B = lm_head vocab half plus shared-expert half plus one FP8 expert as a byte stand-in for the MTP experts (355 MB).
+
+Real FP8 kernels on both sides; FP8 byte stand-ins for the BF16 kv_b / eh_proj halves. Same bytes as the 0.95 GB draft pass.
+
+| run | 3 draft passes, ms (p50) |
+|---|---|
+| GPU only, same bytes | 12.7 (215 GB/s) |
+| GPU half only | 6.6 |
+| workstation half only (server compute) | 5.9 [D: 3 x (476 + 1481 us)] |
+| **split, NIC defaults** | **7.5** (1.69x; swap 122 us per 8 KB phase) |
+
+- One swap per pass is not modeled: the lm_head phase was merged into phase B, so 6 phases ran instead of 9. That adds about 3 x 0.13 ms → ~7.9 ms [D].
+- The section-5 model assumed 8.7 ms at defaults and 7.4 ms with EEE off, so the measurement is slightly better than modeled.
+- **Updated measured-input estimate with split drafts:**
+  - NIC defaults: 77.6 + 7.9 = 85.5 ms per cycle → **~25.9 tok/s** (24.2 with drafts on the GPU only).
+  - EEE off: ~31 tok/s (modeled from the measured EEE-off swap).
