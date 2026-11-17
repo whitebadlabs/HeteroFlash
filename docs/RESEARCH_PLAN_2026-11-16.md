@@ -449,3 +449,38 @@ Full write-up: `results/2026-11-16-dualmem/README.md`.
 - **Draft passes split (prototype, NIC defaults):** 3 passes take 7.5 ms split vs 12.7 ms GPU-only on the same bytes (1.69x). The modeled value was 8.7 ms.
   - Estimate at defaults: ~25.9 tok/s with split drafts, ~31 with EEE off (measured parts, modeled composition).
 - **Next:** real layer math in the runtime: 91 graph segments, KDA state and MLA latent KV on the CPU side, dynamic expert assignment. Then a measured end-to-end decode and a dNLL check of bf16 vs fp32 partial exchange.
+
+### E4. Bet 1 step 5: integration plan for the real runtime (2026-11-17)
+
+**Runtime integrated into.** The config-B deployment: Spark-native vLLM (V2 runner, CUDA graphs, MTP-3, B12X backends, FP8 fixed path from `full_iq2xxs_fp8`), routed experts as Q4_K + imatrix on the workstation CPU (`runtime/expert_server_gguf.c`), handoff through the graph-capturable mailbox (`ops/route3/remote_hook/hf_mailbox.cu`). New code: `bench/dualrt/` (hook `hook/sitecustomize.py`, CUDA extension `hook/hf_drt.cu`).
+
+**Execution model.**
+- The GPU stays the master. Per exchange point it packs the phase input into a pinned host-mapped mailbox from inside the CUDA graph; a Spark relay thread forwards it to the workstation; a spin-wait kernel later in the same graph adds or consumes the reply. Exchange points are therefore not CUDA-graph breaks: the plan's "91 graph segments" become 91 in-graph exchange points per verify pass (45 layers x 2 + lm_head), plus 3 per draft pass. The mailbox was already exact under graph replay (11-08 unit test).
+- Asymmetric request/reply (GPU sends the phase input, the workstation returns its part), not the prototype's symmetric swap. It costs one extra one-way link latency per phase, but the workstation never needs the mHC residual streams, norms, router or sampling state. A symmetric variant is a later optimisation.
+- Partial sums return in bf16 by default (Carmen 2026-11-17: the +6-11% per-layer rounding of bf16 exchange "is fine. Try to optimize for more tok/s"); fp32 is an option (new flag bit 2 in the HFX1 protocol), and both are measured on the eval set. Projection outputs that the GPU itself would round to bf16 (q/k/v rows) are returned in bf16, which is the same rounding as the GPU-only path.
+
+**What runs where, per layer.**
+
+| part | GPU (Spark) | workstation CPU | exchange |
+|---|---|---|---|
+| routed experts (layers 3-44), stage M1 | a resident hot set of the *same* Q4_K bytes (read from the Spark's copy of the GGUF; the unused IQ2 copies of layers 3-44 are freed) | every expert (175 GB, unchanged server) | assign kernel per step: union U of the window's experts; cap = round(A·U + B) resident experts go to the GPU, the rest to the CPU; fp32 partial back |
+| shared expert (layers 3-44), dense MLP (0-2), stage M2 | half the intermediate columns (own FP8 GEMV over a copy of its half) | the other half (`bench/dualmem/hf_gemv_lib.c` kernels, checkpoint's own FP8 bytes) | merged into the MoE reply (one partial per layer) |
+| KDA attention (34 layers), stage M3 | q/k/v rows of heads it owns, the small bf16 projections, then conv, recurrence, gating and o_proj for all heads | q/k/v rows of the other heads | bf16 q/k/v rows back (T x h_cpu x 384) |
+| MLA attention (11 layers), stage M3 | kv_a, indexer, attention over its latent cache for all heads, kv_b absorption, o_proj | q_a, q_a norm, q_b rows of the heads it owns | bf16 q rows back |
+| lm_head (verify and drafts), stage M4 | half the vocabulary | the other half | top-k (k = 8) values + ids per token; exact for greedy decode (speed runs are greedy); quality runs keep the full lm_head on the GPU |
+| MTP draft passes, stage M4 | as above per pass (MLA + MoE + eh_proj + shared head) | as above | same exchanges |
+
+**Deviation from the plan: KDA recurrent state and the MLA latent cache stay on the GPU.**
+- The workstation computes the projection rows of its heads, not their recurrence or attention.
+- Gain: vLLM keeps owning every state. Speculative-decode rollback (accepted-prefix KDA state), prefix caching, KDA block checkpoints and prefill are unchanged, and no state is copied between machines after a prefill.
+- Cost [modeled]: o_proj (KDA) and the attention core no longer overlap with workstation work: about 1.2 GB per cycle at GPU speed, ~3 ms per cycle. The head ratio is chosen so the projection phase balances.
+- The CPU-side-state design (plan text) stays the fallback if the measured cost is larger.
+
+**Order of work and gates.**
+1. Same-session config-B baseline (MTP-3, mailbox, prose + Hermes-like prompts, 3 repeats), because config B varied 15.3-19.5 tok/s between earlier runs.
+2. **M1 experts by expert** (largest term: 13.5 of ~25 GB per cycle is Q4_K experts, all on the CPU in config B). Unit test of the GPU Q4_K kernel against an fp32 dequantised reference and against the workstation server; then 1 layer split, then all 42; teacher-forced agreement against config B at each step (same token ids, per-position top-1 and logit error; free-running text diverges after one rounding flip, so it is reported but not the gate). The pass bar is set from a repeat of the unsplit run (noise floor).
+3. **M2 shared/dense columns, M3 attention projections, M4 lm_head and drafts**, each with the same agreement check. A loopback mode (the "CPU" half computed by a second GPU kernel) isolates decomposition bugs from transport bugs where it is cheap.
+4. Measure at each stage: tok/s batch 1 (essay benchmark, 4 chat prompts, 10 Hermes-suite items), MTP acceptance, per-component time (assign counters, server time, relay round trip), NIC defaults (EEE on) with the mailbox's 20 us heartbeat; a temporary EEE-off run restored afterwards is reported separately.
+5. Quality: balanced eval at small batched-token windows (so the decode-size split path is exercised; exchange counters asserted nonzero), paired per-token dNLL and direct KLD against the unsplit config-B run on the same windows, fp32 vs bf16 partial exchange, plus a repeat of the unsplit run for the floor.
+
+**Gating fact found while planning.** The section-5 composition assumed a GPU Q4_K expert kernel at the IQ2 kernel's 195 GB/s ([A] in `dualmem_compose_2026_11_16.py`). b12x has no Q4_K path and cannot address a compact hot subset (route geometry fixed at 288 experts per layer, 11-08), and the GPU's IQ2 copies fail the quality bar (+0.12 to +0.18). So M1 needs its own GPU Q4_K kernel over a compact resident pool; it is written in `hook/hf_drt.cu`.

@@ -1,5 +1,5 @@
 // HeteroFlash CPU expert server, GGUF k-quant edition (runtime-v2).
-// Same wire protocol as expert_server.c (HFX1 request -> HFY1 reply, flag bit0 busy-poll, bit1 heartbeat), but the
+// Same wire protocol as expert_server.c (HFX1 request -> HFY1 reply, flag bit0 busy-poll, bit1 heartbeat, bit2 fp32 reply), but the
 // experts are the rows of a llama.cpp GGUF (e.g. Q4_K + imatrix), memory-mapped, and every dot product is llama.cpp's
 // own CPU kernel (ggml_get_type_traits_cpu(type)->vec_dot with activations quantized to its vec_dot_type), so the CPU
 // computes exactly what llama.cpp would for that format.
@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include "ggml.h"
 #include "ggml-cpu.h"
+#include "hf_gemv_lib.c"   // bench/dualmem: exact-format FP8 / BF16 GEMV kernels (dense row-split requests, 2026-11-17)
 
 #define H 4096
 #define I 2048
@@ -79,6 +80,29 @@ static int load(const char *gguf, const char *idx) {
 static inline const uint8_t *row_ptr(const XT *t, int e, int r) { return t->base + ((size_t)e * t->rows + r) * t->row_bytes; }
 
 typedef struct { uint16_t tok, expert; float w; } Pair;
+
+// ---------------------------------------------------------------- dense row-split linears (HFD1 -> HFE1), 2026-11-17
+// HF_DENSE_PACK file: "HFDP", u32 n, then n x {u32 lid, u32 fmt, u32 N, u32 K, u64 w_off, u64 s_off} and the data.
+// fmt 0 = MXFP8 (E4M3 [N][K] + E8M0 [N][K/32]), 3 = FP8 + FP32 128x128 block scales. The server's rows only.
+#define DMAX 64
+typedef struct { int fmt, N, K; const uint8_t *W; const void *S; } DL;
+static DL dl[DMAX];
+static int load_dense(const char *path) {
+    int fd = open(path, O_RDONLY); if (fd < 0) { perror("open dense pack"); return -1; }
+    struct stat st; fstat(fd, &st);
+    const uint8_t *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED | MAP_POPULATE, fd, 0);
+    if (map == MAP_FAILED) { perror("mmap dense"); return -1; }
+    if (memcmp(map, "HFDP", 4)) { fprintf(stderr, "bad dense pack magic\n"); return -1; }
+    uint32_t n; memcpy(&n, map + 4, 4);
+    for (uint32_t i = 0; i < n; i++) {
+        const uint8_t *r = map + 8 + i * 32; uint32_t lid, f, N, K; uint64_t wo, so;
+        memcpy(&lid, r, 4); memcpy(&f, r + 4, 4); memcpy(&N, r + 8, 4); memcpy(&K, r + 12, 4); memcpy(&wo, r + 16, 8); memcpy(&so, r + 24, 8);
+        if (lid >= DMAX) return -1;
+        dl[lid].fmt = f; dl[lid].N = N; dl[lid].K = K; dl[lid].W = map + wo; dl[lid].S = map + so;
+    }
+    fprintf(stderr, "dense pack: %u linears, %.2f GB\n", n, st.st_size / 1e9);
+    return (int)n;
+}
 
 // y[ntok][H] = sum over pairs of w * down( silu(gate x) * up x ), all dot products by llama.cpp's vec_dot for the type.
 static int run_layer(int L, int ntok, const float *x, int np, const Pair *pairs, float *y) {
@@ -203,6 +227,8 @@ int main(int argc, char **argv) {
     if (argc < 5 || strcmp(argv[1], "serve")) { fprintf(stderr, "usage: %s serve <port> <gguf> <idx> | selftest <gguf> <idx> <layer> <expert>\n", argv[0]); return 2; }
     int port = atoi(argv[2]);
     if (load(argv[3], argv[4]) <= 0) return 1;
+    if (getenv("HF_DENSE_PACK") && load_dense(getenv("HF_DENSE_PACK")) < 0) return 1;
+    static float dy[16 * 160000]; static uint16_t dyb[16 * 160000], dxb[16 * 8192];
     int srv = socket(AF_INET, SOCK_STREAM, 0), one = 1;
     setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
     struct sockaddr_in a = {.sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY};
@@ -217,7 +243,25 @@ int main(int argc, char **argv) {
         busy_conn = 0;
         for (;;) {
             uint32_t magic; uint16_t hdr[4];
-            if (readn(c, &magic, 4) || magic != 0x31584648u || readn(c, hdr, 8)) break;
+            if (readn(c, &magic, 4) || readn(c, hdr, 8)) break;
+            if (magic == 0x31444648u) {   // HFD1 dense rows: lid, T, flags
+                int lid = hdr[0], T = hdr[1];
+                if ((hdr[2] & 1) && !busy_conn) set_busy(c);
+                int use_hb = (hdr[2] & 2) != 0;
+                if (use_hb && !hb_started) { hb_fd = c; atomic_store(&hb_state, 0); pthread_create(&hbt, NULL, hb_thread, NULL); hb_started = 1; }
+                if (lid >= DMAX || !dl[lid].W || T > 16 || (size_t)T * dl[lid].N > 16 * 160000) break;
+                if (readn(c, dxb, (size_t)T * dl[lid].K * 2)) break;
+                double t0 = now_us();
+                if (use_hb) atomic_store(&hb_state, 1);
+                int st = hf_gemv(dl[lid].fmt, dl[lid].W, dl[lid].fmt == 0 ? (const uint8_t *)dl[lid].S : NULL,
+                                 dl[lid].fmt == 3 ? (const float *)dl[lid].S : NULL, dl[lid].N, dl[lid].K, dxb, T, dy);
+                for (size_t i = 0; i < (size_t)T * dl[lid].N; i++) dyb[i] = f_to_bf16(dy[i]);
+                if (use_hb) hb_stop();
+                uint32_t us = (uint32_t)(now_us() - t0), rm = 0x31454648u; uint16_t rh[2] = {(uint16_t)T, (uint16_t)(st ? 1 : 0)};
+                if (writen(c, &rm, 4) || writen(c, rh, 4) || writen(c, &us, 4) || writen(c, dyb, (size_t)T * dl[lid].N * 2)) break;
+                continue;
+            }
+            if (magic != 0x31584648u) break;
             int layer = hdr[0], ntok = hdr[1], np = hdr[2];
             if ((hdr[3] & 1) && !busy_conn) set_busy(c);
             int use_hb = (hdr[3] & 2) != 0;
@@ -230,10 +274,12 @@ int main(int argc, char **argv) {
             for (int p = 0; p < np; p++) { pairs[p].tok = wire[p].tok; pairs[p].expert = wire[p].expert; pairs[p].w = wire[p].w; }
             for (int i = 0; i < ntok * H; i++) x[i] = bf16_to_f(xb[i]);
             int st = run_layer(layer, ntok, x, np, pairs, y);
-            for (int i = 0; i < ntok * H; i++) yb[i] = f_to_bf16(y[i]);
+            int f32 = (hdr[3] & 4) != 0;   // flag bit2 (2026-11-17): reply with fp32 partial sums instead of bf16
+            if (!f32) for (int i = 0; i < ntok * H; i++) yb[i] = f_to_bf16(y[i]);
             if (use_hb) hb_stop();
             uint32_t us = (uint32_t)(now_us() - t0), rm = 0x31594648u; uint16_t rh[2] = {(uint16_t)ntok, (uint16_t)st};
-            if (writen(c, &rm, 4) || writen(c, rh, 4) || writen(c, &us, 4) || writen(c, yb, (size_t)ntok * H * 2)) break;
+            if (writen(c, &rm, 4) || writen(c, rh, 4) || writen(c, &us, 4) ||
+                (f32 ? writen(c, y, (size_t)ntok * H * 4) : writen(c, yb, (size_t)ntok * H * 2))) break;
         }
         if (hb_started) { atomic_store(&hb_state, 2); pthread_join(hbt, NULL); hb_started = 0; atomic_store(&hb_state, 0); }
         close(c);
