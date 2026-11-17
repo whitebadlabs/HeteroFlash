@@ -23,6 +23,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
 #include <atomic>
 #include <cstring>
 #include <thread>
@@ -78,6 +79,7 @@ static int n_slots = 0, sock_fd = -1;
 static std::thread relay;
 static std::atomic<bool> relay_run{false};
 static std::atomic<long long> st_req{0}, st_pairs{0}, st_us{0}, st_rt_us{0};
+static std::atomic<long long> sd_req{0}, sd_pairs{0}, sd_us{0}, sd_rt_us{0};   // decode-size windows only (T <= 4)
 
 __global__ void pack_kernel(Slot *slots, unsigned long long *seqs, int slot, int layer_idx, const __nv_bfloat16 *x,
                             const int64_t *ids64, const int *ids32, const float *w, const bool *remote, int T) {
@@ -116,13 +118,22 @@ __global__ void wait_add_kernel(Slot *slots, const unsigned long long *seqs, int
   for (int i = threadIdx.x; i < T * HMB_H; i += blockDim.x) out[i] = __float2bfloat16(__bfloat162float(out[i]) + y[i]);
 }
 
+static inline double now_us();
 static void writen(const void *b, size_t n) {
+  last_tx = now_us();
   const char *p = (const char *)b;
   while (n) { ssize_t k = send(sock_fd, p, n, MSG_NOSIGNAL); if (k <= 0) throw std::runtime_error("send"); p += k; n -= k; }
 }
-static void readn(void *b, size_t n) {
+static int keepalive_us = 0;            // >0: send a 0x00 byte when the link has been idle this long (EEE keep-awake)
+static double last_tx = 0;
+static void readn(void *b, size_t n) {   // busy-poll receive: no sleep/wakeup on the reply path
   char *p = (char *)b;
-  while (n) { ssize_t k = recv(sock_fd, p, n, 0); if (k <= 0) throw std::runtime_error("recv"); p += k; n -= k; }
+  while (n) {
+    ssize_t k = recv(sock_fd, p, n, MSG_DONTWAIT);
+    if (k > 0) { p += k; n -= k; continue; }
+    if (k == 0) throw std::runtime_error("recv closed");
+    if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) throw std::runtime_error("recv");
+  }
 }
 static inline double now_us() { timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e6 + t.tv_nsec / 1e3; }
 static inline float bf2f(unsigned short b) { unsigned int u = (unsigned int)b << 16; float f; memcpy(&f, &u, 4); return f; }
@@ -151,6 +162,7 @@ static void relay_loop(int flags) {
   std::vector<unsigned char> buf, yb;
   const bool f32 = (flags & 4) != 0;
   while (relay_run.load(std::memory_order_relaxed)) {
+    if (keepalive_us > 0 && now_us() - last_tx > keepalive_us) { const char z = 0; send(sock_fd, &z, 1, MSG_NOSIGNAL | MSG_DONTWAIT); last_tx = now_us(); }
     for (int si = 0; si < n_dslots; si++) {
       DSlot *s = h_dslots + si;
       unsigned long long q = s->req_flag;
@@ -212,6 +224,7 @@ static void relay_loop(int flags) {
       }
       s->server_us = us; s->relay_us = (unsigned int)(now_us() - t0); s->npairs = (unsigned int)(pairs.size() / 8);
       st_rt_us += s->relay_us;
+      if (T <= 4) { sd_req++; sd_pairs += s->npairs; sd_us += us; sd_rt_us += s->relay_us; }
       std::atomic_thread_fence(std::memory_order_release);
       s->done_flag = q;
       seen[si] = q;
@@ -221,6 +234,7 @@ static void relay_loop(int flags) {
 
 void mb_init(int64_t slots, std::string host, int64_t port, int64_t flags) {
   if (h_slots) return;
+  if (getenv("HF_SPLIT_KEEPALIVE_US")) keepalive_us = atoi(getenv("HF_SPLIT_KEEPALIVE_US"));
   n_slots = (int)slots;
   if (cudaHostAlloc((void **)&h_slots, sizeof(Slot) * n_slots, cudaHostAllocMapped) != cudaSuccess) throw std::runtime_error("cudaHostAlloc");
   memset((void *)h_slots, 0, sizeof(Slot) * n_slots);
@@ -258,13 +272,15 @@ void mb_wait_add(int64_t slot, torch::Tensor out) {
   wait_add_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_slots, d_seq, (int)slot, (__nv_bfloat16 *)out.data_ptr(), T);
 }
 
-std::vector<int64_t> mb_stats() { return {st_req.load(), st_pairs.load(), st_us.load(), st_rt_us.load()}; }
+std::vector<int64_t> mb_stats() { return {st_req.load(), st_pairs.load(), st_us.load(), st_rt_us.load(),
+                                          sd_req.load(), sd_pairs.load(), sd_us.load(), sd_rt_us.load()}; }
 std::vector<int64_t> mb_slot_info(int64_t slot) { Slot *s = h_slots + slot; return {(int64_t)s->server_us, (int64_t)s->relay_us, (int64_t)s->npairs}; }
 
 // ------------------------------------------------------------------------------------------------ assign
 // stats per layer: [calls, sum U, sum cap, sum resident-in-union]
-__global__ void assign_kernel(const int64_t *ids64, const int *ids32, const float *w, int T, const int *slot_of, float a, float b,
+__global__ void assign_kernel(const int64_t *ids64, const int *ids32, const float *w, int T, const int *slot_of, const float *ab,
                               int mode, bool *remote, int *glist, int *gcount, float *gw, long long *stats) {
+  const float a = ab[0], b = ab[1];      // balance rule from device memory: tunable at run time under CUDA graphs
   __shared__ int present[NEXP], rank_res[NEXP];
   __shared__ int s_cap, s_U, s_R;
   int tid = threadIdx.x;
@@ -312,14 +328,14 @@ __global__ void assign_kernel(const int64_t *ids64, const int *ids32, const floa
   }
 }
 
-void assign(torch::Tensor ids, torch::Tensor w, torch::Tensor slot_of, double a, double b, int64_t mode, torch::Tensor remote,
+void assign(torch::Tensor ids, torch::Tensor w, torch::Tensor slot_of, torch::Tensor ab, int64_t mode, torch::Tensor remote,
             torch::Tensor glist, torch::Tensor gcount, torch::Tensor gw, torch::Tensor stats) {
   int T = (int)ids.size(0);
   TORCH_CHECK(T <= HMB_MAXT && ids.size(1) == HMB_K && ids.is_contiguous() && w.is_contiguous() && w.scalar_type() == at::kFloat);
   bool is64 = ids.scalar_type() == at::kLong;
   assign_kernel<<<1, 512, 0, at::cuda::getCurrentCUDAStream()>>>(
       is64 ? ids.data_ptr<int64_t>() : nullptr, is64 ? nullptr : ids.data_ptr<int>(), w.data_ptr<float>(), T, slot_of.data_ptr<int>(),
-      (float)a, (float)b, (int)mode, remote.data_ptr<bool>(), glist.data_ptr<int>(), gcount.data_ptr<int>(), gw.data_ptr<float>(),
+      ab.data_ptr<float>(), (int)mode, remote.data_ptr<bool>(), glist.data_ptr<int>(), gcount.data_ptr<int>(), gw.data_ptr<float>(),
       stats.numel() ? (long long *)stats.data_ptr<int64_t>() : nullptr);
 }
 
@@ -510,7 +526,8 @@ int64_t dense_register(int64_t lid, int64_t K, int64_t N) {
   return si;
 }
 
-__global__ void dense_pack_kernel(DSlot *slots, unsigned long long *seqs, int si, const __nv_bfloat16 *x, int T, int K) {
+__global__ void dense_pack_kernel(DSlot *slots, unsigned long long *seqs, int si, const __nv_bfloat16 *x, int T, int K, const int *gate) {
+  if (gate && *gate == 0) return;          // run-time switch: this split is off, the GPU computes every row
   DSlot *s = slots + si;
   const uint4 *xs = (const uint4 *)x; uint4 *xd = (uint4 *)s->x;
   for (int i = threadIdx.x; i < T * K / 8; i += blockDim.x) xd[i] = xs[i];
@@ -524,37 +541,43 @@ __global__ void dense_pack_kernel(DSlot *slots, unsigned long long *seqs, int si
 
 // out[t, col0 + j] = y[t, j] for j < N (row stride ldo); every block waits for the reply flag.
 __global__ void dense_wait_copy_kernel(DSlot *slots, const unsigned long long *seqs, int si, const __nv_bfloat16 *y, int T, int N,
-                                       __nv_bfloat16 *out, int ldo, int col0) {
+                                       __nv_bfloat16 *out, int ldo, int col0, int ycol0, int nc, const int *gate) {
+  if (gate && *gate == 0) return;
   DSlot *s = slots + si;
   __shared__ unsigned long long want;
   if (threadIdx.x == 0) { want = seqs[si]; while (s->done_flag != want) { __nanosleep(100); } __threadfence_system(); }
   __syncthreads();
   const volatile unsigned short *yv = (const volatile unsigned short *)y;
   unsigned short *o = (unsigned short *)out;
-  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x; i < (size_t)T * N; i += (size_t)gridDim.x * blockDim.x) {
-    int t = (int)(i / N), j = (int)(i % N);
-    o[(size_t)t * ldo + col0 + j] = yv[i];
+  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x; i < (size_t)T * nc; i += (size_t)gridDim.x * blockDim.x) {
+    int t = (int)(i / nc), j = (int)(i % nc);
+    o[(size_t)t * ldo + col0 + j] = yv[(size_t)t * N + ycol0 + j];
   }
 }
 
-void dense_pack(int64_t si, torch::Tensor x) {
+static const int *gate_ptr(torch::Tensor g) { return g.numel() ? g.data_ptr<int>() : nullptr; }
+void dense_pack(int64_t si, torch::Tensor x, torch::Tensor gate) {
   int T = (int)x.size(0), K = (int)x.size(1);
   TORCH_CHECK(T <= DMAXT && x.is_contiguous() && x.scalar_type() == at::kBFloat16 && K == h_dslots[si].K);
-  dense_pack_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_dslots, d_dseq, (int)si, (const __nv_bfloat16 *)x.data_ptr(), T, K);
+  dense_pack_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_dslots, d_dseq, (int)si, (const __nv_bfloat16 *)x.data_ptr(), T, K, gate_ptr(gate));
 }
 
-void dense_wait_copy(int64_t si, int64_t T, torch::Tensor out, int64_t col0) {
+// out[:, col0 : col0 + nc] = reply[:, ycol0 : ycol0 + nc]  (nc < 0: the whole reply)
+void dense_wait_copy(int64_t si, int64_t T, torch::Tensor out, int64_t col0, int64_t ycol0, int64_t nc, torch::Tensor gate) {
   TORCH_CHECK(out.scalar_type() == at::kBFloat16 && out.stride(1) == 1);
   int N = dN[si];
-  dense_wait_copy_kernel<<<64, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_dslots, d_dseq, (int)si, d_dy[si], (int)T, N,
-      (__nv_bfloat16 *)out.data_ptr(), (int)out.stride(0), (int)col0);
+  if (nc < 0) nc = N - ycol0;
+  int blocks = (int)std::min<int64_t>(64, (T * nc + 1023) / 1024);
+  dense_wait_copy_kernel<<<std::max(blocks, 1), 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_dslots, d_dseq, (int)si, d_dy[si], (int)T, N,
+      (__nv_bfloat16 *)out.data_ptr(), (int)out.stride(0), (int)col0, (int)ycol0, (int)nc, gate_ptr(gate));
 }
 
 // MXFP8 (E4M3 + E8M0 per 32 along K) row GEMV: out[t, r] = bf16(sum_k W[r,k] * 2^(S[r,k/32]-127) * x[t,k]), r < N.
 // One warp per row, 32 rows per block; lane reads 4 weights per 128-column step (coalesced), x fp32 in shared memory.
 template <int T>
 __global__ void __launch_bounds__(1024) mxfp8_gemv_kernel(const uint8_t *W, const uint8_t *S, int N, int K, const __nv_bfloat16 *x,
-                                                         __nv_bfloat16 *out, int ldo) {
+                                                         __nv_bfloat16 *out, int ldo, const int *gate, int want) {
+  if (gate && *gate != want) return;
   extern __shared__ float xs[];
   for (int i = threadIdx.x; i < T * K; i += blockDim.x) xs[i] = __bfloat162float(x[i]);
   __syncthreads();
@@ -591,15 +614,17 @@ __global__ void __launch_bounds__(1024) mxfp8_gemv_kernel(const uint8_t *W, cons
 }
 
 template <int T>
-static void launch_mx(const uint8_t *W, const uint8_t *S, int N, int K, const __nv_bfloat16 *x, __nv_bfloat16 *out, int ldo, cudaStream_t st) {
+static void launch_mx(const uint8_t *W, const uint8_t *S, int N, int K, const __nv_bfloat16 *x, __nv_bfloat16 *out, int ldo, cudaStream_t st,
+                      const int *gate, int want) {
   size_t sm = (size_t)T * K * 4;
   static bool attr = false;
   if (!attr) { cudaFuncSetAttribute(mxfp8_gemv_kernel<T>, cudaFuncAttributeMaxDynamicSharedMemorySize, (int)sm); attr = true; }
-  mxfp8_gemv_kernel<T><<<(N + 31) / 32, 1024, sm, st>>>(W, S, N, K, x, out, ldo);
+  mxfp8_gemv_kernel<T><<<(N + 31) / 32, 1024, sm, st>>>(W, S, N, K, x, out, ldo, gate, want);
 }
 
 // out[:, :N] (row stride out.stride(0)) for x [T, K] bf16, T <= 16 (passes of <= 4 tokens).
-void mxfp8_gemv(torch::Tensor W, torch::Tensor S, torch::Tensor x, torch::Tensor out) {
+// gate (int32 device tensor, may be empty) and want: the kernel runs only when *gate == want (run-time switches).
+void mxfp8_gemv(torch::Tensor W, torch::Tensor S, torch::Tensor x, torch::Tensor out, torch::Tensor gate, int64_t want) {
   int N = (int)W.size(0), K = (int)W.size(1), T = (int)x.size(0);
   TORCH_CHECK(x.is_contiguous() && x.scalar_type() == at::kBFloat16 && out.scalar_type() == at::kBFloat16 && out.stride(1) == 1 && K % 128 == 0);
   auto st = at::cuda::getCurrentCUDAStream();
@@ -610,10 +635,10 @@ void mxfp8_gemv(torch::Tensor W, torch::Tensor S, torch::Tensor x, torch::Tensor
     const __nv_bfloat16 *xp = (const __nv_bfloat16 *)x.data_ptr() + (size_t)t0 * K;
     __nv_bfloat16 *op = (__nv_bfloat16 *)out.data_ptr() + (size_t)t0 * ldo;
     switch (n) {
-      case 1: launch_mx<1>(Wp, Sp, N, K, xp, op, ldo, st); break;
-      case 2: launch_mx<2>(Wp, Sp, N, K, xp, op, ldo, st); break;
-      case 3: launch_mx<3>(Wp, Sp, N, K, xp, op, ldo, st); break;
-      default: launch_mx<4>(Wp, Sp, N, K, xp, op, ldo, st); break;
+      case 1: launch_mx<1>(Wp, Sp, N, K, xp, op, ldo, st, gate_ptr(gate), (int)want); break;
+      case 2: launch_mx<2>(Wp, Sp, N, K, xp, op, ldo, st, gate_ptr(gate), (int)want); break;
+      case 3: launch_mx<3>(Wp, Sp, N, K, xp, op, ldo, st, gate_ptr(gate), (int)want); break;
+      default: launch_mx<4>(Wp, Sp, N, K, xp, op, ldo, st, gate_ptr(gate), (int)want); break;
     }
   }
 }

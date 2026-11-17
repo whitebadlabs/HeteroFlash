@@ -15,8 +15,18 @@ for r in rows:
 json.dump(texts, open("/srv/vllm-research/work/HeteroFlash/results/2026-11-17-dualrt/agree_texts.json", "w"), indent=1)
 print(len(texts), "texts")
 PY
+export HF_SPLIT_STATS=${HF_SPLIT_STATS:-/out/${TAG}_stats.json}
+rm -f $OUT/drt_load.done
 bash $H/bench/dualrt/serve.sh $TAG agree || { docker rm -f hf-drt >/dev/null 2>&1; exit 1; }
+if [ "${HF_SPLIT:-0}" = 1 ] && [ "${HF_SPLIT_NRES:-0}" -gt 0 ]; then
+  touch $OUT/drt_load.req
+  for i in $(seq 120); do
+    curl -s -m 120 http://127.0.0.1:8095/v1/completions -H 'Content-Type: application/json' -d '{"model":"GLM-5.3-Flash","prompt":"Hello","max_tokens":4}' >/dev/null
+    [ -s $OUT/drt_load.done ] && break; sleep 2
+  done
+  echo "$(date -u +%H:%M:%SZ) $(cat $OUT/drt_load.done 2>/dev/null || echo 'pool load did not report')"
+fi
 python3 -I $H/bench/dualrt/agree_client.py $OUT/agree_texts.json $OUT/${TAG}_agree.json > $OUT/${TAG}_agree.log 2>&1
-[ -n "${HF_SPLIT_STATS:-}" ] && { touch $OUT/$(basename $HF_SPLIT_STATS).req; sleep 4; }
+touch $OUT/${TAG}_stats.json.req; sleep 4
 docker logs hf-drt > $OUT/${TAG}_serve.log 2>&1; docker rm -f hf-drt >/dev/null 2>&1
 echo "$(date -u +%H:%M:%SZ) DONE $TAG"

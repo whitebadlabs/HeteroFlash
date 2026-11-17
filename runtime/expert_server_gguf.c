@@ -243,7 +243,13 @@ int main(int argc, char **argv) {
         busy_conn = 0;
         for (;;) {
             uint32_t magic; uint16_t hdr[4];
-            if (readn(c, &magic, 4) || readn(c, hdr, 8)) break;
+            {   // the Spark relay may send 0x00 keep-alive bytes while idle (keeps EEE from parking the link)
+                uint8_t b0 = 0;
+                do { if (readn(c, &b0, 1)) goto conn_done; } while (b0 == 0);
+                uint8_t m3[3]; if (readn(c, m3, 3)) break;
+                magic = (uint32_t)b0 | ((uint32_t)m3[0] << 8) | ((uint32_t)m3[1] << 16) | ((uint32_t)m3[2] << 24);
+            }
+            if (readn(c, hdr, 8)) break;
             if (magic == 0x31444648u) {   // HFD1 dense rows: lid, T, flags
                 int lid = hdr[0], T = hdr[1];
                 if ((hdr[2] & 1) && !busy_conn) set_busy(c);
@@ -281,6 +287,7 @@ int main(int argc, char **argv) {
             if (writen(c, &rm, 4) || writen(c, rh, 4) || writen(c, &us, 4) ||
                 (f32 ? writen(c, y, (size_t)ntok * H * 4) : writen(c, yb, (size_t)ntok * H * 2))) break;
         }
+    conn_done:
         if (hb_started) { atomic_store(&hb_state, 2); pthread_join(hbt, NULL); hb_started = 0; atomic_store(&hb_state, 0); }
         close(c);
     }

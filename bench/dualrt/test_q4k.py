@@ -48,7 +48,7 @@ PTRS = torch.tensor([G.data_ptr(), U.data_ptr(), D.data_ptr()], dtype=torch.int6
 slot_of = torch.full((NE,), -1, dtype=torch.int32); slot_of[torch.tensor(experts)] = torch.arange(NS, dtype=torch.int32); slot_of = slot_of.cuda()
 remote = torch.ones(NE, dtype=torch.bool, device="cuda"); glist = torch.zeros(64, dtype=torch.int32, device="cuda")
 gcount = torch.zeros(1, dtype=torch.int32, device="cuda"); gw = torch.zeros(64 * 16, device="cuda"); hbuf = torch.zeros(64 * 4 * I, device="cuda")
-stats = torch.zeros(4, dtype=torch.int64, device="cuda")
+stats = torch.zeros(4, dtype=torch.int64, device="cuda"); AB = torch.tensor([1.0, 0.0], device="cuda")
 torch.manual_seed(0); rng = np.random.default_rng(0)
 deqc = {}
 def ref_moe(x, ids, w):  # fp32 reference over the same routes
@@ -69,7 +69,7 @@ for T in (1, 2, 4, 7):
     ids = torch.tensor(np.stack([rng.choice(experts, 8, replace=False) for _ in range(T)]), dtype=torch.int32)
     w = torch.rand(T, 8) * 0.3
     y = torch.zeros(T, H, device="cuda")
-    ext.assign(ids.cuda().contiguous(), w.cuda().contiguous(), slot_of, 1.0, 0.0, 2, remote, glist, gcount, gw, stats)
+    ext.assign(ids.cuda().contiguous(), w.cuda().contiguous(), slot_of, AB, 2, remote, glist, gcount, gw, stats)
     ext.q4k_moe(x.cuda().contiguous(), glist, gcount, gw, PTRS, hbuf, y)
     torch.cuda.synchronize()
     r = ref_moe(x.float().numpy().astype(np.float64), ids.numpy(), w.numpy().astype(np.float64))
@@ -99,10 +99,10 @@ for T in (1, 4):
         w = torch.rand(T, 8, device="cuda") * 0.3; y = torch.zeros(T, H, device="cuda")
         sl = torch.full((NE,), -1, dtype=torch.int32); sl[torch.tensor(experts[:ng])] = torch.arange(ng, dtype=torch.int32); sl = sl.cuda()
         for _ in range(5):
-            ext.assign(ids, w, sl, 1.0, 0.0, 2, remote, glist, gcount, gw, stats); ext.q4k_moe(x, glist, gcount, gw, PTRS, hbuf, y)
+            ext.assign(ids, w, sl, AB, 2, remote, glist, gcount, gw, stats); ext.q4k_moe(x, glist, gcount, gw, PTRS, hbuf, y)
         torch.cuda.synchronize(); n = 200; t0 = time.perf_counter()
         for _ in range(n):
-            ext.assign(ids, w, sl, 1.0, 0.0, 2, remote, glist, gcount, gw, stats); ext.q4k_moe(x, glist, gcount, gw, PTRS, hbuf, y)
+            ext.assign(ids, w, sl, AB, 2, remote, glist, gcount, gw, stats); ext.q4k_moe(x, glist, gcount, gw, PTRS, hbuf, y)
         torch.cuda.synchronize(); dt = (time.perf_counter() - t0) / n
         gc = int(gcount.item()); byts = gc * (2 * I * 2304 + H * 1152)
         bw.append({"T": T, "n_gpu_experts": gc, "us": round(dt * 1e6, 1), "GB_s": round(byts / dt / 1e9, 1)}); print(json.dumps(bw[-1]), flush=True)

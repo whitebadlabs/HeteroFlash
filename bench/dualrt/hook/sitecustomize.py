@@ -56,6 +56,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
     _STATS = os.environ.get("HF_SPLIT_STATS", "")
     _LMH_VG = int(os.environ.get("HF_SPLIT_LMHEAD_VG", "0"))   # >0: lm_head rows [0, VG) on the GPU, the rest on the CPU (lid 0)
     _CKPT = os.environ.get("HF_SPLIT_CKPT", "/m")
+    _KDA_HC = int(os.environ.get("HF_SPLIT_KDA_HC", "0"))   # >0: q/k/v rows of the last HC heads of every KDA layer on the CPU
     _tl = threading.local()
     _layer_re = re.compile(r"layers\.(\d+)\.")
     _S = {"ext": None, "buf": None, "pool": None, "calls": 0, "done": False, "pw_done": False, "fm_done": False}
@@ -63,14 +64,19 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
     def _log(msg):
         print(f"[hf-drt] {msg}", flush=True)
 
+    _ext_lock = threading.Lock()
+
     def _ext():
-        if _S["ext"] is None:
-            from torch.utils.cpp_extension import load
-            src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hf_drt.cu")
-            ext = load(name="hf_drt", sources=[src], extra_cuda_cflags=["-O3", "--use_fast_math"], verbose=False)
-            ext.mb_init((_LAST - _FIRST + 1) * _NSUB, _host, int(_port), _FLAGS)
-            _S["ext"] = ext
-            _log(f"mailbox up: mode={_MODE} A={_A} B={_B} maxT={_SPLIT_MAXT} f32={_F32} flags={_FLAGS}")
+        if _S["ext"] is not None:
+            return _S["ext"]
+        with _ext_lock:
+            if _S["ext"] is None:
+                from torch.utils.cpp_extension import load
+                src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hf_drt.cu")
+                ext = load(name="hf_drt", sources=[src], extra_cuda_cflags=["-O3", "--use_fast_math"], verbose=False)
+                ext.mb_init((_LAST - _FIRST + 1) * _NSUB, _host, int(_port), _FLAGS)
+                _S["ext"] = ext
+                _log(f"mailbox up: mode={_MODE} A={_A} B={_B} maxT={_SPLIT_MAXT} f32={_F32} flags={_FLAGS}")
         return _S["ext"]
 
     def _bufs(device):
@@ -86,6 +92,10 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 "hbuf": torch.zeros(64 * 4 * _I, dtype=torch.float32, device=device),
                 "y": torch.zeros(_MAXT * _H, dtype=torch.float32, device=device),
                 "stats": torch.zeros(nl, 4, dtype=torch.int64, device=device),
+                "ab": torch.tensor([_A, _B], dtype=torch.float32, device=device),
+                # run-time switches read by the kernels (CUDA graphs stay valid): [lm_head split on, KDA split on]
+                "gates": torch.tensor([int(os.environ.get("HF_SPLIT_LMH_ON", "1")), int(os.environ.get("HF_SPLIT_KDA_ON", "1"))],
+                                      dtype=torch.int32, device=device),
                 "counts": torch.zeros(nl, _NE, dtype=torch.int64, device=device),
             }
             if _S["pool"] is None:   # resident pool not loaded yet: dummy bases, every slot -1 (all routes to the CPU)
@@ -93,6 +103,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 _S["pool"] = {"dummy": dummy, "ptrs": torch.tensor([dummy.data_ptr()] * 3, dtype=torch.int64, device=device),
                               "slot_of": torch.full((nl, _NE), -1, dtype=torch.int32, device=device)}
             _S["buf"] = b
+            _S["none"] = torch.zeros(0, dtype=torch.int32, device=device)
             if _COUNT or _STATS:
                 threading.Thread(target=_dump_loop, daemon=True).start()
         return _S["buf"]
@@ -220,19 +231,27 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         _log(f"released {n / 1e9:.1f} GB of IQ2 storage; cuda free {free / 1e9:.1f} / {total / 1e9:.1f} GB")
 
     # ------------------------------------------------------------------ lm_head vocabulary split (stage M3a)
+    def _ckpt_get(name):
+        from safetensors import safe_open
+        wm = _S.get("wm")
+        if wm is None:
+            wm = _S["wm"] = json.load(open(f"{_CKPT}/model.safetensors.index.json"))["weight_map"]
+        with safe_open(f"{_CKPT}/{wm[name]}", framework="pt") as f:
+            return f.get_tensor(name)
+
     def _load_lmhead(device):
         if _LMH_VG <= 0:
             return
         import torch
         from safetensors import safe_open
         wm = json.load(open(f"{_CKPT}/model.safetensors.index.json"))["weight_map"]
-        with safe_open(f"{_CKPT}/{wm['lm_head.weight']}", framework="pt") as f:
-            w = f.get_slice("lm_head.weight"); V = w.get_shape()[0]
-            W = f.get_tensor("lm_head.weight").view(torch.uint8)[:_LMH_VG].contiguous().to(device)
-            S = f.get_tensor("lm_head.weight_scale").view(torch.uint8)[:_LMH_VG].contiguous().to(device)
+        w8 = _ckpt_get("lm_head.weight").view(torch.uint8); V = w8.shape[0]
+        W = w8[:_LMH_VG].contiguous().to(device); Wc = w8[_LMH_VG:].contiguous().to(device); del w8
+        s8 = _ckpt_get("lm_head.weight_scale").view(torch.uint8)
+        S = s8[:_LMH_VG].contiguous().to(device); Sc = s8[_LMH_VG:].contiguous().to(device)
         ext = _ext()
         si = ext.dense_register(0, 4096, V - _LMH_VG)
-        _S["lmh"] = {"W": W, "S": S, "V": V, "si": si}
+        _S["lmh"] = {"W": W, "S": S, "Wc": Wc, "Sc": Sc, "V": V, "si": si}
         _log(f"lm_head split: GPU rows 0-{_LMH_VG - 1}, workstation rows {_LMH_VG}-{V - 1} (dense slot {si})")
 
     _LOAD_REQ = os.environ.get("HF_SPLIT_LOAD_REQ", "/out/drt_load.req")
@@ -255,9 +274,82 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             f.write(msg + "\n")
         os.remove(_LOAD_REQ)
 
+    _AB_REQ = os.environ.get("HF_SPLIT_AB_REQ", "/out/drt_ab.req")
+
+    _G_REQ = os.environ.get("HF_SPLIT_GATES_REQ", "/out/drt_gates.req")
+
+    def _maybe_set_gates():
+        if _S.get("ah_calls", 0) % 16 or not os.path.exists(_G_REQ) or _S["buf"] is None:
+            return
+        import torch
+        try:
+            v = [int(t) for t in open(_G_REQ).read().split()[:2]]
+            torch.cuda.synchronize()
+            _S["buf"]["gates"].copy_(torch.tensor(v, dtype=torch.int32))
+            torch.cuda.synchronize()
+            _log(f"split switches set: lm_head={v[0]} kda={v[1]}")
+        except Exception as ex:  # noqa: BLE001
+            _log(f"bad gates request: {ex!r}")
+        os.remove(_G_REQ)
+
+    def _maybe_set_ab():
+        if _S.get("ah_calls", 0) % 16 or not os.path.exists(_AB_REQ) or _S["buf"] is None:
+            return
+        try:
+            a, b = (float(v) for v in open(_AB_REQ).read().split()[:2])
+            _S["buf"]["ab"].copy_(torch_tensor([a, b]))
+            _log(f"balance rule set: cap = round({a} * U + {b})")
+        except Exception as ex:  # noqa: BLE001
+            _log(f"bad ab request: {ex!r}")
+        os.remove(_AB_REQ)
+
+    def torch_tensor(v):
+        import torch
+        return torch.tensor(v, dtype=torch.float32)
+
+    # Quality capture for small-batch evals (HF_SPLIT_CAPTURE=dir): the eval client writes the request index to
+    # dir/capture.cur before each 2048-token request; every logits row of that request is appended in order and rows
+    # [1024, 2047) are saved as logits_<pid>_<n>.npy (log-softmax, fp16), the layout src/control_kld.py compare reads.
+    _CAP = os.environ.get("HF_SPLIT_CAPTURE", "")
+    _cap = {"id": None, "rows": [], "n": 0, "log": []}
+
+    def _cap_flush():
+        import numpy as np
+        import torch
+        if _cap["id"] is None or not _cap["rows"]:
+            return
+        allr = torch.cat(_cap["rows"], 0)
+        _cap["log"].append((_cap["id"], int(allr.shape[0])))
+        if allr.shape[0] >= 2047:
+            _cap["n"] += 1
+            np.save(os.path.join(_CAP, f"logits_{os.getpid()}_{_cap['n']:05d}.npy"), allr[1024:2047].numpy())
+        with open(os.path.join(_CAP, "capture_rows.json"), "w") as f:
+            json.dump(_cap["log"], f)
+        _cap["rows"] = []
+
+    def _cap_rows(out):
+        import torch
+        try:
+            cur = open(os.path.join(_CAP, "capture.cur")).read().strip()
+        except OSError:
+            return
+        if cur != _cap["id"]:
+            _cap_flush(); _cap["id"] = cur
+        if cur == "stop":
+            return
+        _cap["rows"].append(torch.log_softmax(out.float(), dim=-1).to(torch.float16).cpu())
+
     def _apply_head_split(orig, self, lm_head, hidden_states, embedding_bias):
+        out = _apply_head_split2(orig, self, lm_head, hidden_states, embedding_bias)
+        if _CAP:
+            _cap_rows(out[..., : getattr(self, "org_vocab_size", out.shape[-1])])
+        return out
+
+    def _apply_head_split2(orig, self, lm_head, hidden_states, embedding_bias):
         import torch
         _maybe_lazy_load()
+        _maybe_set_ab()
+        _maybe_set_gates()
         L = _S.get("lmh")
         T = int(hidden_states.shape[0])
         if L is None or embedding_bias is not None or T == 0 or T > 16:
@@ -270,11 +362,61 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         dt, Vp = L["proto"]
         ext = _ext()
         x = hidden_states.to(torch.bfloat16).contiguous()
-        ext.dense_pack(L["si"], x)
+        g = _S["buf"]["gates"][0:1]
+        ext.dense_pack(L["si"], x, g)
         out = torch.zeros(T, Vp, dtype=torch.bfloat16, device=x.device) if Vp > L["V"] else torch.empty(T, Vp, dtype=torch.bfloat16, device=x.device)
-        ext.mxfp8_gemv(L["W"], L["S"], x, out)
-        ext.dense_wait_copy(L["si"], T, out, _LMH_VG)
+        ext.mxfp8_gemv(L["W"], L["S"], x, out, _S["none"], 0)
+        ext.mxfp8_gemv(L["Wc"], L["Sc"], x, out.narrow(1, _LMH_VG, L["V"] - _LMH_VG), g, 0)   # split off: GPU does these rows
+        ext.dense_wait_copy(L["si"], T, out, _LMH_VG, 0, -1, g)
         return out if dt == torch.bfloat16 else out.to(dt)
+
+    # ------------------------------------------------------------------ KDA q/k/v projection rows by head (stage M3b)
+    def _load_kda(model, device):
+        if _KDA_HC <= 0:
+            return
+        import torch
+        from safetensors import safe_open
+        wm = json.load(open(f"{_CKPT}/model.safetensors.index.json"))["weight_map"]
+        ext = _ext()
+        n = 0
+        for name, mod in model.named_modules():
+            if not hasattr(mod, "in_proj_qkv") or not hasattr(mod, "project_split_input"):
+                continue
+            m = _layer_re.search(name); L = int(m.group(1))
+            pre = f"model.language_model.layers.{L}.self_attn."
+            parts = []
+            for pr in ("q_proj", "k_proj", "v_proj"):
+                w = _ckpt_get(pre + pr + ".weight").view(torch.uint8); sc = _ckpt_get(pre + pr + ".weight_scale").view(torch.uint8)
+                P = w.shape[0]; g = P - _KDA_HC * 128
+                parts.append((w[:g].contiguous().to(device), sc[:g].contiguous().to(device), P, g,
+                              w[g:].contiguous().to(device), sc[g:].contiguous().to(device)))
+            si = ext.dense_register(1 + n, 4096, 3 * _KDA_HC * 128)
+            mod.in_proj_qkv._hf_kda = {"parts": parts, "si": si, "L": L}
+            orig_fwd = mod.in_proj_qkv.forward
+
+            def fwd(x, *a, _orig=orig_fwd, _mod=mod.in_proj_qkv, **k):
+                T = int(x.shape[0])
+                if T == 0 or T > 16 or a or k:
+                    return _orig(x, *a, **k)
+                d = _mod._hf_kda
+                gt = _S["buf"]["gates"][1:2]
+                xb = x.to(torch.bfloat16).contiguous()
+                ext.dense_pack(d["si"], xb, gt)
+                Ptot = sum(p[2] for p in d["parts"])
+                out = torch.empty(T, Ptot, dtype=torch.bfloat16, device=x.device)
+                off = 0
+                for (W, S, P, g, Wc, Sc) in d["parts"]:
+                    ext.mxfp8_gemv(W, S, xb, out.narrow(1, off, g), _S["none"], 0)
+                    ext.mxfp8_gemv(Wc, Sc, xb, out.narrow(1, off + g, P - g), gt, 0)    # split off: GPU does these rows
+                    off += P
+                off, yoff, hc = 0, 0, _KDA_HC * 128
+                for (W, S, P, g, Wc, Sc) in d["parts"]:
+                    ext.dense_wait_copy(d["si"], T, out, off + g, yoff, hc, gt)
+                    off += P; yoff += hc
+                return out, None
+            mod.in_proj_qkv.forward = fwd
+            n += 1
+        _log(f"KDA q/k/v split: {n} layers, last {_KDA_HC} heads of q, k and v on the workstation (dense slots 1-{n})")
 
     # ------------------------------------------------------------------ dumps (a thread: CUDA graph replays run no Python)
     import contextlib
@@ -310,7 +452,8 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             ms = _ext().mb_stats()
             json.dump({"mode": _MODE, "A": _A, "B": _B, "f32": _F32, "nres": _NRES, "moe_calls": _S["calls"],
                        "per_layer_calls_U_cap_R": {str(L): st[L - _FIRST] for L in range(_FIRST, _LAST + 1)},
-                       "mailbox_req_pairs_serverus_relayus": ms}, open(_STATS, "w"))
+                       "mailbox_req_pairs_serverus_relayus": ms[:4], "mailbox_decode_T<=4_req_pairs_serverus_relayus": ms[4:],
+                       "dense_req_serverus_relayus": _ext().dense_stats()}, open(_STATS, "w"))
 
     # ------------------------------------------------------------------ the MoE path
     def _moe_split(L, x, topk_weights, topk_ids):
@@ -326,7 +469,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         if T <= _SPLIT_MAXT:
             if _COUNT:
                 b["counts"][li].index_add_(0, ids.reshape(-1).long(), torch.ones_like(ids.reshape(-1), dtype=torch.int64))
-            ext.assign(ids, w, P["slot_of"][li], _A, _B, _MODE, b["remote"], b["glist"], b["gcount"], b["gw"], b["stats"][li])
+            ext.assign(ids, w, P["slot_of"][li], b["ab"], _MODE, b["remote"], b["glist"], b["gcount"], b["gw"], b["stats"][li])
             ext.mb_pack(li * _NSUB, li, xb, ids, w, b["remote"])
             y = b["y"][: T * _H].view(T, _H)
             ext.q4k_moe(xb, b["glist"], b["gcount"], b["gw"], P["ptrs"], b["hbuf"], y)
@@ -365,6 +508,9 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                     if workspace is None:
                         return orig_fm(self, x, topk_weights, topk_ids, shared_experts=shared_experts, shared_experts_input=shared_experts_input)
                     return orig_fm(self, x, topk_weights, topk_ids, shared_experts=shared_experts, shared_experts_input=shared_experts_input, workspace=workspace)
+                if shared_experts is not None and shared_experts_input is not None:   # runs only if the kernel owned it
+                    from vllm.model_executor.layers.fused_moe.runner.shared_experts import SharedExpertsOrder
+                    shared_experts(shared_experts_input, SharedExpertsOrder.MK_INTERNAL_OVERLAPPED)
                 return _moe_split(L, x, topk_weights, topk_ids)
 
             def forward(self, hidden_states, router_logits, *a, **k):
@@ -404,6 +550,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 dev = torch.device("cuda", torch.cuda.current_device())
                 _free_iq2(model)
                 _bufs(dev)
+                _load_kda(model, dev)
                 _load_lmhead(dev)
                 free, total = torch.cuda.mem_get_info()
                 _log(f"after resident load: cuda free {free / 1e9:.1f} / {total / 1e9:.1f} GB")
