@@ -118,14 +118,14 @@ __global__ void wait_add_kernel(Slot *slots, const unsigned long long *seqs, int
   for (int i = threadIdx.x; i < T * HMB_H; i += blockDim.x) out[i] = __float2bfloat16(__bfloat162float(out[i]) + y[i]);
 }
 
+static int keepalive_us = 0;            // >0: send a 0x00 byte when the link has been idle this long (EEE keep-awake)
+static double last_tx = 0;
 static inline double now_us();
 static void writen(const void *b, size_t n) {
   last_tx = now_us();
   const char *p = (const char *)b;
   while (n) { ssize_t k = send(sock_fd, p, n, MSG_NOSIGNAL); if (k <= 0) throw std::runtime_error("send"); p += k; n -= k; }
 }
-static int keepalive_us = 0;            // >0: send a 0x00 byte when the link has been idle this long (EEE keep-awake)
-static double last_tx = 0;
 static void readn(void *b, size_t n) {   // busy-poll receive: no sleep/wakeup on the reply path
   char *p = (char *)b;
   while (n) {
