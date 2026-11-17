@@ -1,0 +1,11 @@
+{"workload": "essay_completions_rep0", "tokens": 256, "s": 9.555, "tok_s": 26.79, "drafts": 110.0, "committed_per_step": 2.327, "per_pos_accept": [0.755, 0.409, 0.164], "ms_per_cycle": 86.86}
+{"workload": "essay_completions_rep1", "tokens": 256, "s": 9.62, "tok_s": 26.61, "drafts": 110.0, "committed_per_step": 2.327, "per_pos_accept": [0.755, 0.409, 0.164], "ms_per_cycle": 87.46}
+{"workload": "essay_completions_rep2", "tokens": 256, "s": 9.638, "tok_s": 26.56, "drafts": 111.0, "committed_per_step": 2.306, "per_pos_accept": [0.748, 0.369, 0.189], "ms_per_cycle": 86.83}
+{"workload": "prose", "tokens": 400, "s": 15.365, "tok_s": 26.03, "drafts": 171.0, "committed_per_step": 2.333, "per_pos_accept": [0.713, 0.409, 0.211], "ms_per_cycle": 89.85}
+{"workload": "code", "tokens": 400, "s": 16.64, "tok_s": 24.04, "drafts": 181.0, "committed_per_step": 2.204, "per_pos_accept": [0.652, 0.365, 0.188], "ms_per_cycle": 91.94}
+{"workload": "chat", "tokens": 400, "s": 16.298, "tok_s": 24.54, "drafts": 186.0, "committed_per_step": 2.145, "per_pos_accept": [0.651, 0.323, 0.172], "ms_per_cycle": 87.63}
+{"workload": "reasoning", "tokens": 400, "s": 15.583, "tok_s": 25.67, "drafts": 172.0, "committed_per_step": 2.32, "per_pos_accept": [0.64, 0.442, 0.238], "ms_per_cycle": 90.6}
+{"workload": "profiled_decode64", "tokens": 64, "s": 2.581, "tok_s": 24.8, "drafts": 28.0, "committed_per_step": 2.25, "per_pos_accept": [0.75, 0.393, 0.107], "ms_per_cycle": 92.17}
+{"cold_45k_s": 41.18}
+{"cached_45k_plus32_s": 0.715, "rep": 0, "profiled": true, "cached_tokens": null}
+{"cached_45k_plus32_s": 2.153, "rep": 1, "profiled": false, "cached_tokens": null}

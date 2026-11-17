@@ -11,3 +11,7 @@ results/glm_mmid_perf_raw.txt
 
 # raw model answers from eval suites (kept outside the repo)
 results/**/answers_*.jsonl
+
+# run-time control files of held boots (2026-11-17)
+results/**/*.stop
+results/**/*.req

@@ -1,0 +1,989 @@
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347] 
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347]        █     █     █▄   ▄█
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.1.dev21830+g8244d1c44.d20261015
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347]   █▄█▀ █     █     █     █  model   /m
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:347] 
+(APIServer pid=1) INFO 11-16 23:54:02 [api_utils.py:286] non-default args: {'model_tag': '/m', 'chat_template': '/tmpl.jinja', 'default_chat_template_kwargs': {'reasoning_effort': 'high'}, 'enable_auto_tool_choice': True, 'tool_call_parser': 'glm47', 'host': '0.0.0.0', 'port': 8095, 'model': '/m', 'trust_remote_code': True, 'dtype': 'bfloat16', 'max_model_len': 65536, 'quantization': 'modelopt_mixed', 'served_model_name': ['GLM-5.3-Flash'], 'attention_backend': 'B12X', 'reasoning_parser': 'glm45', 'block_size': 256, 'gpu_memory_utilization': 0.9, 'kv_cache_dtype': 'fp8', 'mamba_ssm_cache_dtype': 'bfloat16', 'max_num_batched_tokens': 8192, 'max_num_seqs': 1, 'moe_backend': 'b12x', 'linear_backend': 'b12x', 'speculative_config': {'method': 'mtp', 'num_speculative_tokens': 3, 'attention_backend': 'B12X'}, 'profiler_config': ProfilerConfig(profiler='torch', torch_profiler_dir='/prof', proton_profiler_dir='', proton_context='shadow', proton_data='tree', proton_backend=None, proton_mode=None, proton_hook=None, proton_output_format=None, proton_graph_attribution=False, torch_profiler_with_stack=True, torch_profiler_with_flops=False, torch_profiler_use_gzip=True, torch_profiler_dump_cuda_time_total=True, torch_profiler_record_shapes=False, torch_profiler_with_memory=False, capture_torch_profiler=False, detailed_trace_annotation=False, ignore_frontend=False, delay_iterations=0, max_iterations=0, warmup_iterations=0, active_iterations=5, wait_iterations=0)}
+(APIServer pid=1) WARNING 11-16 23:54:02 [envs.py:2630] Unknown vLLM environment variable detected: VLLM_BASE_DIR
+(APIServer pid=1) INFO 11-16 23:54:10 [model.py:693] Resolved architecture: Glm5NextForConditionalGeneration
+(APIServer pid=1) INFO 11-16 23:54:10 [model.py:2061] Using max model len 65536
+(APIServer pid=1) INFO 11-16 23:54:12 [cache.py:369] Using fp8 data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+(APIServer pid=1) INFO 11-16 23:54:17 [model.py:693] Resolved architecture: Glm5NextMTPModel
+(APIServer pid=1) INFO 11-16 23:54:17 [model.py:2061] Using max model len 1048576
+(APIServer pid=1) WARNING 11-16 23:54:17 [speculative.py:1506] Enabling num_speculative_tokens > 1 will run multiple times of forward on same MTP layer,which may result in lower acceptance rate
+(APIServer pid=1) INFO 11-16 23:54:17 [speculative.py:1816] Overriding draft model max model len from 1048576 to 65536
+(APIServer pid=1) INFO 11-16 23:54:17 [scheduler.py:403] Chunked prefill is enabled with max_num_batched_tokens=8192.
+(APIServer pid=1) INFO 11-16 23:54:17 [config.py:1047] Mamba cache mode is set to 'align' for Glm5NextForConditionalGeneration by default when prefix caching is enabled
+(APIServer pid=1) INFO 11-16 23:54:17 [vllm.py:929] Auto-enabling VLLM_USE_BREAKABLE_CUDAGRAPH=1. Set VLLM_USE_BREAKABLE_CUDAGRAPH=0 to opt out.
+(APIServer pid=1) INFO 11-16 23:54:17 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(APIServer pid=1) INFO 11-16 23:54:17 [compilation.py:336] Enabled custom fusions: norm_quant, act_quant
+(APIServer pid=1) [transformers] The following generation flags are not valid and may be ignored: ['top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+(EngineCore pid=365) INFO 11-16 23:54:23 [core.py:124] Initializing a V1 LLM engine (v0.1.dev21830+g8244d1c44.d20261015) with config: model='/m', speculative_config=SpeculativeConfig(method='mtp', model='/m', num_spec_tokens=3), tokenizer='/m', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=65536, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=modelopt_mixed, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=fp8, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='glm45', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=GLM-5.3-Flash, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+quant_fp8', 'all', '+quant_fp8'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 8, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native']), enable_flashinfer_autotune=True, enable_b12x_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='b12x', sparse_indexer_topk_backend='auto', linear_backend='b12x', linear_backend_per_quant=None)
+(APIServer pid=1) INFO 11-16 23:54:24 [base.py:261] Multi-modal warmup completed in 1.401s
+(EngineCore pid=365) INFO 11-16 23:54:25 [parallel_state.py:1909] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_268705f23e3c411599ae465fe7835e46 backend=nccl
+(EngineCore pid=365) INFO 11-16 23:54:25 [parallel_state.py:2349] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, ETP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=365) INFO 11-16 23:54:25 [gpu_worker.py:480] Using V2 Model Runner
+(EngineCore pid=365) /usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:1300: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:408.)
+(EngineCore pid=365)   return torch._C._cuda_getCurrentBlasHandle()
+(APIServer pid=1) INFO 11-16 23:54:26 [base.py:261] Readonly multi-modal warmup completed in 1.325s
+(EngineCore pid=365) INFO 11-16 23:54:26 [model_runner.py:424] Loading model from scratch...
+(EngineCore pid=365) INFO 11-16 23:54:26 [cuda.py:611] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=365) INFO 11-16 23:54:26 [mm_encoder_attention.py:372] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=365) INFO 11-16 23:54:26 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(EngineCore pid=365) INFO 11-16 23:54:26 [compilation.py:336] Enabled custom fusions: norm_quant, act_quant
+(EngineCore pid=365) INFO 11-16 23:54:26 [kimi_gdn_linear_attn.py:372] KDA input projection runs as two GEMMs: q/k/v MXFP8, b/f_a BF16.
+(EngineCore pid=365) INFO 11-16 23:54:26 [__init__.py:923] Using B12xMxfp8LinearKernel for MXFP8 GEMM
+(EngineCore pid=365) INFO 11-16 23:54:26 [__init__.py:726] Selected B12xFp8BlockScaledMMKernel for DeepSeekV2FusedQkvAProjLinear
+(EngineCore pid=365) INFO 11-16 23:54:26 [__init__.py:726] Selected B12xFp8BlockScaledMMKernel for ColumnParallelLinear
+(EngineCore pid=365) INFO 11-16 23:54:26 [__init__.py:726] Selected B12xFp8BlockScaledMMKernel for RowParallelLinear
+(EngineCore pid=365) INFO 11-16 23:54:26 [mla_attention.py:688] Using fp8_ds_mla KV cache format for B12X backend.
+(EngineCore pid=365) WARNING 11-16 23:54:26 [mla_attention.py:783] Sparse MLA layer has no dense-MHA prefill path; using the top-k MQA path only.
+(EngineCore pid=365) INFO 11-16 23:54:26 [deep_gemm.py:196] deep_gemm not found in site-packages, trying vendored vllm.third_party.deep_gemm
+(EngineCore pid=365) INFO 11-16 23:54:26 [deep_gemm.py:223] DeepGEMM PDL enabled on vllm.third_party.deep_gemm.
+(EngineCore pid=365) INFO 11-16 23:54:26 [deep_gemm.py:136] DeepGEMM E8M0 enabled on current platform.
+(EngineCore pid=365) INFO 11-16 23:54:26 [__init__.py:726] Selected B12xFp8BlockScaledMMKernel for MergedColumnParallelLinear
+(EngineCore pid=365) INFO 11-16 23:54:30 [weight_utils.py:1059] Filesystem type for checkpoints: EXT4. Checkpoint size: 85.62 GiB. Available RAM: 27.28 GiB.
+(EngineCore pid=365) INFO 11-16 23:54:30 [weight_utils.py:1089] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre) and the checkpoint size (85.62 GiB) exceeds 90% of available RAM (27.28 GiB).
+(EngineCore pid=365) Loading safetensors checkpoint shards:   0% Completed | 0/23 [00:00<?, ?it/s]
+(EngineCore pid=365) Loading safetensors checkpoint shards:   4% Completed | 1/23 [00:27<10:10, 27.75s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:   9% Completed | 2/23 [00:33<05:04, 14.52s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  13% Completed | 3/23 [00:56<06:13, 18.67s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  17% Completed | 4/23 [01:17<06:14, 19.73s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  22% Completed | 5/23 [01:41<06:17, 20.95s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  26% Completed | 6/23 [02:04<06:11, 21.86s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  30% Completed | 7/23 [02:28<06:00, 22.54s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  35% Completed | 8/23 [02:53<05:48, 23.23s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  39% Completed | 9/23 [03:17<05:30, 23.60s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  43% Completed | 10/23 [03:41<05:08, 23.72s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  48% Completed | 11/23 [04:05<04:45, 23.82s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  52% Completed | 12/23 [04:29<04:22, 23.87s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  57% Completed | 13/23 [04:53<03:58, 23.84s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  61% Completed | 14/23 [05:17<03:34, 23.88s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  65% Completed | 15/23 [05:41<03:10, 23.76s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  70% Completed | 16/23 [06:04<02:45, 23.69s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  74% Completed | 17/23 [06:28<02:22, 23.73s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  78% Completed | 18/23 [06:52<01:58, 23.78s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  83% Completed | 19/23 [07:16<01:36, 24.01s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  87% Completed | 20/23 [07:41<01:12, 24.10s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  91% Completed | 21/23 [08:04<00:47, 23.89s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  96% Completed | 22/23 [08:29<00:24, 24.13s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards: 100% Completed | 23/23 [08:44<00:00, 21.47s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards: 100% Completed | 23/23 [08:44<00:00, 22.80s/it]
+(EngineCore pid=365) 
+(EngineCore pid=365) INFO 11-17 00:03:15 [default_loader.py:575] Loading weights took 524.67 seconds
+(EngineCore pid=365) INFO 11-17 00:03:51 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(EngineCore pid=365) INFO 11-17 00:03:51 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(EngineCore pid=365) INFO 11-17 00:03:51 [vocab_parallel_embedding.py:437] Quantizing LM head shards to NVFP4 with BF16 activations.
+(EngineCore pid=365) INFO 11-17 00:03:51 [weight_utils.py:705] Safetensors index filter selected 3/23 checkpoint shards.
+(EngineCore pid=365) INFO 11-17 00:03:51 [weight_utils.py:1059] Filesystem type for checkpoints: EXT4. Checkpoint size: 11.06 GiB. Available RAM: 24.67 GiB.
+(EngineCore pid=365) INFO 11-17 00:03:51 [weight_utils.py:1082] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=365) Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  33% Completed | 1/3 [00:00<00:01,  1.94it/s]
+(EngineCore pid=365) Loading safetensors checkpoint shards:  67% Completed | 2/3 [00:02<00:01,  1.12s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:15<00:00,  6.69s/it]
+(EngineCore pid=365) Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:15<00:00,  5.13s/it]
+(EngineCore pid=365) 
+(EngineCore pid=365) INFO 11-17 00:04:06 [default_loader.py:575] Loading weights took 15.46 seconds
+(EngineCore pid=365) WARNING 11-17 00:04:07 [speculator.py:240] Draft model Glm5NextMTP does not support external multimodal embeddings. Embeddings from the target model will not be passed to the drafter; using text-only draft inputs instead.
+(EngineCore pid=365) INFO 11-17 00:04:13 [model_runner.py:456] Model loading took 87.32 GiB memory and 587.950281 seconds
+(EngineCore pid=365) INFO 11-17 00:04:14 [topk_topp_sampler.py:80] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=365) INFO 11-17 00:04:14 [interface.py:1051] Setting attention block size to 4864 tokens to ensure that attention page size is >= mamba page size.
+(EngineCore pid=365) INFO 11-17 00:04:14 [interface.py:1084] Padding mamba page size by 4.11% to ensure that mamba page size and attention page size are exactly equal.
+(EngineCore pid=365) INFO 11-17 00:04:14 [utils.py:407] Using BLHNC KV cache layout.
+(EngineCore pid=365) INFO 11-17 00:04:15 [b12x_prepare.py:573] b12x weights preparation uses 4 compiler workers
+b12x selecting norm.mhc: 0/85 ready, candidates 0/1 prepared, 0 measured, 35 cached, 0 compilations, 0:00
+b12x priming norm.mhc: 13/85 ready, 0 measured, 35 cached, 0 compilations, 0:00
+b12x selecting gemm.blockscaled_precision: 19/85 ready, 0 measured, 35 cached, 0 compilations, 0:01
+b12x compiling gemm.blockscaled_precision: 19/85 ready, 0 measured, 35 cached, 0 compilations, 0:01
+b12x priming gemm.blockscaled.fixed: 51/85 ready, candidates 0/1 prepared, 0 measured, 35 cached, 3 compilations, 0:06
+b12x compiling moe.decode: 70/85 ready, 0 measured, 35 cached, 3 compilations, 0:06
+b12x priming moe.decode: 73/85 ready, 0 measured, 35 cached, 24 compilations, 0:09
+b12x priming gemm.blockscaled_precision: 79/85 ready, 0 measured, 35 cached, 30 compilations, 0:12
+b12x ready gemm.blockscaled_precision: 85/85 ready, 0 measured, 35 cached, 30 compilations, 0:15
+(EngineCore pid=365) INFO 11-17 00:04:32 [encoder_runner.py:131] Encoder cache will be initialized with a budget of 32242 tokens, and profiled with 1 video items of the maximum feature size.
+(EngineCore pid=365) WARNING 11-17 00:04:56 [kv_cache_utils.py:2527] Speculative decoding (method=mtp) is enabled but no KV cache group could be identified as the draft model's.
+(EngineCore pid=365) /usr/local/lib/python3.12/dist-packages/flashinfer/experimental/b12x/attention/_shared/mla/kv_cache.py:919: UserWarning: Accessing the data pointer of FakeTensor is deprecated and will error in PyTorch 2.5. This is almost definitely a bug in your code and will cause undefined behavior with subsystems like torch.compile. Please wrap calls to tensor.data_ptr() in an opaque custom op; If all else fails, you can guard accesses to tensor.data_ptr() on isinstance(tensor, FakeTensor). (Triggered internally at /__w/pytorch/pytorch/c10/core/StorageImpl.cpp:46.)
+(EngineCore pid=365)   if kv_c.stride(0) % 2 != 0 or kv_c.data_ptr() % 4 != 0:
+(EngineCore pid=365) INFO 11-17 00:04:58 [breakable_cudagraph.py:327] Breakable CUDA graph enabled
+(EngineCore pid=365) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/4 [00:00<?, ?it/s]/usr/local/lib/python3.12/dist-packages/triton/language/core.py:2284: UserWarning: tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.
+(EngineCore pid=365)   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+(EngineCore pid=365) Capturing CUDA graphs (PIECEWISE):  25%|██▌       | 1/4 [00:00<00:02,  1.02it/s]Capturing CUDA graphs (PIECEWISE):  50%|█████     | 2/4 [00:01<00:01,  1.70it/s]Capturing CUDA graphs (PIECEWISE):  75%|███████▌  | 3/4 [00:01<00:00,  2.18it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:02<00:00,  2.23it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:02<00:00,  1.97it/s]
+(EngineCore pid=365) Capturing CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00,  2.11it/s]Capturing CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00,  2.11it/s]
+(EngineCore pid=365) INFO 11-17 00:05:01 [speculator.py:187] Capturing model for speculator...
+(EngineCore pid=365) Capturing prefill CUDA graphs (PIECEWISE):   0%|          | 0/4 [00:00<?, ?it/s]Capturing prefill CUDA graphs (PIECEWISE):  25%|██▌       | 1/4 [00:00<00:00,  8.63it/s]Capturing prefill CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:00<00:00, 25.75it/s]
+(EngineCore pid=365) Capturing prefill CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing prefill CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00, 72.54it/s]
+(EngineCore pid=365) Capturing decode CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing decode CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00, 10.70it/s]
+(EngineCore pid=365) INFO 11-17 00:05:01 [model_runner.py:1263] Graph capturing finished in 3 secs, took -0.07 GiB
+(EngineCore pid=365) INFO 11-17 00:05:01 [cudagraph_utils.py:1445] CUDA graph memory profile: capture took -0.07 GiB with 1 of 1 FULL graphs (tokens: grown/kept MiB 4: -467.2/32.0); the other 0 FULL graphs add 0.00 GiB; estimate 0.00 GiB.
+(EngineCore pid=365) INFO 11-17 00:05:03 [gpu_worker.py:839] Available KV cache memory: 17.39 GiB
+(EngineCore pid=365) WARNING 11-17 00:05:03 [kv_cache_utils.py:2527] Speculative decoding (method=mtp) is enabled but no KV cache group could be identified as the draft model's.
+(EngineCore pid=365) INFO 11-17 00:05:03 [kv_cache_utils.py:2850] GPU KV cache size: 691,768 tokens, Maximum concurrency for 65,536 tokens per request: 10.56x
+(EngineCore pid=365) INFO 11-17 00:05:03 [b12x_prepare.py:633] b12x autotuning uses 32 temporary KV blocks before allocating 570 serving blocks
+(EngineCore pid=365) INFO 11-17 00:05:04 [b12x_prepare.py:573] b12x state preparation uses 4 compiler workers
+b12x compiling attention.gdn: 0/92 ready, 0 measured, 1 cached, 0 compilations, 0:00
+b12x priming attention.dsa_indexer: 4/92 ready, candidates 0/1 prepared, 0 measured, 1 cached, 1 compilations, 0:02
+b12x priming attention.sparse_mla: 7/92 ready, candidates 0/1 prepared, 0 measured, 1 cached, 1 compilations, 0:02
+b12x ready gemm.blockscaled_precision: 92/92 ready, 0 measured, 1 cached, 1 compilations, 0:03
+(EngineCore pid=365) INFO 11-17 00:05:09 [gpu_worker.py:944] Cleared 0.06 GiB of cached CUDA allocator memory before KV cache allocation.
+(EngineCore pid=365) INFO 11-17 00:05:11 [b12x_prepare.py:573] b12x bind preparation uses 4 compiler workers
+b12x priming attention.dsa_indexer: 4/92 ready, candidates 0/1 prepared, 0 measured, 1 cached, 0 compilations, 0:00
+b12x priming attention.sparse_mla: 7/92 ready, candidates 0/1 prepared, 0 measured, 1 cached, 0 compilations, 0:00
+b12x ready gemm.blockscaled_precision: 92/92 ready, 0 measured, 1 cached, 0 compilations, 0:00
+(EngineCore pid=365) INFO 11-17 00:05:12 [torch_utils.py:287] Reducing Torch threads from 20 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.
+(EngineCore pid=365) INFO 11-17 00:05:12 [kernel_warmup.py:174] JIT kernel warmup starting.
+(EngineCore pid=365) JIT kernel warmup (68 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (68 compile keys):  25%|██▌       | 1/4 [00:09<00:27,  9.17s/kernel, _DecoratedTritonJitKernel (8 keys)]JIT kernel warmup (68 compile keys):  50%|█████     | 2/4 [00:10<00:08,  4.43s/kernel, _DecoratedTritonJitKernel (12 keys)]JIT kernel warmup (68 compile keys):  75%|███████▌  | 3/4 [00:19<00:06,  6.42s/kernel, _DecoratedTritonJitKernel (36 keys)]JIT kernel warmup (68 compile keys): 100%|██████████| 4/4 [00:23<00:00,  5.51s/kernel, _DecoratedTritonJitKernel (12 keys)]JIT kernel warmup (68 compile keys): 100%|██████████| 4/4 [00:23<00:00,  5.80s/kernel, _DecoratedTritonJitKernel (12 keys)]
+(EngineCore pid=365) INFO 11-17 00:05:35 [kernel_warmup.py:187] JIT kernel warmup finished in 23.21s.
+(EngineCore pid=365) INFO 11-17 00:05:35 [mamba_triton_warmup.py:42] Warmed Mamba batch_memcpy_kernel.
+(EngineCore pid=365) INFO 11-17 00:05:35 [kernel_warmup.py:97] Warming up ll_bf16 router GEMM kernels for shapes: ((4096, 288),).
+(EngineCore pid=365) 2026-11-17 00:05:36,873 - INFO - autotuner.py:1048 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=365) INFO 11-17 00:05:36 [kernel_warmup.py:407] Using FlashInfer autotune cache file: /root/.cache/vllm/flashinfer_autotune_cache/0.7.1/121a/da9fb1b21cfd36c8fbf4d7d6b1f3b7a6e24f2c617d0c1e89f26c2905bdb96023/autotune_configs.json
+(EngineCore pid=365) INFO 11-17 00:05:36 [kernel_warmup.py:353] Running FlashInfer autotune with 8192 tokens and token buckets (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 768, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 3584, 4096, 8192).
+(EngineCore pid=365) 2026-11-17 00:05:43,423 - INFO - autotuner.py:1071 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=365) 2026-11-17 00:05:43,743 - INFO - autotuner.py:3672 - flashinfer.jit: [Autotuner]: Saved 0 configs to /root/.cache/vllm/flashinfer_autotune_cache/0.7.1/121a/da9fb1b21cfd36c8fbf4d7d6b1f3b7a6e24f2c617d0c1e89f26c2905bdb96023/tmp00kspe7x/autotune_configs.json (0 new, 0 from previous config)
+(EngineCore pid=365) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/4 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):  25%|██▌       | 1/4 [00:00<00:00,  3.60it/s]Capturing CUDA graphs (PIECEWISE):  50%|█████     | 2/4 [00:00<00:00,  4.09it/s]Capturing CUDA graphs (PIECEWISE):  75%|███████▌  | 3/4 [00:00<00:00,  4.17it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:00<00:00,  4.35it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:00<00:00,  4.22it/s]
+(EngineCore pid=365) INFO 11-17 00:05:59 [speculator.py:187] Capturing model for speculator...
+(EngineCore pid=365) Capturing CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00,  4.60it/s]Capturing CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00,  4.60it/s]
+(EngineCore pid=365) Capturing prefill CUDA graphs (PIECEWISE):   0%|          | 0/4 [00:00<?, ?it/s]Capturing prefill CUDA graphs (PIECEWISE): 100%|██████████| 4/4 [00:00<00:00, 76.32it/s]
+(EngineCore pid=365) Capturing prefill CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing prefill CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00, 93.86it/s]
+(EngineCore pid=365) Capturing decode CUDA graphs (FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing decode CUDA graphs (FULL): 100%|██████████| 1/1 [00:00<00:00, 45.91it/s]
+(EngineCore pid=365) INFO 11-17 00:06:00 [model_runner.py:1263] Graph capturing finished in 9 secs, took 0.11 GiB
+(EngineCore pid=365) INFO 11-17 00:06:00 [gpu_worker.py:1143] Free memory on device (112.94/121.69 GiB) on startup. Desired GPU memory utilization is (0.9, 109.52 GiB). Actual usage is 90.44 GiB for consumed memory (weights + non-torch), 1.68 GiB for peak activation, and 0.11 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=18404923700` (17.14 GiB) to fit into requested memory, or `--kv-cache-memory=22078088704` (20.56 GiB) to fully utilize gpu memory. Current kv cache memory in use is 17.39 GiB.
+(EngineCore pid=365) INFO 11-17 00:06:01 [jit_monitor.py:85] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=365) INFO 11-17 00:06:02 [core.py:390] init engine (profile, create kv cache, warmup model) took 108.09 s
+(EngineCore pid=365) INFO 11-17 00:06:02 [kv_cache_utils.py:752] kv cache group sizes [4864, 4864, 4864, 4864]
+(EngineCore pid=365) INFO 11-17 00:06:02 [kv_cache_utils.py:753] kv lcm block sizes 4864
+(EngineCore pid=365) INFO 11-17 00:06:03 [kv_cache_manager.py:298] Request-boundary recurrent checkpoint caching is enabled. Supported chat requests retain leading instructions, the complete prompt, and the response endpoint.
+(EngineCore pid=365) INFO 11-17 00:06:03 [kernel.py:430] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])
+(APIServer pid=1) INFO 11-17 00:06:14 [async_llm.py:211] Torch profiler enabled. AsyncLLM CPU traces will be collected under /prof
+(APIServer pid=1) INFO 11-17 00:06:14 [wrapper.py:202] Torch profiling enabled. Traces will be saved to: /prof
+(APIServer pid=1) INFO 11-17 00:06:14 [entry.py:135] Supported tasks: ['generate']
+(APIServer pid=1) WARNING 11-17 00:06:14 [api_router.py:41] Profiler with mode 'torch' is enabled in the API server. This should ONLY be used for local development!
+(APIServer pid=1) INFO 11-17 00:06:16 [factories.py:76] Scale-out endpoints are disabled. Set --enable-scale-out to enable them.
+(APIServer pid=1) INFO 11-17 00:06:16 [parser_manager.py:36] "auto" tool choice has been enabled.
+(APIServer pid=1) INFO 11-17 00:06:16 [hf.py:642] Detected the chat template content format to be 'openai'. You can set `--chat-template-content-format` to override this.
+(APIServer pid=1) WARNING 11-17 00:06:16 [model.py:1799] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 1.0, 'top_p': 0.95}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+(APIServer pid=1) INFO 11-17 00:06:16 [entry.py:139] Starting vLLM server on http://0.0.0.0:8095
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:62] Available routes are:
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /openapi.json, Methods: GET, HEAD
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /docs, Methods: GET, HEAD
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /docs/oauth2-redirect, Methods: GET, HEAD
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /redoc, Methods: GET, HEAD
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /load, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /version, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /health, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /metrics, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /start_profile, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /stop_profile, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /tokenize, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /detokenize, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/models, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /ping, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /ping, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /invocations, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/chat/completions, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/chat/completions/batch, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/responses, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/responses/{response_id}, Methods: GET
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/responses/{response_id}/cancel, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/completions, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/messages, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /v1/messages/count_tokens, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /generative_scoring, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /scale_elastic_ep, Methods: POST
+(APIServer pid=1) INFO 11-17 00:06:16 [launcher.py:71] Route: /is_scaling_elastic_ep, Methods: POST
+(APIServer pid=1) INFO:     Started server process [1]
+(APIServer pid=1) INFO:     Waiting for application startup.
+(APIServer pid=1) INFO:     Application startup complete.
+(APIServer pid=1) INFO:     172.17.0.1:48296 - "GET /health HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:48302 - "GET /health HTTP/1.1" 200 OK
+(EngineCore pid=365) WARNING 11-17 00:06:24 [jit_monitor.py:141] Triton kernel JIT compilation during inference: _glm_device_token_metadata_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(APIServer pid=1) INFO:     172.17.0.1:48316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:48330 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:48332 - "POST /v1/completions HTTP/1.1" 200 OK
+(EngineCore pid=365) WARNING 11-17 00:06:24 [jit_monitor.py:141] Triton kernel JIT compilation during inference: _restore_auxiliary_state_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(EngineCore pid=365) WARNING 11-17 00:06:25 [jit_monitor.py:141] Triton kernel JIT compilation during inference: _post_update_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(APIServer pid=1) INFO 11-17 00:06:27 [loggers.py:315] Engine 000: Avg prompt throughput: 0.8 tokens/s, Avg generation throughput: 3.0 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.9%, Prefix cache hit rate: 25.9%
+(APIServer pid=1) INFO 11-17 00:06:27 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.19, Mean verification depth: 3.00/3, Accepted throughput: 1.56 tokens/s, Drafted throughput: 3.93 tokens/s, Accepted: 37 tokens, Drafted: 93 tokens, Per-position acceptance rate: 0.710, 0.387, 0.097, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 39.8%
+(APIServer pid=1) INFO:     172.17.0.1:48336 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:47808 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:47824 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:47830 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:06:37 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 26.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.9%, Prefix cache hit rate: 51.2%
+(APIServer pid=1) INFO 11-17 00:06:37 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.32, Mean verification depth: 3.00/3, Accepted throughput: 15.00 tokens/s, Drafted throughput: 34.19 tokens/s, Accepted: 150 tokens, Drafted: 342 tokens, Per-position acceptance rate: 0.754, 0.404, 0.158, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 43.9%
+(APIServer pid=1) INFO:     172.17.0.1:47838 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:42044 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:42060 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:42064 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:06:47 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 26.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.9%, Prefix cache hit rate: 63.6%
+(APIServer pid=1) INFO 11-17 00:06:47 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.31, Mean verification depth: 3.00/3, Accepted throughput: 14.90 tokens/s, Drafted throughput: 34.19 tokens/s, Accepted: 149 tokens, Drafted: 342 tokens, Per-position acceptance rate: 0.746, 0.386, 0.175, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 43.6%
+(APIServer pid=1) INFO:     172.17.0.1:42068 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:56368 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:56384 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:06:57 [loggers.py:315] Engine 000: Avg prompt throughput: 2.9 tokens/s, Avg generation throughput: 26.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 41.7%
+(APIServer pid=1) INFO 11-17 00:06:57 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.43, Mean verification depth: 3.00/3, Accepted throughput: 15.70 tokens/s, Drafted throughput: 33.00 tokens/s, Accepted: 157 tokens, Drafted: 330 tokens, Per-position acceptance rate: 0.773, 0.409, 0.245, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 47.6%
+(APIServer pid=1) INFO 11-17 00:07:07 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 26.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 41.7%
+(APIServer pid=1) INFO 11-17 00:07:07 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.28, Mean verification depth: 3.00/3, Accepted throughput: 14.90 tokens/s, Drafted throughput: 34.80 tokens/s, Accepted: 149 tokens, Drafted: 348 tokens, Per-position acceptance rate: 0.690, 0.405, 0.190, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 42.8%
+(APIServer pid=1) INFO:     172.17.0.1:56388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:53234 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:53242 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:07:17 [loggers.py:315] Engine 000: Avg prompt throughput: 3.4 tokens/s, Avg generation throughput: 24.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 29.7%
+(APIServer pid=1) INFO 11-17 00:07:17 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.30, Mean verification depth: 3.00/3, Accepted throughput: 13.90 tokens/s, Drafted throughput: 32.10 tokens/s, Accepted: 139 tokens, Drafted: 321 tokens, Per-position acceptance rate: 0.654, 0.421, 0.224, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 43.3%
+(APIServer pid=1) INFO:     172.17.0.1:53254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:58830 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:58842 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:07:27 [loggers.py:315] Engine 000: Avg prompt throughput: 3.3 tokens/s, Avg generation throughput: 23.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 23.2%
+(APIServer pid=1) INFO 11-17 00:07:27 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.19, Mean verification depth: 3.00/3, Accepted throughput: 12.60 tokens/s, Drafted throughput: 31.79 tokens/s, Accepted: 126 tokens, Drafted: 318 tokens, Per-position acceptance rate: 0.698, 0.340, 0.151, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 39.6%
+(APIServer pid=1) INFO 11-17 00:07:37 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 23.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 23.2%
+(APIServer pid=1) INFO 11-17 00:07:37 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.02, Mean verification depth: 3.00/3, Accepted throughput: 11.90 tokens/s, Drafted throughput: 35.10 tokens/s, Accepted: 119 tokens, Drafted: 351 tokens, Per-position acceptance rate: 0.598, 0.282, 0.137, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 33.9%
+(APIServer pid=1) INFO:     172.17.0.1:58854 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:43984 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:43998 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:07:47 [loggers.py:315] Engine 000: Avg prompt throughput: 5.8 tokens/s, Avg generation throughput: 24.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 16.7%
+(APIServer pid=1) INFO 11-17 00:07:47 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.21, Mean verification depth: 3.00/3, Accepted throughput: 13.40 tokens/s, Drafted throughput: 33.30 tokens/s, Accepted: 134 tokens, Drafted: 333 tokens, Per-position acceptance rate: 0.622, 0.360, 0.225, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 40.2%
+(APIServer pid=1) INFO 11-17 00:07:57 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 27.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.0%, Prefix cache hit rate: 16.7%
+(APIServer pid=1) INFO 11-17 00:07:57 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.39, Mean verification depth: 3.00/3, Accepted throughput: 15.80 tokens/s, Drafted throughput: 34.20 tokens/s, Accepted: 158 tokens, Drafted: 342 tokens, Per-position acceptance rate: 0.675, 0.465, 0.246, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 46.2%
+(APIServer pid=1) INFO:     172.17.0.1:44002 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:55872 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:07:58 [api_router.py:23] Starting profiler...
+(EngineCore pid=365) INFO 11-17 00:07:58 [wrapper.py:202] Torch profiling enabled. Traces will be saved to: /prof
+ERROR: External init callback must run in same thread as registerClient (461304192 != -436512992)
+USDT:2026-11-17 00:07:58 1:964 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-11-17 00:07:58 365:365 SyncActivityProfilerHandler.cpp:52] profiler_start
+(APIServer pid=1) INFO 11-17 00:07:58 [api_router.py:25] Profiler started.
+(APIServer pid=1) INFO:     172.17.0.1:55880 - "POST /start_profile HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:55884 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:55890 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:44622 - "GET /metrics HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:08:00 [api_router.py:31] Stopping profiler...
+USDT:2026-11-17 00:08:00 1:964 SyncActivityProfilerHandler.cpp:59] profiler_stop
+USDT:2026-11-17 00:08:00 365:365 SyncActivityProfilerHandler.cpp:59] profiler_stop
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                          threading.py(1030): _bootstrap         0.00%       1.504us        83.33%       14.163s        2.833s             5  
+(APIServer pid=1)                    threading.py(1073): _bootstrap_inner         0.00%       4.559us        83.33%       14.163s        2.833s             5  
+(APIServer pid=1)                                 threading.py(1010): run         0.00%       2.400us        66.67%       11.330s        2.833s             4  
+(APIServer pid=1)               concurrent/futures/thread.py(92): _worker         0.00%      10.288us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                   concurrent/futures/thread.py(58): run         0.00%       2.976us         0.01%       1.070ms       1.070ms             1  
+(APIServer pid=1)                     vllm/profiler/wrapper.py(97): start         0.00%       0.496us         0.01%       1.043ms       1.043ms             1  
+(APIServer pid=1)               vllm/profiler/wrapper.py(73): _call_start         0.00%       1.024us         0.01%       1.043ms       1.043ms             1  
+(APIServer pid=1)                   vllm/profiler/wrapper.py(321): _start         0.00%       3.952us         0.01%       1.042ms       1.042ms             1  
+(APIServer pid=1)                 torch/profiler/profiler.py(1128): start         0.00%       1.088us         0.01%       1.012ms       1.012ms             1  
+(APIServer pid=1)       torch/profiler/profiler.py(1262): _transit_action         0.00%       0.880us         0.01%       1.011ms       1.011ms             1  
+(APIServer pid=1)            torch/profiler/profiler.py(342): start_trace         0.00%      17.663us         0.01%       1.010ms       1.010ms             1  
+(APIServer pid=1)           torch/autograd/profiler.py(414): _start_trace         0.00%     712.994us         0.01%     970.621us     970.621us             1  
+(APIServer pid=1)                  anyio/_backends/_asyncio.py(1089): run         0.00%      62.783us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                                      queue.py(171): get         0.00%      24.816us         1.14%     193.182ms     193.182ms             1  
+(APIServer pid=1)                                 threading.py(355): wait         1.14%     193.099ms         1.14%     193.142ms     193.142ms             1  
+(APIServer pid=1)               concurrent/futures/thread.py(89): _worker        17.95%        3.051s        33.33%        5.665s        2.833s             2  
+(APIServer pid=1) vllm/v1/engine/core_client.py(811): monitor_engine_c...         0.00%       1.488us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1) vllm/v1/engine/utils.py(263): monitor_engine_livenes...         0.00%      71.855us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)               multiprocessing/connection.py(1136): wait         0.00%     212.700us         3.95%     671.078ms     671.078ms             1  
+(APIServer pid=1)                               selectors.py(415): select         3.95%     670.842ms         3.95%     670.842ms     670.842ms             1  
+(APIServer pid=1)                                      vllm(10): <module>         0.00%       2.032us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                 vllm/entrypoints/cli/main.py(106): main         0.00%       3.184us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                 vllm/entrypoints/cli/serve.py(184): cmd         0.00%       2.496us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                             uvloop/__init__.py(96): run         0.00%       1.632us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                            asyncio/runners.py(194): run         0.00%       0.848us        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                            asyncio/runners.py(118): run        16.30%        2.770s        16.67%        2.833s        2.833s             1  
+(APIServer pid=1)                             sitecustomize.py(47): _hook         0.01%       1.520ms         0.01%       2.241ms      41.506us            54  
+(APIServer pid=1)                          <built-in function __import__>         0.00%     430.234us         0.00%     656.024us      12.149us            54  
+(APIServer pid=1) <built-in method startswith of str object at 0xeb150...         0.00%       0.496us         0.00%       0.496us       0.165us             3  
+(APIServer pid=1)                     <built-in function perf_counter_ns>         0.00%       0.736us         0.00%       0.736us       0.368us             2  
+(APIServer pid=1)      torch/profiler/profiler.py(538): add_metadata_json         0.00%       5.120us         0.00%       7.008us       2.336us             3  
+(APIServer pid=1) <built-in method _add_metadata_json of pybind11_buil...         0.00%       1.888us         0.00%       1.888us       0.629us             3  
+(APIServer pid=1) <built-in method kineto_available of pybind11_builti...         0.00%       0.304us         0.00%       0.304us       0.304us             1  
+(APIServer pid=1) torch/profiler/profiler.py(554): _get_distributed_in...         0.00%       5.744us         0.00%      13.808us      13.808us             1  
+(APIServer pid=1)         torch/distributed/__init__.py(17): is_available         0.00%       1.488us         0.00%       2.464us       2.464us             1  
+(APIServer pid=1)                             <built-in function hasattr>         0.00%     155.005us         0.00%     204.700us       1.190us           172  
+(APIServer pid=1) torch/distributed/distributed_c10d.py(1394): is_init...         0.00%       1.888us         0.00%       3.392us       3.392us             1  
+(APIServer pid=1)       torch/distributed/distributed_c10d.py(817): WORLD         0.00%       1.216us         0.00%       1.504us       1.504us             1  
+(APIServer pid=1) torch/distributed/distributed_c10d.py(688): default_...         0.00%       0.288us         0.00%       0.288us       0.288us             1  
+(APIServer pid=1)                             <built-in function getattr>         0.00%     170.716us         0.00%     187.404us       1.136us           165  
+(APIServer pid=1) <built-in method items of dict object at 0xeb15435fd...         0.00%       0.160us         0.00%       0.160us       0.160us             1  
+(APIServer pid=1) vllm/profiler/wrapper.py(295): _maybe_add_version_me...         0.00%       8.352us         0.00%      25.584us      25.584us             1  
+(APIServer pid=1)                            json/__init__.py(183): dumps         0.00%       6.896us         0.00%      35.888us      11.963us             3  
+(APIServer pid=1)                            json/encoder.py(183): encode         0.00%       9.232us         0.00%      27.920us       9.307us             3  
+(APIServer pid=1)                          <built-in function isinstance>         0.00%     635.423us         0.00%     652.031us       0.336us          1941  
+(APIServer pid=1)             <built-in function encode_basestring_ascii>         0.00%       0.544us         0.00%       0.544us       0.544us             1  
+(APIServer pid=1)                        json/encoder.py(205): iterencode         0.00%      16.448us         0.00%      16.448us       8.224us             2  
+(APIServer pid=1)        <built-in method join of str object at 0xb204e0>         0.00%       0.240us         0.00%       0.240us       0.240us             1  
+(APIServer pid=1)            concurrent/futures/_base.py(537): set_result         0.00%      15.631us         0.00%      50.415us      25.208us             2  
+(APIServer pid=1)                            threading.py(299): __enter__         0.00%      31.535us         0.00%      48.479us       1.731us            28  
+(APIServer pid=1) <built-in method __enter__ of _thread.RLock object a...         0.00%       5.680us         0.00%       5.680us       0.473us            12  
+(APIServer pid=1)                           threading.py(424): notify_all         0.00%       5.456us         0.00%      13.328us       3.332us             4  
+(APIServer pid=1)                                 <built-in function len>         0.01%     915.691us         0.01%     915.691us       0.105us          8733  
+(APIServer pid=1)                               threading.py(394): notify         0.00%      29.408us         0.00%      58.160us       4.154us            14  
+(APIServer pid=1) <built-in method _is_owned of _thread.RLock object a...         0.00%       0.096us         0.00%       0.096us       0.096us             1  
+(APIServer pid=1)                             threading.py(302): __exit__         0.00%      21.856us         0.00%      27.520us       0.983us            28  
+(APIServer pid=1) <built-in method __exit__ of _thread.RLock object at...         0.00%       1.888us         0.00%       1.888us       0.157us            12  
+(APIServer pid=1)     concurrent/futures/_base.py(337): _invoke_callbacks         0.00%       7.088us         0.00%      24.128us      12.064us             2  
+(APIServer pid=1)                asyncio/futures.py(394): _call_set_state         0.00%      16.608us         0.00%      17.040us       8.520us             2  
+(APIServer pid=1) <built-in method cancelled of _asyncio.Future object...         0.00%     121.356us         0.00%     121.356us       3.467us            35  
+(APIServer pid=1) <built-in method get_nowait of _queue.SimpleQueue ob...         0.00%       1.072us         0.00%       1.072us       1.072us             1  
+(APIServer pid=1)                              threading.py(515): release         0.00%       4.512us         0.00%      11.248us       5.624us             2  
+(APIServer pid=1) <built-in method __enter__ of _thread.lock object at...         0.00%       0.208us         0.00%       0.208us       0.208us             1  
+(APIServer pid=1)                            threading.py(314): _is_owned         0.00%       8.960us         0.00%      17.952us       1.282us            14  
+(APIServer pid=1) <built-in method acquire of _thread.lock object at 0...         0.00%       0.240us         0.00%       0.240us       0.240us             1  
+(APIServer pid=1) <built-in method __exit__ of _thread.lock object at ...         0.00%       0.064us         0.00%       0.064us       0.064us             1  
+(APIServer pid=1) <built-in method get of _queue.SimpleQueue object at...        16.65%        2.831s        16.65%        2.831s        2.831s             1  
+(APIServer pid=1)                     asyncio/futures.py(381): _set_state         0.00%     302.186us         0.00%     373.065us     186.533us             2  
+(APIServer pid=1)                   asyncio/base_futures.py(13): isfuture         0.00%      15.104us         0.00%      20.352us       1.131us            18  
+(APIServer pid=1)             asyncio/futures.py(345): _copy_future_state         0.00%      22.224us         0.00%      63.103us      31.552us             2  
+(APIServer pid=1)                  concurrent/futures/_base.py(393): done         0.00%       6.464us         0.00%      17.104us       8.552us             2  
+(APIServer pid=1) <built-in method done of _asyncio.Future object at 0...         0.00%      50.592us         0.00%      50.592us       0.713us            71  
+(APIServer pid=1)             concurrent/futures/_base.py(383): cancelled         0.00%       3.328us         0.00%       5.488us       2.744us             2  
+(APIServer pid=1)             concurrent/futures/_base.py(463): exception         0.00%       3.840us         0.00%       5.760us       2.880us             2  
+(APIServer pid=1)                concurrent/futures/_base.py(428): result         0.00%       4.624us         0.00%       6.832us       3.416us             2  
+(APIServer pid=1)          concurrent/futures/_base.py(398): __get_result         0.00%       0.336us         0.00%       0.336us       0.168us             2  
+(APIServer pid=1) <built-in method set_result of _asyncio.Future objec...         0.01%     927.918us         0.01%     927.918us       8.922us           104  
+(APIServer pid=1)             asyncio/futures.py(387): _call_check_cancel         0.00%       1.168us         0.00%       1.568us       0.784us             2  
+(APIServer pid=1)                       asyncio/threads.py(25): to_thread         0.00%       1.328us         0.00%       1.328us       1.328us             1  
+(APIServer pid=1)                   asyncio/tasks.py(767): _done_callback         0.00%     341.161us         0.00%     352.345us      70.469us             5  
+(APIServer pid=1) <built-in method cancelled of _asyncio.Task object a...         0.00%       1.984us         0.00%       1.984us       0.198us            10  
+(APIServer pid=1) <built-in method exception of _asyncio.Task object a...         0.00%       2.560us         0.00%       2.560us       0.256us            10  
+(APIServer pid=1) asyncio/futures.py(311): _set_result_unless_cancelle...         0.00%     340.522us         0.01%     859.136us      30.683us            28  
+(APIServer pid=1)                            uvicorn/server.py(90): serve         0.00%     132.653us         0.01%       2.528ms      90.272us            28  
+(APIServer pid=1)                          uvicorn/server.py(107): _serve         0.00%     144.399us         0.01%       2.395ms      85.534us            28  
+(APIServer pid=1)                       uvicorn/server.py(248): main_loop         0.00%     518.599us         0.01%       2.251ms      80.377us            28  
+(APIServer pid=1)                            asyncio/tasks.py(665): sleep         0.00%     224.749us         0.00%     224.749us       8.027us            28  
+(APIServer pid=1)                         uvicorn/server.py(251): on_tick         0.00%     253.657us         0.00%     575.604us      20.557us            28  
+(APIServer pid=1)                            asyncio/tasks.py(653): sleep         0.01%     868.398us         0.01%     936.526us      29.266us            32  
+(APIServer pid=1)                    <built-in function get_running_loop>         0.00%     111.567us         0.00%     111.567us       1.488us            75  
+(APIServer pid=1)                           zmq/asyncio.py(151): <lambda>         0.00%     386.393us         0.05%       7.878ms     262.609us            30  
+(APIServer pid=1)                     zmq/_future.py(670): _handle_events         0.01%       2.250ms         0.04%       7.492ms     249.730us            30  
+(APIServer pid=1)                                  enum.py(726): __call__         0.00%     587.750us         0.01%     913.665us       1.799us           508  
+(APIServer pid=1)                                  enum.py(1129): __new__         0.00%     325.915us         0.00%     325.915us       0.642us           508  
+(APIServer pid=1)                                  enum.py(1562): __and__         0.00%     748.775us         0.01%       1.720ms       6.936us           248  
+(APIServer pid=1)                               enum.py(1544): _get_value         0.00%     540.262us         0.01%     868.877us       0.888us           978  
+(APIServer pid=1)                       zmq/_future.py(586): _handle_recv         0.01%       1.047ms         0.02%       3.969ms     124.038us            32  
+(APIServer pid=1) <built-in method popleft of collections.deque object...         0.00%      91.214us         0.00%      91.214us       0.981us            93  
+(APIServer pid=1)                     zmq/_future.py(704): _drop_io_state         0.00%     442.887us         0.01%       1.166ms      36.435us            32  
+(APIServer pid=1)                               enum.py(1584): __invert__         0.00%      70.844us         0.00%      90.284us       3.009us            30  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1) Self CPU time total: 16.995s
+(APIServer pid=1) 
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)               concurrent/futures/thread.py(89): _worker        17.95%        3.051s        33.33%        5.665s        2.833s             2  
+(APIServer pid=1) <built-in method get of _queue.SimpleQueue object at...        16.65%        2.831s        16.65%        2.831s        2.831s             1  
+(APIServer pid=1)                            asyncio/runners.py(118): run        16.30%        2.770s        16.67%        2.833s        2.833s             1  
+(APIServer pid=1) <built-in method get of _queue.SimpleQueue object at...        15.38%        2.613s        15.38%        2.613s        2.613s             1  
+(APIServer pid=1) <built-in method acquire of _thread.lock object at 0...        15.29%        2.599s        15.29%        2.599s     162.465ms            16  
+(APIServer pid=1) <built-in method poll of select.poll object at 0xeb1...        12.72%        2.161s        12.72%        2.161s     720.325ms             3  
+(APIServer pid=1)                               selectors.py(415): select         3.95%     670.842ms         3.95%     670.842ms     670.842ms             1  
+(APIServer pid=1)                                 threading.py(355): wait         1.14%     193.099ms         1.14%     193.142ms     193.142ms             1  
+(APIServer pid=1) <built-in method step of tokenizers.decoders.DecodeS...         0.06%      10.932ms         0.06%      10.932ms     170.819us            64  
+(APIServer pid=1)       prometheus_client/exposition.py(294): sample_line         0.04%       7.263ms         0.13%      22.704ms      22.000us          1032  
+(APIServer pid=1) prometheus_client/exposition.py(283): generate_lates...         0.02%       3.597ms         0.23%      39.669ms      19.834ms             2  
+(APIServer pid=1)                vllm/v1/metrics/loggers.py(1075): record         0.02%       3.384ms         0.05%       8.943ms     288.486us            31  
+(APIServer pid=1) prometheus_client/openmetrics/exposition.py(219): _e...         0.01%       2.286ms         0.02%       3.519ms       1.268us          2776  
+(APIServer pid=1) <built-in method match of re.Pattern object at 0xeb1...         0.01%       2.269ms         0.01%       2.269ms       0.324us          7004  
+(APIServer pid=1)                     zmq/_future.py(670): _handle_events         0.01%       2.250ms         0.04%       7.492ms     249.730us            30  
+(APIServer pid=1) prometheus_client/validation.py(94): _is_valid_legac...         0.01%       2.004ms         0.02%       3.926ms       1.414us          2776  
+(APIServer pid=1) prometheus_client/openmetrics/exposition.py(196): es...         0.01%       1.771ms         0.03%       5.932ms       2.137us          2776  
+(APIServer pid=1)       prometheus_client/metrics.py(694): _child_samples         0.01%       1.757ms         0.02%       4.054ms     101.352us            40  
+(APIServer pid=1) <built-in method decode of msgspec.msgpack.Decoder o...         0.01%       1.716ms         0.01%       1.822ms      56.936us            32  
+(APIServer pid=1)       prometheus_client/metrics.py(278): _multi_samples         0.01%       1.709ms         0.02%       2.764ms       2.909us           950  
+(APIServer pid=1)          prometheus_client/utils.py(9): floatToGoString         0.01%       1.688ms         0.02%       2.745ms       1.648us          1666  
+(APIServer pid=1) <built-in method format of str object at 0xeb17aee10...         0.01%       1.618ms         0.01%       1.618ms       0.323us          5014  
+(APIServer pid=1)                             sitecustomize.py(47): _hook         0.01%       1.520ms         0.01%       2.241ms      41.506us            54  
+(APIServer pid=1)        vllm/v1/engine/async_llm.py(813): output_handler         0.01%       1.475ms         0.18%      29.871ms       1.030ms            29  
+(APIServer pid=1) <built-in method replace of str object at 0xeb17ae76...         0.01%       1.333ms         0.01%       1.333ms       0.152us          8748  
+(APIServer pid=1) vllm/v1/engine/output_processor.py(632): process_out...         0.01%       1.227ms         0.09%      15.245ms     525.688us            29  
+(APIServer pid=1)               prometheus_client/metrics.py(89): collect         0.01%       1.185ms         0.06%      10.848ms     104.309us           104  
+(APIServer pid=1) vllm/v1/engine/core_client.py(1150): process_outputs...         0.01%       1.104ms         0.06%       9.841ms     328.028us            30  
+(APIServer pid=1)                    zmq/_future.py(470): _add_recv_event         0.01%       1.054ms         0.03%       5.181ms     161.910us            32  
+(APIServer pid=1)                       zmq/_future.py(586): _handle_recv         0.01%       1.047ms         0.02%       3.969ms     124.038us            32  
+(APIServer pid=1)     uvicorn/protocols/http/httptools_impl.py(463): send         0.01%     958.971us         0.01%       1.709ms     213.612us             8  
+(APIServer pid=1) prometheus_client/openmetrics/exposition.py(173): es...         0.01%     956.323us         0.01%       2.534ms       1.745us          1452  
+(APIServer pid=1)                                   <string>(1): <lambda>         0.01%     951.953us         0.01%       1.584ms       0.525us          3016  
+(APIServer pid=1) <built-in method set_result of _asyncio.Future objec...         0.01%     927.918us         0.01%     927.918us       8.922us           104  
+(APIServer pid=1)                                 <built-in function len>         0.01%     915.691us         0.01%     915.691us       0.105us          8733  
+(APIServer pid=1)                    prometheus_client/values.py(27): inc         0.01%     908.282us         0.01%     996.040us       1.242us           802  
+(APIServer pid=1) <built-in method _disable_profiler of pybind11_built...         0.01%     904.520us         0.01%     904.520us     904.520us             1  
+(APIServer pid=1)                  prometheus_client/metrics.py(337): inc         0.01%     883.424us         0.01%       2.379ms       3.695us           644  
+(APIServer pid=1)                            asyncio/tasks.py(653): sleep         0.01%     868.398us         0.01%     936.526us      29.266us            32  
+(APIServer pid=1)       prometheus_client/metrics_core.py(35): add_sample         0.00%     793.535us         0.01%       1.409ms       1.409us          1000  
+(APIServer pid=1)                                  enum.py(1562): __and__         0.00%     748.775us         0.01%       1.720ms       6.936us           248  
+(APIServer pid=1)        prometheus_client/metrics.py(67): _is_observable         0.00%     744.532us         0.00%     744.532us       0.740us          1006  
+(APIServer pid=1)       vllm/v1/metrics/stats.py(463): update_from_output         0.00%     718.835us         0.01%       2.208ms      76.137us            29  
+(APIServer pid=1)           torch/autograd/profiler.py(414): _start_trace         0.00%     712.994us         0.01%     970.621us     970.621us             1  
+(APIServer pid=1)                 ray/_private/log.py(75): record_factory         0.00%     708.610us         0.01%     977.725us     162.954us             6  
+(APIServer pid=1) prometheus_client/validation.py(50): _is_valid_legac...         0.00%     706.925us         0.01%       1.420ms       0.978us          1452  
+(APIServer pid=1)                  prometheus_client/metrics.py(460): set         0.00%     701.813us         0.01%       1.592ms       5.707us           279  
+(APIServer pid=1)                zmq/sugar/socket.py(785): recv_multipart         0.00%     683.477us         0.00%     708.148us      22.130us            32  
+(APIServer pid=1) <built-in method __new__ of type object at 0xa38b60>...         0.00%     650.021us         0.00%     650.021us       0.211us          3087  
+(APIServer pid=1)                          <built-in function isinstance>         0.00%     635.423us         0.00%     652.031us       0.336us          1941  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1) Self CPU time total: 16.995s
+(APIServer pid=1) 
+(APIServer pid=1) INFO 11-17 00:08:03 [wrapper.py:82] Profiler stopped successfully.
+(APIServer pid=1) INFO 11-17 00:08:07 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 7.7 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 19.4%
+(APIServer pid=1) INFO 11-17 00:08:07 [metrics.py:136] SpecDecoding metrics: Mean acceptance length: 2.30, Mean verification depth: 3.00/3, Accepted throughput: 4.30 tokens/s, Drafted throughput: 9.90 tokens/s, Accepted: 43 tokens, Drafted: 99 tokens, Per-position acceptance rate: 0.758, 0.424, 0.121, Per-position verification coverage: 1.000, 1.000, 1.000, Avg Draft acceptance rate: 43.4%
+(APIServer pid=1) INFO 11-17 00:08:17 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 19.4%
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365)                    execute_context_0(0)_generation_1(4)         0.00%       0.000us         0.00%       0.000us       0.000us        4.676s       171.46%        4.676s       4.479ms          1044  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kern...         0.00%       0.000us         0.00%       0.000us       0.000us     900.290ms        33.01%     900.290ms     688.295us          1308  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us     668.413ms        24.51%     668.413ms     574.238us          1164  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xgemmblockscaled_block_fp8_...         0.00%       0.000us         0.00%       0.000us       0.000us     342.701ms        12.57%     342.701ms      99.796us          3434  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us     193.609ms         7.10%     193.609ms     196.358us           986  
+(EngineCore pid=365)                        b12x::blockscaled_bf16_workspace         0.00%     497.896us         0.17%      31.600ms     957.568us      86.011ms         3.15%      86.011ms       2.606ms            33  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us      78.365ms         2.87%      78.365ms       2.702ms            29  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      70.352ms         2.58%      70.352ms     149.686us           470  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      47.389ms         1.74%      47.389ms      17.762us          2668  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us      46.292ms         1.70%      46.292ms     113.184us           409  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      35.134ms         1.29%      35.134ms      17.816us          1972  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      32.491ms         1.19%      32.491ms      93.366us           348  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPostPreP...         0.00%       0.000us         0.00%       0.000us       0.000us      29.905ms         1.10%      29.905ms      11.458us          2610  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      29.613ms         1.09%      29.613ms      78.548us           377  
+(EngineCore pid=365)                    _packed_sequential_kda_decode_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      27.597ms         1.01%      27.597ms      27.989us           986  
+(EngineCore pid=365) void per_token_group_quant_8bit_kernel<c10::BFloat16...         0.00%       0.000us         0.00%       0.000us       0.000us      23.616ms         0.87%      23.616ms       6.244us          3782  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us      20.746ms         0.76%      20.746ms     238.455us            87  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xgemmblockscaled_reduceWeig...         0.00%       0.000us         0.00%       0.000us       0.000us      17.279ms         0.63%      17.279ms       7.724us          2237  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_s1616...         0.00%       0.000us         0.00%       0.000us       0.000us      17.037ms         0.62%      17.037ms      13.988us          1218  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us      16.863ms         0.62%      16.863ms     267.668us            63  
+(EngineCore pid=365)                           _pack_topk_routes_sort_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      16.284ms         0.60%      16.284ms      12.450us          1308  
+(EngineCore pid=365) void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bf...         0.00%       0.000us         0.00%       0.000us       0.000us      13.546ms         0.50%      13.546ms       9.710us          1395  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCFinalize...         0.00%       0.000us         0.00%       0.000us       0.000us      13.045ms         0.48%      13.045ms       4.998us          2610  
+(EngineCore pid=365) void gemmSN_TN_kernel<float, 128, 16, 2, 4, 4, 4, tr...         0.00%       0.000us         0.00%       0.000us       0.000us      12.362ms         0.45%      12.362ms      35.522us           348  
+(EngineCore pid=365)                    execute_context_1(1)_generation_0(0)         0.00%       0.000us         0.00%       0.000us       0.000us       9.506ms         0.35%       9.506ms       9.506ms             1  
+(EngineCore pid=365)                   _pack_topk_routes_small_prefix_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       8.289ms         0.30%       8.289ms       6.337us          1308  
+(EngineCore pid=365) void vllm::moe::single_group_topk::detail::single_gr...         0.00%       0.000us         0.00%       0.000us       0.000us       7.486ms         0.27%       7.486ms       5.723us          1308  
+(EngineCore pid=365) void cublasLt::splitKreduce_kernel<32, 16, int, __nv...         0.00%       0.000us         0.00%       0.000us       0.000us       6.670ms         0.24%       6.670ms       2.500us          2668  
+(EngineCore pid=365)                            _causal_conv1d_update_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       6.487ms         0.24%       6.487ms       6.579us           986  
+(EngineCore pid=365) kernel_cutlass_kernel_pertok_b12xattention_sharedmla...         0.00%       0.000us         0.00%       0.000us       0.000us       4.351ms         0.16%       4.351ms      10.638us           409  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kern...         0.00%       0.000us         0.00%       0.000us       0.000us       2.852ms         0.10%       2.852ms       2.180us          1308  
+(EngineCore pid=365)                                   _decode_update_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       2.375ms         0.09%       2.375ms       6.805us           349  
+(EngineCore pid=365)                                             aten::index         0.01%       2.130ms         0.02%       4.171ms      27.626us       2.273ms         0.08%       2.273ms      15.054us           151  
+(EngineCore pid=365) void vllm::rms_norm_kernel<c10::BFloat16, 8, 2, true...         0.00%       0.000us         0.00%       0.000us       0.000us       2.245ms         0.08%       2.245ms       2.009us          1117  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattentiondsa_indexerfused_...         0.00%       0.000us         0.00%       0.000us       0.000us       2.216ms         0.08%       2.216ms       6.349us           349  
+(EngineCore pid=365)                                   _gated_rmsnorm_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       2.189ms         0.08%       2.189ms       2.220us           986  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattention_sharedmlamergeSp...         0.00%       0.000us         0.00%       0.000us       0.000us       2.079ms         0.08%       2.079ms       5.083us           409  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.968ms         0.07%       1.968ms       1.505us          1308  
+(EngineCore pid=365)                                  aten::_index_put_impl_         0.00%     379.337us         0.00%     728.192us      23.490us       1.814ms         0.07%       1.814ms      58.501us            31  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.734ms         0.06%       1.734ms       1.734ms             1  
+(EngineCore pid=365)                            b12x::blockscaled_serialized         0.00%      42.112us         0.01%       2.277ms     151.798us       1.712ms         0.06%       1.712ms     114.144us            15  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.706ms         0.06%       1.706ms       1.706ms             1  
+(EngineCore pid=365) void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us       1.629ms         0.06%       1.629ms       1.338us          1218  
+(EngineCore pid=365) void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us       1.610ms         0.06%       1.610ms       2.306us           698  
+(EngineCore pid=365) void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us       1.569ms         0.06%       1.569ms       2.254us           696  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us       1.133ms         0.04%       1.133ms      12.591us            90  
+(EngineCore pid=365)                                             aten::copy_         0.02%       3.463ms         0.06%      11.324ms       8.476us       1.081ms         0.04%       1.081ms       0.809us          1336  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.029ms         0.04%       1.029ms       0.930us          1107  
+(EngineCore pid=365)                                                aten::mm         0.00%     199.791us         0.00%     266.891us      26.689us     968.047us         0.04%     968.047us      96.805us            10  
+(EngineCore pid=365)                                               aten::bmm         0.00%      94.464us         0.00%     129.486us      21.581us     892.048us         0.03%     892.048us     148.675us             6  
+(EngineCore pid=365) void at::native::(anonymous namespace)::vectorized_l...         0.00%       0.000us         0.00%       0.000us       0.000us     872.240us         0.03%     872.240us       2.499us           349  
+(EngineCore pid=365)                                vllm::moe_forward_shared         0.00%      11.936us         0.06%      10.250ms       3.417ms     851.247us         0.03%       1.244ms     414.520us             3  
+(EngineCore pid=365)                          checkpoint_mamba_states_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     777.585us         0.03%     777.585us      26.813us            29  
+(EngineCore pid=365) void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us     774.511us         0.03%     774.511us       2.219us           349  
+(EngineCore pid=365)                                             aten::fill_         0.02%       3.132ms         0.05%       9.222ms      12.119us     761.516us         0.03%     763.883us       1.004us           761  
+(EngineCore pid=365)                                           memcpy32_post         0.00%       0.000us         0.00%       0.000us       0.000us     704.280us         0.03%     704.280us       1.104us           638  
+(EngineCore pid=365) void at::native::(anonymous namespace)::indexSelectS...         0.00%       0.000us         0.00%       0.000us       0.000us     702.962us         0.03%     702.962us       3.927us           179  
+(EngineCore pid=365)                                      _fwht_quant_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     675.285us         0.02%     675.285us       1.935us           349  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattention_sharedmlakv_cach...         0.00%       0.000us         0.00%       0.000us       0.000us     671.731us         0.02%     671.731us       1.642us           409  
+(EngineCore pid=365)                          Memcpy DtoD (Device -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us     667.703us         0.02%     667.703us       1.458us           458  
+(EngineCore pid=365)                      _prepare_c4_decode_metadata_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     657.399us         0.02%     657.399us       1.884us           349  
+(EngineCore pid=365)                            _copy_attention_tails_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     543.507us         0.02%     543.507us      18.742us            29  
+(EngineCore pid=365) void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us     530.777us         0.02%     530.777us       5.898us            90  
+(EngineCore pid=365) std::enable_if<(((8)>(0)))&&vllm::_typeConvert<c10::...         0.00%       0.000us         0.00%       0.000us       0.000us     499.290us         0.02%     499.290us       2.774us           180  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     479.639us         0.02%     479.639us       1.374us           349  
+(EngineCore pid=365)            _expand_pooled_topk_to_physical_slots_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     422.969us         0.02%     422.969us       1.326us           319  
+(EngineCore pid=365)                           _compute_slot_mappings_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     395.350us         0.01%     395.350us       4.393us            90  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     392.733us         0.01%     392.733us       1.125us           349  
+(EngineCore pid=365)                                      aten::index_select         0.01%       1.704ms         0.02%       3.383ms      21.971us     344.154us         0.01%     344.154us       2.235us           154  
+(EngineCore pid=365)                      _compute_local_logits_stats_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     338.809us         0.01%     338.809us      11.683us            29  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     304.438us         0.01%     304.438us       5.074us            60  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     264.506us         0.01%     264.506us       2.972us            89  
+(EngineCore pid=365)                                                  kernel         0.00%       0.000us         0.00%       0.000us       0.000us     240.668us         0.01%     240.668us       2.674us            90  
+(EngineCore pid=365) void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us     228.924us         0.01%     228.924us       1.924us           119  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     217.979us         0.01%     217.979us       0.893us           244  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPostPreP...         0.00%       0.000us         0.00%       0.000us       0.000us     205.884us         0.01%     205.884us       7.099us            29  
+(EngineCore pid=365)                          Memcpy HtoD (Pinned -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us     187.517us         0.01%     187.517us       1.019us           184  
+(EngineCore pid=365)                                     _post_update_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     173.149us         0.01%     173.149us       5.772us            30  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     161.598us         0.01%     161.598us       5.572us            29  
+(EngineCore pid=365)                             _fill_uniform_spec_metadata         0.00%       0.000us         0.00%       0.000us       0.000us     138.878us         0.01%     138.878us       1.596us            87  
+(EngineCore pid=365) void at::native::reduce_kernel<128, 4, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us     132.188us         0.00%     132.188us       4.558us            29  
+(EngineCore pid=365)                             _update_draft_inputs_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     130.138us         0.00%     130.138us       2.169us            60  
+(EngineCore pid=365)                                  _zero_kv_blocks_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     129.246us         0.00%     129.246us     129.246us             1  
+(EngineCore pid=365)                            _scatter_num_accepted_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     123.965us         0.00%     123.965us       4.275us            29  
+(EngineCore pid=365)                                        cuLaunchKernelEx         0.05%       8.502ms         0.05%       8.502ms       9.113us     106.813us         0.00%     106.813us       0.114us           933  
+(EngineCore pid=365) void per_token_group_quant_8bit_kernel<c10::BFloat16...         0.00%       0.000us         0.00%       0.000us       0.000us     105.149us         0.00%     105.149us       1.724us            61  
+(EngineCore pid=365) void at::native::vectorized_gather_kernel<16, long>(...         0.00%       0.000us         0.00%       0.000us       0.000us     104.828us         0.00%     104.828us       3.615us            29  
+(EngineCore pid=365)                                       _rejection_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      97.278us         0.00%      97.278us       3.354us            29  
+(EngineCore pid=365)                     preprocess_mamba_align_fused_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      94.144us         0.00%      94.144us       3.246us            29  
+(EngineCore pid=365) void at::native::(anonymous namespace)::CatArrayBatc...         0.00%       0.000us         0.00%       0.000us       0.000us      93.439us         0.00%      93.439us       1.038us            90  
+(EngineCore pid=365)                          Memcpy DtoH (Device -> Pinned)         0.00%       0.000us         0.00%       0.000us       0.000us      91.391us         0.00%      91.391us       1.027us            89  
+(EngineCore pid=365) void at::native::(anonymous namespace)::indexSelectS...         0.00%       0.000us         0.00%       0.000us       0.000us      84.862us         0.00%      84.862us       1.414us            60  
+(EngineCore pid=365)                            _copy_auxiliary_state_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      84.063us         0.00%      84.063us       0.966us            87  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      79.136us         0.00%      79.136us       2.638us            30  
+(EngineCore pid=365)                       _glm_device_token_metadata_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      74.847us         0.00%      74.847us       1.247us            60  
+(EngineCore pid=365) void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us      74.624us         0.00%      74.624us       1.244us            60  
+(EngineCore pid=365)                             _gather_block_tables_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      69.214us         0.00%      69.214us       2.307us            30  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us      68.350us         0.00%      68.350us      68.350us             1  
+(EngineCore pid=365)                                               _quantize         0.00%       0.000us         0.00%       0.000us       0.000us      67.583us         0.00%      67.583us       2.330us            29  
+(EngineCore pid=365)                                        _resample_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      67.582us         0.00%      67.582us       2.330us            29  
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365) Self CPU time total: 18.536s
+(EngineCore pid=365) Self CUDA time total: 2.727s
+(EngineCore pid=365) 
+(EngineCore pid=365) INFO 11-17 00:08:23 [wrapper.py:82] Profiler stopped successfully.
+(APIServer pid=1) INFO 11-17 00:08:23 [api_router.py:33] Profiler stopped.
+(APIServer pid=1) INFO:     172.17.0.1:44624 - "POST /stop_profile HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:57126 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:09:06 [api_router.py:23] Starting profiler...
+(APIServer pid=1) /usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:300: UserWarning: Warning: Profiler clears events at the end of each cycle. Only events from the current cycle will be reported. To keep events across cycles, set acc_events=True.
+(APIServer pid=1)   _warn_once(
+(EngineCore pid=365) /usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:300: UserWarning: Warning: Profiler clears events at the end of each cycle. Only events from the current cycle will be reported. To keep events across cycles, set acc_events=True.
+(EngineCore pid=365)   _warn_once(
+USDT:2026-11-17 00:09:06 1:964 SyncActivityProfilerHandler.cpp:52] profiler_start
+(APIServer pid=1) INFO 11-17 00:09:07 [loggers.py:315] Engine 000: Avg prompt throughput: 4499.3 tokens/s, Avg generation throughput: 0.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.1%
+USDT:2026-11-17 00:09:08 365:365 SyncActivityProfilerHandler.cpp:52] profiler_start
+(APIServer pid=1) INFO 11-17 00:09:08 [api_router.py:25] Profiler started.
+(APIServer pid=1) INFO:     172.17.0.1:44826 - "POST /start_profile HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:44838 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:09:09 [api_router.py:31] Stopping profiler...
+USDT:2026-11-17 00:09:09 1:964 SyncActivityProfilerHandler.cpp:59] profiler_stop
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                          threading.py(1030): _bootstrap         0.00%       1.808us       150.00%       17.832s        2.972s             6  
+(APIServer pid=1)                    threading.py(1073): _bootstrap_inner         0.00%       5.535us       150.00%       17.832s        2.972s             6  
+(APIServer pid=1)                           zmq/utils/garbage.py(56): run         0.00%      11.792us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                                 threading.py(1010): run         0.00%       2.544us       100.00%       11.888s        2.972s             4  
+(APIServer pid=1)               concurrent/futures/thread.py(92): _worker         0.00%      26.272us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                   concurrent/futures/thread.py(58): run         0.00%       3.456us         0.00%     415.064us     415.064us             1  
+(APIServer pid=1)                     vllm/profiler/wrapper.py(97): start         0.00%       0.800us         0.00%     159.869us     159.869us             1  
+(APIServer pid=1)               vllm/profiler/wrapper.py(73): _call_start         0.00%       0.928us         0.00%     159.069us     159.069us             1  
+(APIServer pid=1)                   vllm/profiler/wrapper.py(321): _start         0.00%       3.872us         0.00%     158.141us     158.141us             1  
+(APIServer pid=1)                 torch/profiler/profiler.py(1128): start         0.00%       1.360us         0.00%     153.757us     153.757us             1  
+(APIServer pid=1)       torch/profiler/profiler.py(1262): _transit_action         0.00%       1.072us         0.00%     152.397us     152.397us             1  
+(APIServer pid=1)            torch/profiler/profiler.py(342): start_trace         0.00%      15.231us         0.00%     151.325us     151.325us             1  
+(APIServer pid=1)           torch/autograd/profiler.py(414): _start_trace         0.00%      88.607us         0.00%     111.038us     111.038us             1  
+(APIServer pid=1)                  anyio/_backends/_asyncio.py(1089): run         0.00%       0.992us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                                      queue.py(171): get         0.00%       0.928us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                                 threading.py(355): wait         0.00%       1.376us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)               concurrent/futures/thread.py(89): _worker        25.00%        2.972s        50.00%        5.944s        2.972s             2  
+(APIServer pid=1) vllm/v1/engine/core_client.py(811): monitor_engine_c...         0.00%       1.888us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1) vllm/v1/engine/utils.py(263): monitor_engine_livenes...         0.00%      37.391us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)               multiprocessing/connection.py(1136): wait         0.00%      73.615us         1.23%     146.622ms     146.622ms             1  
+(APIServer pid=1)                               selectors.py(415): select         1.23%     146.522ms         1.23%     146.522ms     146.522ms             1  
+(APIServer pid=1)                                      vllm(10): <module>         0.00%       2.144us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                 vllm/entrypoints/cli/main.py(106): main         0.00%       3.248us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                 vllm/entrypoints/cli/serve.py(184): cmd         0.00%       2.400us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                             uvloop/__init__.py(96): run         0.00%       1.680us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                            asyncio/runners.py(194): run         0.00%       1.040us        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                            asyncio/runners.py(118): run        24.48%        2.910s        25.00%        2.972s        2.972s             1  
+(APIServer pid=1)                             sitecustomize.py(47): _hook         0.00%      62.686us         0.00%     141.869us       9.458us            15  
+(APIServer pid=1)                          <built-in function __import__>         0.00%      47.008us         0.00%      59.776us       3.985us            15  
+(APIServer pid=1) <built-in method startswith of str object at 0xeb156...         0.00%       1.391us         0.00%       1.391us       0.464us             3  
+(APIServer pid=1)                     <built-in function perf_counter_ns>         0.00%       1.584us         0.00%       1.584us       0.792us             2  
+(APIServer pid=1)      torch/profiler/profiler.py(538): add_metadata_json         0.00%       4.496us         0.00%       5.888us       5.888us             1  
+(APIServer pid=1) <built-in method _add_metadata_json of pybind11_buil...         0.00%       1.392us         0.00%       1.392us       1.392us             1  
+(APIServer pid=1) <built-in method kineto_available of pybind11_builti...         0.00%       0.352us         0.00%       0.352us       0.352us             1  
+(APIServer pid=1) torch/profiler/profiler.py(554): _get_distributed_in...         0.00%       5.184us         0.00%      15.392us      15.392us             1  
+(APIServer pid=1)         torch/distributed/__init__.py(17): is_available         0.00%       1.824us         0.00%       3.104us       3.104us             1  
+(APIServer pid=1)                             <built-in function hasattr>         0.00%      49.950us         0.00%      73.917us       0.870us            85  
+(APIServer pid=1) torch/distributed/distributed_c10d.py(1394): is_init...         0.00%       2.016us         0.00%       3.808us       3.808us             1  
+(APIServer pid=1)       torch/distributed/distributed_c10d.py(817): WORLD         0.00%       1.488us         0.00%       1.792us       1.792us             1  
+(APIServer pid=1) torch/distributed/distributed_c10d.py(688): default_...         0.00%       0.304us         0.00%       0.304us       0.304us             1  
+(APIServer pid=1)                             <built-in function getattr>         0.00%      57.326us         0.00%      81.405us       0.969us            84  
+(APIServer pid=1) <built-in method items of dict object at 0xeb15435fd...         0.00%       0.416us         0.00%       0.416us       0.416us             1  
+(APIServer pid=1) vllm/profiler/wrapper.py(295): _maybe_add_version_me...         0.00%       0.512us         0.00%       0.512us       0.512us             1  
+(APIServer pid=1)            concurrent/futures/_base.py(537): set_result         0.00%       6.863us         0.00%     251.739us     251.739us             1  
+(APIServer pid=1)                            threading.py(299): __enter__         0.00%      17.776us         0.00%      29.487us       2.681us            11  
+(APIServer pid=1) <built-in method __enter__ of _thread.RLock object a...         0.00%       7.264us         0.00%       7.264us       1.038us             7  
+(APIServer pid=1)                           threading.py(424): notify_all         0.00%       2.112us         0.00%       4.160us       4.160us             1  
+(APIServer pid=1)                                 <built-in function len>         0.00%      23.600us         0.00%      23.600us       0.284us            83  
+(APIServer pid=1)                               threading.py(394): notify         0.00%       6.656us         0.00%      14.864us       3.716us             4  
+(APIServer pid=1) <built-in method _is_owned of _thread.RLock object a...         0.00%       0.224us         0.00%       0.224us       0.224us             1  
+(APIServer pid=1)                             threading.py(302): __exit__         0.00%      10.991us         0.00%      13.903us       1.264us            11  
+(APIServer pid=1) <built-in method __exit__ of _thread.RLock object at...         0.00%       1.984us         0.00%       1.984us       0.283us             7  
+(APIServer pid=1)     concurrent/futures/_base.py(337): _invoke_callbacks         0.00%       2.080us         0.00%     237.132us     237.132us             1  
+(APIServer pid=1)                asyncio/futures.py(394): _call_set_state         0.00%     234.620us         0.00%     235.052us     235.052us             1  
+(APIServer pid=1) <built-in method cancelled of _asyncio.Future object...         0.00%      83.934us         0.00%      83.934us       2.469us            34  
+(APIServer pid=1) <built-in method get_nowait of _queue.SimpleQueue ob...         0.00%       2.560us         0.00%       2.560us       2.560us             1  
+(APIServer pid=1)                              threading.py(515): release         0.00%       1.744us         0.00%       8.767us       8.767us             1  
+(APIServer pid=1) <built-in method __enter__ of _thread.lock object at...         0.00%       0.400us         0.00%       0.400us       0.400us             1  
+(APIServer pid=1)                            threading.py(314): _is_owned         0.00%       5.312us         0.00%       7.984us       2.661us             3  
+(APIServer pid=1) <built-in method acquire of _thread.lock object at 0...         0.00%       0.688us         0.00%       0.688us       0.688us             1  
+(APIServer pid=1) <built-in method __exit__ of _thread.lock object at ...         0.00%       0.096us         0.00%       0.096us       0.096us             1  
+(APIServer pid=1) <built-in method get of _queue.SimpleQueue object at...        24.99%        2.971s        24.99%        2.971s        2.971s             1  
+(APIServer pid=1)                     asyncio/futures.py(381): _set_state         0.00%      35.567us         0.00%      86.446us      86.446us             1  
+(APIServer pid=1)                   asyncio/base_futures.py(13): isfuture         0.00%      13.296us         0.00%      18.384us       1.532us            12  
+(APIServer pid=1)             asyncio/futures.py(345): _copy_future_state         0.00%      16.144us         0.00%      43.487us      43.487us             1  
+(APIServer pid=1)                  concurrent/futures/_base.py(393): done         0.00%       4.048us         0.00%      12.624us      12.624us             1  
+(APIServer pid=1) <built-in method done of _asyncio.Future object at 0...         0.00%       6.687us         0.00%       6.687us       0.393us            17  
+(APIServer pid=1)             concurrent/futures/_base.py(383): cancelled         0.00%       1.568us         0.00%       2.736us       2.736us             1  
+(APIServer pid=1)             concurrent/futures/_base.py(463): exception         0.00%       2.736us         0.00%       3.696us       3.696us             1  
+(APIServer pid=1)                concurrent/futures/_base.py(428): result         0.00%       2.320us         0.00%       3.376us       3.376us             1  
+(APIServer pid=1)          concurrent/futures/_base.py(398): __get_result         0.00%       0.160us         0.00%       0.160us       0.160us             1  
+(APIServer pid=1) <built-in method set_result of _asyncio.Future objec...         0.00%     319.803us         0.00%     319.803us       6.271us            51  
+(APIServer pid=1)             asyncio/futures.py(387): _call_check_cancel         0.00%       0.880us         0.00%       1.328us       1.328us             1  
+(APIServer pid=1)                       asyncio/threads.py(25): to_thread         0.00%       2.816us         0.00%       2.816us       2.816us             1  
+(APIServer pid=1)                   asyncio/tasks.py(767): _done_callback         0.00%      38.480us         0.00%      48.432us       9.686us             5  
+(APIServer pid=1) <built-in method cancelled of _asyncio.Task object a...         0.00%       1.936us         0.00%       1.936us       0.194us            10  
+(APIServer pid=1) <built-in method exception of _asyncio.Task object a...         0.00%       2.384us         0.00%       2.384us       0.238us            10  
+(APIServer pid=1) asyncio/futures.py(311): _set_result_unless_cancelle...         0.00%     246.252us         0.01%     604.197us      19.490us            31  
+(APIServer pid=1)                            uvicorn/server.py(90): serve         0.00%      93.470us         0.01%       1.643ms      56.659us            29  
+(APIServer pid=1)                          uvicorn/server.py(107): _serve         0.00%     103.038us         0.01%       1.550ms      53.436us            29  
+(APIServer pid=1)                       uvicorn/server.py(248): main_loop         0.00%     395.468us         0.01%       1.447ms      49.883us            29  
+(APIServer pid=1)                            asyncio/tasks.py(665): sleep         0.00%     187.533us         0.00%     187.533us       6.049us            31  
+(APIServer pid=1)                         uvicorn/server.py(251): on_tick         0.00%     132.703us         0.00%     292.491us      10.086us            29  
+(APIServer pid=1)                            asyncio/tasks.py(653): sleep         0.00%     591.155us         0.01%     617.538us      19.921us            31  
+(APIServer pid=1)                    <built-in function get_running_loop>         0.00%      29.407us         0.00%      29.407us       0.754us            39  
+(APIServer pid=1)                           <built-in function monotonic>         0.00%      16.079us         0.00%      16.079us       2.297us             7  
+(APIServer pid=1)                             selectors.py(202): __exit__         0.00%       9.552us         0.00%      38.559us      12.853us             3  
+(APIServer pid=1)                                selectors.py(268): close         0.00%      20.527us         0.00%      29.007us       9.669us             3  
+(APIServer pid=1) <built-in method clear of dict object at 0xeb15095cc...         0.00%       8.480us         0.00%       8.480us       2.827us             3  
+(APIServer pid=1)                               threading.py(601): is_set         0.00%       1.616us         0.00%       1.616us       0.323us             5  
+(APIServer pid=1)               multiprocessing/connection.py(1122): wait         0.00%      83.326us        23.77%        2.825s     941.768ms             3  
+(APIServer pid=1)                             selectors.py(347): __init__         0.00%      23.808us         0.00%      37.920us      12.640us             3  
+(APIServer pid=1)                             selectors.py(209): __init__         0.00%       9.504us         0.00%      10.368us       3.456us             3  
+(APIServer pid=1)                              selectors.py(63): __init__         0.00%       0.864us         0.00%       0.864us       0.288us             3  
+(APIServer pid=1)                                <built-in function poll>         0.00%       3.744us         0.00%       3.744us       1.248us             3  
+(APIServer pid=1)                            selectors.py(199): __enter__         0.00%       0.576us         0.00%       0.576us       0.192us             3  
+(APIServer pid=1)                             selectors.py(351): register         0.00%      16.416us         0.00%     117.599us      39.200us             3  
+(APIServer pid=1)                             selectors.py(234): register         0.00%      65.663us         0.00%      95.503us      31.834us             3  
+(APIServer pid=1)                      selectors.py(215): _fileobj_lookup         0.00%       7.952us         0.00%      15.776us       5.259us             3  
+(APIServer pid=1)                        selectors.py(21): _fileobj_to_fd         0.00%       4.928us         0.00%       7.824us       2.608us             3  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1) Self CPU time total: 11.888s
+(APIServer pid=1) 
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1)               concurrent/futures/thread.py(89): _worker        25.00%        2.972s        50.00%        5.944s        2.972s             2  
+(APIServer pid=1) <built-in method get of _queue.SimpleQueue object at...        24.99%        2.971s        24.99%        2.971s        2.971s             1  
+(APIServer pid=1)                            asyncio/runners.py(118): run        24.48%        2.910s        25.00%        2.972s        2.972s             1  
+(APIServer pid=1) <built-in method poll of select.poll object at 0xeb1...        23.76%        2.825s        23.76%        2.825s     941.673ms             3  
+(APIServer pid=1)                               selectors.py(415): select         1.23%     146.522ms         1.23%     146.522ms     146.522ms             1  
+(APIServer pid=1) <built-in method step of tokenizers.decoders.DecodeS...         0.35%      41.354ms         0.35%      41.354ms      41.354ms             1  
+(APIServer pid=1)                        json/decoder.py(343): raw_decode         0.02%       2.770ms         0.02%       2.770ms       2.770ms             1  
+(APIServer pid=1) vllm/entrypoints/serve/engine/protocol.py(44): __log...         0.02%       2.371ms         0.02%       2.568ms     427.936us             6  
+(APIServer pid=1)             vllm/logging_utils/formatter.py(20): format         0.01%     889.920us         0.01%       1.015ms     338.313us             3  
+(APIServer pid=1)                            asyncio/tasks.py(653): sleep         0.00%     591.155us         0.01%     617.538us      19.921us            31  
+(APIServer pid=1)                                 <built-in function max>         0.00%     570.886us         0.00%     570.886us      71.361us             8  
+(APIServer pid=1)            vllm/v1/engine/detokenizer.py(169): __init__         0.00%     555.142us         0.00%     558.422us     558.422us             1  
+(APIServer pid=1)                                 <built-in function min>         0.00%     546.438us         0.00%     547.142us     273.571us             2  
+(APIServer pid=1) <built-in method token_to_id of tokenizers.Tokenizer...         0.00%     518.102us         0.00%     518.102us     518.102us             1  
+(APIServer pid=1)                       uvicorn/server.py(248): main_loop         0.00%     395.468us         0.01%       1.447ms      49.883us            29  
+(APIServer pid=1)     uvicorn/protocols/http/httptools_impl.py(463): send         0.00%     388.938us         0.01%     858.655us     214.664us             4  
+(APIServer pid=1) <built-in method set_result of _asyncio.Future objec...         0.00%     319.803us         0.00%     319.803us       6.271us            51  
+(APIServer pid=1) <built-in method encode of msgspec.msgpack.Encoder o...         0.00%     249.099us         0.00%     249.099us     124.549us             2  
+(APIServer pid=1) asyncio/futures.py(311): _set_result_unless_cancelle...         0.00%     246.252us         0.01%     604.197us      19.490us            31  
+(APIServer pid=1)                       zmq/_future.py(586): _handle_recv         0.00%     235.643us         0.00%     503.894us     125.974us             4  
+(APIServer pid=1)                asyncio/futures.py(394): _call_set_state         0.00%     234.620us         0.00%     235.052us     235.052us             1  
+(APIServer pid=1)                            asyncio/tasks.py(665): sleep         0.00%     187.533us         0.00%     187.533us       6.049us            31  
+(APIServer pid=1)                     zmq/_future.py(670): _handle_events         0.00%     173.260us         0.01%     744.017us     248.006us             3  
+(APIServer pid=1)                            fastapi/routing.py(120): app         0.00%     170.717us         0.06%       7.349ms       1.837ms             4  
+(APIServer pid=1) uvicorn/protocols/http/httptools_impl.py(170): data_...         0.00%     166.717us         0.00%     377.128us      94.282us             4  
+(APIServer pid=1)                vllm/v1/metrics/loggers.py(1075): record         0.00%     163.980us         0.00%     443.304us     147.768us             3  
+(APIServer pid=1) fastapi/dependencies/utils.py(598): solve_dependenci...         0.00%     139.134us         0.02%       2.909ms     969.656us             3  
+(APIServer pid=1)                         uvicorn/server.py(251): on_tick         0.00%     132.703us         0.00%     292.491us      10.086us            29  
+(APIServer pid=1)                      logging/__init__.py(298): __init__         0.00%     125.101us         0.00%     234.940us      46.988us             5  
+(APIServer pid=1)                          <built-in function isinstance>         0.00%     115.549us         0.00%     130.253us       0.334us           390  
+(APIServer pid=1)                          uvicorn/server.py(107): _serve         0.00%     103.038us         0.01%       1.550ms      53.436us            29  
+(APIServer pid=1)                      starlette/routing.py(244): matches         0.00%     101.440us         0.00%     184.525us       2.883us            64  
+(APIServer pid=1)                          zmq/sugar/socket.py(638): send         0.00%      99.678us         0.00%     133.709us      22.285us             6  
+(APIServer pid=1)                    zmq/_future.py(470): _add_recv_event         0.00%      99.168us         0.00%     374.057us      93.514us             4  
+(APIServer pid=1)                            uvicorn/server.py(90): serve         0.00%      93.470us         0.01%       1.643ms      56.659us            29  
+(APIServer pid=1)           torch/autograd/profiler.py(414): _start_trace         0.00%      88.607us         0.00%     111.038us     111.038us             1  
+(APIServer pid=1)                                  enum.py(1562): __and__         0.00%      84.014us         0.00%     207.900us       7.425us            28  
+(APIServer pid=1) <built-in method cancelled of _asyncio.Future object...         0.00%      83.934us         0.00%      83.934us       2.469us            34  
+(APIServer pid=1)               multiprocessing/connection.py(1122): wait         0.00%      83.326us        23.77%        2.825s     941.768ms             3  
+(APIServer pid=1) prometheus_fastapi_instrumentator/metrics.py(779): i...         0.00%      82.560us         0.00%     320.282us     160.141us             2  
+(APIServer pid=1)                               enum.py(1544): _get_value         0.00%      77.407us         0.00%     123.725us       0.982us           126  
+(APIServer pid=1) <built-in method flush of _io.TextIOWrapper object a...         0.00%      76.863us         0.00%      76.863us      15.373us             5  
+(APIServer pid=1) prometheus_fastapi_instrumentator/middleware.py(178)...         0.00%      75.598us         0.07%       7.865ms       1.966ms             4  
+(APIServer pid=1)               multiprocessing/connection.py(1136): wait         0.00%      73.615us         1.23%     146.622ms     146.622ms             1  
+(APIServer pid=1)                    prometheus_client/values.py(27): inc         0.00%      71.469us         0.00%      81.869us       1.106us            74  
+(APIServer pid=1)               prometheus_client/metrics.py(138): labels         0.00%      67.792us         0.00%      77.440us       9.680us             8  
+(APIServer pid=1)                                  enum.py(726): __call__         0.00%      67.551us         0.00%     103.071us       1.586us            65  
+(APIServer pid=1) vllm/entrypoints/openai/completion/serving.py(137): ...         0.00%      65.966us         0.03%       3.507ms       1.169ms             3  
+USDT:2026-11-17 00:09:09 365:365 SyncActivityProfilerHandler.cpp:59] profiler_stop
+(APIServer pid=1)                             selectors.py(234): register         0.00%      65.663us         0.00%      95.503us      31.834us             3  
+(APIServer pid=1)                             sitecustomize.py(47): _hook         0.00%      62.686us         0.00%     141.869us       9.458us            15  
+(APIServer pid=1) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(APIServer pid=1) Self CPU time total: 11.888s
+(APIServer pid=1) 
+(APIServer pid=1) INFO 11-17 00:09:17 [loggers.py:315] Engine 000: Avg prompt throughput: 3.2 tokens/s, Avg generation throughput: 0.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 49.9%
+(APIServer pid=1) INFO 11-17 00:09:27 [loggers.py:315] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 49.9%
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280] Engine core has spent 62 s in one profile utility call without finishing; the engine is blocked, not idle. Loop thread stack:
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:10:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280] Engine core has spent 122 s in one profile utility call without finishing; the engine is blocked, not idle. Loop thread stack:
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 924, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     ch.device_time_total for ch in self.cpu_children
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in device_time_total
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/profiler_util.py", line 923, in <genexpr>
+(EngineCore pid=365) WARNING 11-17 00:11:11 [stall_diagnostics.py:280]     return sum(kinfo.duration for kinfo in self.kernels) + sum(
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365)                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365)                   execute_context_1(32)_generation_0(0)         0.00%       0.000us         0.00%       0.000us       0.000us        1.037s       383.67%        1.037s     518.658ms             2  
+(EngineCore pid=365)                                vllm::moe_forward_shared         0.00%     191.389us         3.66%     140.399ms       3.191ms     180.236ms        66.66%     186.605ms       4.241ms            44  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kern...         0.00%       0.000us         0.00%       0.000us       0.000us     179.818ms        66.51%     179.818ms       3.909ms            46  
+(EngineCore pid=365)                        b12x::blockscaled_bf16_workspace         0.03%       1.324ms         0.90%      34.352ms     446.135us      33.316ms        12.32%      33.316ms     432.671us            77  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us      22.247ms         8.23%      22.247ms     244.468us            91  
+(EngineCore pid=365)                   b12x::mhc_post_pre_planned_functional         0.01%     400.792us         1.63%      62.412ms     701.263us      14.093ms         5.21%      14.093ms     158.352us            89  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPrefillT...         0.00%       0.000us         0.00%       0.000us       0.000us      13.027ms         4.82%      13.027ms     146.367us            89  
+(EngineCore pid=365)                            b12x::blockscaled_serialized         0.02%     583.285us         0.69%      26.645ms     209.801us      12.851ms         4.75%      12.851ms     101.188us           127  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us       9.171ms         3.39%       9.171ms       1.834ms             5  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us       7.747ms         2.87%       7.747ms     227.867us            34  
+(EngineCore pid=365)                                  b12x::sparse_mla_bound         0.00%      80.270us         0.52%      19.823ms       1.525ms       4.568ms         1.69%       4.568ms     351.388us            13  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattention_sharedmlaprefill...         0.00%       0.000us         0.00%       0.000us       0.000us       4.533ms         1.68%       4.533ms     377.742us            12  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us       4.493ms         1.66%       4.493ms     374.414us            12  
+(EngineCore pid=365)                                                aten::mm         0.16%       6.112ms         0.29%      11.209ms      47.903us       4.436ms         1.64%       4.436ms      18.958us           234  
+(EngineCore pid=365)                                               aten::bmm         0.02%     870.159us         0.04%       1.444ms      55.529us       2.909ms         1.08%       2.909ms     111.873us            26  
+(EngineCore pid=365)                                  aten::_index_put_impl_         0.01%     391.656us         0.03%       1.218ms      33.841us       2.244ms         0.83%       2.294ms      63.713us            36  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us       2.165ms         0.80%       2.165ms      51.559us            42  
+(EngineCore pid=365)                                             aten::index         0.00%     175.934us         0.01%     390.264us      43.363us       1.759ms         0.65%       1.759ms     195.406us             9  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.727ms         0.64%       1.727ms       1.727ms             1  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       1.723ms         0.64%       1.723ms       1.723ms             1  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xgemmblockscaled_block_fp8_...         0.00%       0.000us         0.00%       0.000us       0.000us       1.584ms         0.59%       1.584ms     113.132us            14  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us       1.484ms         0.55%       1.484ms     123.696us            12  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us       1.325ms         0.49%       1.325ms     110.408us            12  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us       1.287ms         0.48%       1.287ms     107.283us            12  
+(EngineCore pid=365)                                        _flashkda_C::fwd         0.03%       1.055ms         0.07%       2.744ms      80.713us       1.281ms         0.47%       1.358ms      39.949us            34  
+(EngineCore pid=365)                          checkpoint_mamba_states_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       1.167ms         0.43%       1.167ms       1.167ms             1  
+(EngineCore pid=365)                               _causal_conv1d_fwd_kernel         0.00%       0.000us         0.00%       0.000us       0.000us       1.064ms         0.39%       1.064ms      10.430us           102  
+(EngineCore pid=365) nvjet_sm121_tst_mma_192x16x64_3_32x16x64_tmaAB_split...         0.00%       0.000us         0.00%       0.000us       0.000us     990.156us         0.37%     990.156us      10.763us            92  
+(EngineCore pid=365) _Z25_flash_kda_fwd_recurrenceIN4cute9TiledCopyINS0_9...         0.00%       0.000us         0.00%       0.000us       0.000us     934.859us         0.35%     934.859us      27.496us            34  
+(EngineCore pid=365) nvjet_sm121_tst_mma_96x64x64_4_16x64x64_tmaAB_bz_TNN...         0.00%       0.000us         0.00%       0.000us       0.000us     915.219us         0.34%     915.219us      13.459us            68  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us     891.183us         0.33%     891.183us     148.530us             6  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us     874.256us         0.32%     874.256us     174.851us             5  
+(EngineCore pid=365)                                   b12x::dsa_indexer_fp8         0.02%     893.599us         0.61%      23.516ms       1.809ms     774.513us         0.29%     774.513us      59.578us            13  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us     768.657us         0.28%     768.657us     256.219us             3  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us     750.033us         0.28%     750.033us      62.503us            12  
+(EngineCore pid=365)                            _copy_attention_tails_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     647.668us         0.24%     647.668us     647.668us             1  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPostPreP...         0.00%       0.000us         0.00%       0.000us       0.000us     647.256us         0.24%     647.256us       7.273us            89  
+(EngineCore pid=365) nvjet_sm121_tss_mma_192x16x64_3_32x16x64_tmaAB_split...         0.00%       0.000us         0.00%       0.000us       0.000us     612.850us         0.23%     612.850us      14.592us            42  
+(EngineCore pid=365)                                             aten::copy_         0.05%       2.037ms         0.11%       4.093ms      13.035us     568.663us         0.21%     569.911us       1.815us           314  
+(EngineCore pid=365)                           _gather_initial_states_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     539.480us         0.20%     539.480us      15.867us            34  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     514.266us         0.19%     514.266us      15.125us            34  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattentiondsa_indexercontig...         0.00%       0.000us         0.00%       0.000us       0.000us     507.896us         0.19%     507.896us      42.325us            12  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCFinalize...         0.00%       0.000us         0.00%       0.000us       0.000us     428.121us         0.16%     428.121us       4.757us            90  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xmoe_sharedkernelsw4a16kern...         0.00%       0.000us         0.00%       0.000us       0.000us     361.532us         0.13%     361.532us       7.859us            46  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us     358.681us         0.13%     358.681us     358.681us             1  
+(EngineCore pid=365) kernel_cutlass_kernel_b12x_libdense_gemmDenseGemmKer...         0.00%       0.000us         0.00%       0.000us       0.000us     350.458us         0.13%     350.458us     116.819us             3  
+(EngineCore pid=365) void _flash_kda_fwd_prepare<cute::TiledCopy<cute::Co...         0.00%       0.000us         0.00%       0.000us       0.000us     345.914us         0.13%     345.914us      10.174us            34  
+(EngineCore pid=365) void per_token_group_quant_8bit_kernel<c10::BFloat16...         0.00%       0.000us         0.00%       0.000us       0.000us     339.195us         0.13%     339.195us       2.531us           134  
+(EngineCore pid=365)                           _C::per_token_group_fp8_quant         0.02%     747.832us         0.05%       2.030ms      15.986us     322.107us         0.12%     322.107us       2.536us           127  
+(EngineCore pid=365)                               _w4a16_route_count_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     258.717us         0.10%     258.717us       6.160us            42  
+(EngineCore pid=365) void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us     239.004us         0.09%     239.004us       4.121us            58  
+(EngineCore pid=365) void vllm::moe::single_group_topk::detail::single_gr...         0.00%       0.000us         0.00%       0.000us       0.000us     234.077us         0.09%     234.077us       5.089us            46  
+(EngineCore pid=365)                                    _moe_C::grouped_topk         0.02%     648.344us         0.04%       1.435ms      32.603us     197.630us         0.07%     197.630us       4.492us            44  
+(EngineCore pid=365) void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us     185.341us         0.07%     185.341us       2.015us            92  
+(EngineCore pid=365)                          Memcpy DtoD (Device -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us     172.156us         0.06%     172.156us       2.125us            81  
+(EngineCore pid=365)                             layer_norm_gated_fwd_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     168.186us         0.06%     168.186us       4.947us            34  
+(EngineCore pid=365)                  _w4a16_route_prefix_from_counts_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     158.526us         0.06%     158.526us       3.774us            42  
+(EngineCore pid=365)                    _pack_topk_routes_post_prefix_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     155.133us         0.06%     155.133us       3.694us            42  
+(EngineCore pid=365)                                             aten::fill_         0.04%       1.393ms         0.07%       2.601ms      21.858us     148.573us         0.05%     151.133us       1.270us           119  
+(EngineCore pid=365)                   _gather_shared_paged_supertile_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     146.972us         0.05%     146.972us      12.248us            12  
+(EngineCore pid=365)                                               _quantize         0.00%       0.000us         0.00%       0.000us       0.000us     143.325us         0.05%     143.325us       1.937us            74  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     128.190us         0.05%     128.190us       1.583us            81  
+(EngineCore pid=365) void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bf...         0.00%       0.000us         0.00%       0.000us       0.000us     121.182us         0.04%     121.182us       2.473us            49  
+(EngineCore pid=365) void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us     109.597us         0.04%     109.597us       2.030us            54  
+(EngineCore pid=365)                                               aten::add         0.01%     496.393us         0.02%     790.885us      15.818us     108.414us         0.04%     108.414us       2.168us            50  
+(EngineCore pid=365) void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     106.366us         0.04%     106.366us       2.312us            46  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattentiondsa_indexertiled_...         0.00%       0.000us         0.00%       0.000us       0.000us     102.301us         0.04%     102.301us       8.525us            12  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xgemmblockscaled_reduceWeig...         0.00%       0.000us         0.00%       0.000us       0.000us     101.504us         0.04%     101.504us      20.301us             5  
+(EngineCore pid=365)                                  _zero_kv_blocks_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     100.735us         0.04%     100.735us     100.735us             1  
+(EngineCore pid=365)                           _pack_topk_routes_sort_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      99.676us         0.04%      99.676us       2.167us            46  
+(EngineCore pid=365)                             _C::silu_and_mul_with_clamp         0.01%     371.126us         0.02%     748.940us      15.935us      98.686us         0.04%      98.686us       2.100us            47  
+(EngineCore pid=365) void vllm::rms_norm_kernel<c10::BFloat16, 8, 2, true...         0.00%       0.000us         0.00%       0.000us       0.000us      95.455us         0.04%      95.455us       2.220us            43  
+(EngineCore pid=365) void cutlass::Kernel2<cutlass_80_simt_sgemm_64x64_8x...         0.00%       0.000us         0.00%       0.000us       0.000us      85.885us         0.03%      85.885us       7.157us            12  
+(EngineCore pid=365)                                            _C::rms_norm         0.01%     250.457us         0.01%     481.350us      14.586us      76.416us         0.03%      76.416us       2.316us            33  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us      68.702us         0.03%      68.702us      68.702us             1  
+(EngineCore pid=365)                                    _prefill_pool_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      65.439us         0.02%      65.439us       5.453us            12  
+(EngineCore pid=365) void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us      60.960us         0.02%      60.960us       2.345us            26  
+(EngineCore pid=365) kernel_cutlass_kernel_pertok_b12xattention_sharedmla...         0.00%       0.000us         0.00%       0.000us       0.000us      59.967us         0.02%      59.967us      19.989us             3  
+(EngineCore pid=365) void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us      59.232us         0.02%      59.232us       1.519us            39  
+(EngineCore pid=365) std::enable_if<!(false), void>::type internal::gemvx...         0.00%       0.000us         0.00%       0.000us       0.000us      50.880us         0.02%      50.880us      12.720us             4  
+(EngineCore pid=365)                                                  kernel         0.00%       0.000us         0.00%       0.000us       0.000us      41.056us         0.02%      41.056us       2.737us            15  
+(EngineCore pid=365)                 vllm::unified_mla_attention_with_output         0.00%      63.855us         1.19%      45.663ms       3.513ms      34.944us         0.01%       1.578ms     121.349us            13  
+(EngineCore pid=365)                                     _apply_write_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      32.160us         0.01%      32.160us       8.040us             4  
+(EngineCore pid=365)                                      _fwht_quant_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      31.934us         0.01%      31.934us       2.456us            13  
+(EngineCore pid=365)                        b12x::mhc_pre_planned_functional         0.00%      12.816us         0.02%     931.246us     931.246us      30.527us         0.01%      30.527us      30.527us             1  
+(EngineCore pid=365)                                    _prefill_tail_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      30.432us         0.01%      30.432us       2.536us            12  
+(EngineCore pid=365) std::enable_if<(((8)>(0)))&&vllm::_typeConvert<c10::...         0.00%       0.000us         0.00%       0.000us       0.000us      29.728us         0.01%      29.728us       3.716us             8  
+(EngineCore pid=365)                                 aten::native_layer_norm         0.00%     137.756us         0.01%     357.258us      27.481us      29.632us         0.01%      29.632us       2.279us            13  
+(EngineCore pid=365) void at::native::(anonymous namespace)::vectorized_l...         0.00%       0.000us         0.00%       0.000us       0.000us      29.632us         0.01%      29.632us       2.279us            13  
+(EngineCore pid=365)                                      aten::index_select         0.00%     137.036us         0.01%     324.888us      23.206us      29.599us         0.01%      47.103us       3.364us            14  
+(EngineCore pid=365)                                 _expand_pool_ids_kernel         0.00%       0.000us         0.00%       0.000us       0.000us      28.128us         0.01%      28.128us       2.164us            13  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xattention_sharedmlakv_cach...         0.00%       0.000us         0.00%       0.000us       0.000us      26.623us         0.01%      26.623us       1.775us            15  
+(EngineCore pid=365)                                              aten::amax         0.00%     180.363us         0.01%     280.570us      21.582us      25.504us         0.01%      25.504us       1.962us            13  
+(EngineCore pid=365) void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us      25.504us         0.01%      25.504us       1.962us            13  
+(EngineCore pid=365)                               b12x::glm_mla_cache_write         0.00%      55.838us         0.09%       3.613ms     277.891us      24.447us         0.01%      24.447us       1.881us            13  
+(EngineCore pid=365) void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us      24.256us         0.01%      24.256us       6.064us             4  
+(EngineCore pid=365) void at::native::(anonymous namespace)::indexSelectS...         0.00%       0.000us         0.00%       0.000us       0.000us      23.231us         0.01%      23.231us       3.319us             7  
+(EngineCore pid=365) kernel_cutlass_kernel_b12xnormmhc_kernelsMHCPostPreP...         0.00%       0.000us         0.00%       0.000us       0.000us      21.856us         0.01%      21.856us      21.856us             1  
+(EngineCore pid=365) void at::native::index_elementwise_kernel<128, 4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      19.647us         0.01%      19.647us       6.549us             3  
+(EngineCore pid=365)                                            aten::gather         0.00%      54.750us         0.00%      93.054us      31.018us      19.200us         0.01%      19.200us       6.400us             3  
+(EngineCore pid=365) -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+(EngineCore pid=365) Self CPU time total: 3.837s
+(EngineCore pid=365) Self CUDA time total: 270.364ms
+(EngineCore pid=365) 
+(EngineCore pid=365) WARNING 11-17 00:11:20 [stall_diagnostics.py:258] Engine core profile utility call finished after 130.6 s
+(APIServer pid=1) INFO 11-17 00:11:20 [api_router.py:33] Profiler stopped.
+(APIServer pid=1) INFO:     172.17.0.1:36942 - "POST /stop_profile HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     172.17.0.1:41986 - "POST /v1/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 11-17 00:11:27 [loggers.py:315] Engine 000: Avg prompt throughput: 3.2 tokens/s, Avg generation throughput: 0.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 66.6%
