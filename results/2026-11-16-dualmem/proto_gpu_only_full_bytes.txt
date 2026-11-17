@@ -1,0 +1,1 @@
+{"tag": "gpu_only_full_bytes", "mode": "gpu_sync", "T": 4, "phases_per_cycle": 90, "phaseA_MB": 134.217728, "phaseB_MB": 327.155712, "cycle_ms_p50": 100.07656450761715, "cycle_ms_min": 99.99097100808285, "gpu_GBps_cycle": 207.459207878981, "per_phase_us_p50": {"gpu_launch_to_sync": 1274.962502066046, "d2h_copy": 9.199997293762863, "swap_send_recv_h2d": 0.08000642992556095}}

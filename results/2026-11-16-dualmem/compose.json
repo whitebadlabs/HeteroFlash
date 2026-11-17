@@ -1,0 +1,315 @@
+{
+ "label": "MODELED composition of MEASURED components; not a measured decode speed",
+ "inputs": {
+  "BWg_fixed": [
+   0.201,
+   "M",
+   "GB10 dense FP8 GEMMs in the real V2 runtime, cycle anatomy 2026-11-16 (58.6 ms / 11.8 GB)"
+  ],
+  "BWg_expert": [
+   0.195,
+   "M/A",
+   "GB10 routed-expert kernels (IQ2_XXS) in the same profile; the GPU Q4_K kernel rate is assumed equal [A]"
+  ],
+  "BWc_fixed": [
+   0.215,
+   "M",
+   "workstation FP8 (E4M3+E8M0, exact) GEMV, T=4, 32 cores, measured inside the prototype while swapping (212-218); 229-246 standalone"
+  ],
+  "BWc_expert": [
+   0.17,
+   "M",
+   "workstation Q4_K expert server, 4-token windows, 165-175 GB/s (2026-11-09 audit)"
+  ],
+  "swap_us": {
+   "EEE off + RX coalescing off": [
+    60,
+    "M",
+    "prototype: 50 us swap + 10 us sync/D2H per phase"
+   ],
+   "EEE off": [
+    72,
+    "M",
+    "prototype: 62 + 10"
+   ],
+   "NIC defaults (EEE on)": [
+    205,
+    "M",
+    "prototype: 195 + 10"
+   ]
+  },
+  "A_mtp3_prose": [
+   2.217,
+   "M",
+   "committed tokens per MTP-3 cycle, prose"
+  ],
+  "kda_layer_MB": [
+   145.47058823529412,
+   "M",
+   "headers: KDA attention bytes / 34 layers"
+  ],
+  "mla_layer_MB": [
+   149.1818181818182,
+   "M",
+   "headers: MLA attention + DSA indexer / 11 layers"
+  ],
+  "replicated_MB_per_layer": [
+   4.0476190476190474,
+   "M",
+   "router + mHC, read by both sides (not split)"
+  ],
+  "dense_mlp_layer_MB": [
+   155.66666666666666,
+   "M",
+   "headers"
+  ],
+  "shared_expert_MB": [
+   25.166666666666668,
+   "M",
+   "headers"
+  ],
+  "q4k_expert_MB": [
+   14.16,
+   "M",
+   "GGUF tensor table"
+  ],
+  "U4": [
+   22.7,
+   "M",
+   "verify-window expert union per layer, MTP-3"
+  ],
+  "lm_head_MB": [
+   654,
+   "M",
+   "headers, FP8"
+  ],
+  "draft_pass_MB": [
+   950,
+   "M",
+   "MTP layer + 8 experts + lm_head"
+  ]
+ },
+ "rows": [
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 5.5,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 78.5,
+   "tok_s": 28.2,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "GPU only",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 5.5,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 84.4,
+   "tok_s": 26.3,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 6.4,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 85.3,
+   "tok_s": 26.0,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  },
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 5.5,
+   "drafts_ms": 7.4,
+   "phases": 100,
+   "cycle_ms": 71.8,
+   "tok_s": 30.9,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "split",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 5.5,
+   "drafts_ms": 7.4,
+   "phases": 100,
+   "cycle_ms": 77.6,
+   "tok_s": 28.6,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 6.4,
+   "drafts_ms": 7.5,
+   "phases": 100,
+   "cycle_ms": 78.6,
+   "tok_s": 28.2,
+   "nic": "EEE off + RX coalescing off",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  },
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 6.6,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 79.6,
+   "tok_s": 27.8,
+   "nic": "EEE off",
+   "drafts": "GPU only",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 6.6,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 85.5,
+   "tok_s": 25.9,
+   "nic": "EEE off",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 7.5,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 86.4,
+   "tok_s": 25.6,
+   "nic": "EEE off",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  },
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 6.6,
+   "drafts_ms": 7.5,
+   "phases": 100,
+   "cycle_ms": 73.0,
+   "tok_s": 30.4,
+   "nic": "EEE off",
+   "drafts": "split",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 6.6,
+   "drafts_ms": 7.5,
+   "phases": 100,
+   "cycle_ms": 78.8,
+   "tok_s": 28.1,
+   "nic": "EEE off",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 7.5,
+   "drafts_ms": 7.6,
+   "phases": 100,
+   "cycle_ms": 79.8,
+   "tok_s": 27.8,
+   "nic": "EEE off",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  },
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 18.7,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 91.7,
+   "tok_s": 24.2,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "GPU only",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 18.7,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 97.6,
+   "tok_s": 22.7,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 19.6,
+   "drafts_ms": 14.2,
+   "phases": 91,
+   "cycle_ms": 98.5,
+   "tok_s": 22.5,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "GPU only",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  },
+  {
+   "verify_stream_ms": 58.9,
+   "sync_ms": 18.7,
+   "drafts_ms": 8.7,
+   "phases": 100,
+   "cycle_ms": 86.3,
+   "tok_s": 25.7,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "split",
+   "imbalance": 0.0,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 18.7,
+   "drafts_ms": 8.7,
+   "phases": 100,
+   "cycle_ms": 92.1,
+   "tok_s": 24.1,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 0.0
+  },
+  {
+   "verify_stream_ms": 64.8,
+   "sync_ms": 19.6,
+   "drafts_ms": 8.8,
+   "phases": 100,
+   "cycle_ms": 93.1,
+   "tok_s": 23.8,
+   "nic": "NIC defaults (EEE on)",
+   "drafts": "split",
+   "imbalance": 0.1,
+   "extra_us_per_phase_graph_relaunch_A": 10.0
+  }
+ ],
+ "config_B_same_inputs": {
+  "cycle_ms": 142.7,
+  "tok_s": 15.5,
+  "measured_tok_s": "15.3-19.5 [M]"
+ }
+}
