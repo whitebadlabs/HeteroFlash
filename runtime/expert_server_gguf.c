@@ -7,6 +7,11 @@
 // Usage: expert_server_gguf serve <port> <model.gguf> <index.idx>       (index from runtime/gguf_expert_index.py)
 //        env HF_BIND=<ip>  OMP_NUM_THREADS / OMP_PROC_BIND / OMP_PLACES as for expert_server
 //        expert_server_gguf selftest <model.gguf> <index.idx> <layer> <expert>   (prints a few outputs for comparison)
+//        expert_server_gguf bench <model.gguf> <index.idx> <layer> <n_experts> <n_tok> <reps>   (run_layer time, us)
+// 2026-11-17 (speed-quality frontier): optional second ("alt", e.g. lower-bit) expert table for selected layers:
+//        env HF_ALT_GGUF=<gguf> HF_ALT_IDX=<idx> HF_ALT_LAYERS=<comma list of absolute layers, or "all">
+//        a request with flag bit3 (8) for such a layer is computed from the alt table (per-device precision: the Spark
+//        relay sets it per layer at run time for decode windows; prefill windows keep the main table).
 // Build: gcc -O3 -march=native -fopenmp expert_server_gguf.c -I<llama.cpp>/ggml/include -L<build>/bin -lggml-cpu -lggml-base -lm -lpthread
 #include <arpa/inet.h>
 #include <errno.h>
@@ -39,12 +44,12 @@
 #define NLAYERS 43   // 42 MoE layers + MTP layer 45 (table index 42)
 
 typedef struct { int type, rows, cols, ne; size_t row_bytes; const uint8_t *base; } XT;   // one [ne, rows, row_bytes] tensor
-static XT tab[NLAYERS][3];
+static XT tab[NLAYERS][3], tab_alt[NLAYERS][3];
 static const struct ggml_type_traits_cpu *tr[GGML_TYPE_COUNT];
 
 static int table_index(int abs_layer) { return abs_layer == 45 ? 42 : abs_layer - FIRST_MOE; }
 
-static int load(const char *gguf, const char *idx) {
+static int load_into(XT (*tb)[3], const char *gguf, const char *idx, const char *layers) {
     int fd = open(gguf, O_RDONLY); if (fd < 0) { perror("open gguf"); return -1; }
     struct stat st; fstat(fd, &st);
     const uint8_t *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
@@ -54,7 +59,11 @@ static int load(const char *gguf, const char *idx) {
     int32_t h6[6]; uint64_t q3[3]; int n = 0; size_t bytes = 0;
     while (fread(h6, 4, 6, f) == 6 && fread(q3, 8, 3, f) == 3) {
         int L = table_index(h6[0]); if (L < 0 || L >= NLAYERS) continue;
-        XT *t = &tab[L][h6[1]];
+        if (layers && strcmp(layers, "all")) {   // keep only the listed absolute layers
+            char key[16]; snprintf(key, sizeof key, ",%d,", h6[0]); char lst[1024]; snprintf(lst, sizeof lst, ",%s,", layers);
+            if (!strstr(lst, key)) continue;
+        }
+        XT *t = &tb[L][h6[1]];
         t->type = h6[2]; t->rows = h6[3]; t->cols = h6[4]; t->ne = h6[5]; t->row_bytes = q3[0]; t->base = map + q3[1];
         if (!tr[t->type]) tr[t->type] = ggml_get_type_traits_cpu((enum ggml_type)t->type);
         if (!tr[t->type] || !tr[t->type]->vec_dot) { fprintf(stderr, "no CPU vec_dot for type %d\n", t->type); return -1; }
@@ -67,7 +76,7 @@ static int load(const char *gguf, const char *idx) {
         double t0 = omp_get_wtime(); volatile uint64_t sink = 0;
         #pragma omp parallel for schedule(dynamic, 1) reduction(+ : sink)
         for (int k = 0; k < NLAYERS * 3; k++) {
-            XT *t = &tab[k / 3][k % 3]; if (!t->base) continue;
+            XT *t = &tb[k / 3][k % 3]; if (!t->base) continue;
             size_t nb = (size_t)t->ne * t->rows * t->row_bytes; uint64_t s = 0;
             for (size_t o = 0; o < nb; o += 4096) s += t->base[o];
             sink += s;
@@ -76,6 +85,7 @@ static int load(const char *gguf, const char *idx) {
     }
     return n;
 }
+static int load(const char *gguf, const char *idx) { return load_into(tab, gguf, idx, NULL); }
 
 static inline const uint8_t *row_ptr(const XT *t, int e, int r) { return t->base + ((size_t)e * t->rows + r) * t->row_bytes; }
 
@@ -105,8 +115,8 @@ static int load_dense(const char *path) {
 }
 
 // y[ntok][H] = sum over pairs of w * down( silu(gate x) * up x ), all dot products by llama.cpp's vec_dot for the type.
-static int run_layer(int L, int ntok, const float *x, int np, const Pair *pairs, float *y) {
-    XT *G = &tab[L][0], *U = &tab[L][1], *D = &tab[L][2];
+static int run_layer_t(XT (*tb)[3], int L, int ntok, const float *x, int np, const Pair *pairs, float *y) {
+    XT *G = &tb[L][0], *U = &tb[L][1], *D = &tb[L][2];
     if (!G->base || !U->base || !D->base) return 1;
     const struct ggml_type_traits_cpu *tg = tr[G->type], *tu = tr[U->type], *td = tr[D->type];
     // quantize activations to each projection's vec_dot_type
@@ -164,6 +174,8 @@ static int run_layer(int L, int ntok, const float *x, int np, const Pair *pairs,
     (void)rd;
     return 0;
 }
+static int run_layer(int L, int ntok, const float *x, int np, const Pair *pairs, float *y) { return run_layer_t(tab, L, ntok, x, np, pairs, y); }
+static long n_alt_req = 0;
 
 // ---------------------------------------------------------------- transport (as expert_server.c)
 static inline float bf16_to_f(uint16_t b) { uint32_t u = (uint32_t)b << 16; float f; memcpy(&f, &u, 4); return f; }
@@ -172,7 +184,8 @@ static int busy_conn = 0;
 static void set_busy(int fd) {
     int one = 1, us = 50;
     setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof one);
-    setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL, &us, sizeof us);
+    int rc = setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL, &us, sizeof us);
+    fprintf(stderr, "SO_BUSY_POLL %d us: rc %d (%s)\n", us, rc, rc ? strerror(errno) : "ok");
     busy_conn = 1;
 }
 static int readn(int fd, void *buf, size_t n) {
@@ -224,10 +237,40 @@ int main(int argc, char **argv) {
         double ss = 0; for (int i = 0; i < H; i++) ss += (double)y[i] * y[i]; printf("norm %.6f\n", sqrt(ss));
         return 0;
     }
+    if (argc >= 8 && !strcmp(argv[1], "bench")) {   // mean run_layer time for n distinct experts x ntok tokens (all pairs)
+        setenv("HF_PREFAULT", "0", 1);
+        if (load(argv[2], argv[3]) <= 0) return 1;
+        int L = table_index(atoi(argv[4])), ne = atoi(argv[5]), nt = atoi(argv[6]), reps = atoi(argv[7]);
+        {   // prefault this layer only (random experts per rep then read DRAM, not disk)
+            volatile uint64_t sink = 0;
+            for (int p = 0; p < 3; p++) { XT *t = &tab[L][p]; size_t nb = (size_t)t->ne * t->rows * t->row_bytes;
+                #pragma omp parallel for reduction(+ : sink)
+                for (size_t o = 0; o < nb; o += 4096) sink += t->base[o]; }
+            (void)sink;
+        }
+        static float x[MAXTOK * H], y[MAXTOK * H]; static Pair pp[MAXPAIR];
+        for (int i = 0; i < nt * H; i++) x[i] = sinf(i * 0.37f) * (1.0f + (i % 7) * 0.1f) * 0.5f;
+        double best = 1e30, sum = 0; unsigned s = 12345;
+        for (int r = 0; r < reps + 2; r++) {
+            int np = 0, used[288] = {0};
+            for (int e = 0; e < ne; e++) { int id; do { s = s * 1103515245u + 12345u; id = (s >> 8) % 288; } while (used[id]); used[id] = 1;
+                for (int t = 0; t < nt && np < MAXPAIR; t++) { pp[np].tok = t; pp[np].expert = id; pp[np].w = 0.125f; np++; } }
+            double t0 = now_us(); run_layer(L, nt, x, np, pp, y); double dt = now_us() - t0;
+            if (r >= 2) { sum += dt; if (dt < best) best = dt; }
+        }
+        printf("{\"layer\": %s, \"type\": %d, \"experts\": %d, \"ntok\": %d, \"mean_us\": %.1f, \"best_us\": %.1f}\n", argv[4],
+               tab[L][0].type, ne, nt, sum / reps, best);
+        return 0;
+    }
     if (argc < 5 || strcmp(argv[1], "serve")) { fprintf(stderr, "usage: %s serve <port> <gguf> <idx> | selftest <gguf> <idx> <layer> <expert>\n", argv[0]); return 2; }
     int port = atoi(argv[2]);
     if (load(argv[3], argv[4]) <= 0) return 1;
     if (getenv("HF_DENSE_PACK") && load_dense(getenv("HF_DENSE_PACK")) < 0) return 1;
+    if (getenv("HF_ALT_GGUF") && getenv("HF_ALT_IDX")) {
+        int na = load_into(tab_alt, getenv("HF_ALT_GGUF"), getenv("HF_ALT_IDX"), getenv("HF_ALT_LAYERS") ? getenv("HF_ALT_LAYERS") : "all");
+        if (na <= 0) return 1;
+        fprintf(stderr, "alt expert table: %d tensors (layers %s)\n", na, getenv("HF_ALT_LAYERS") ? getenv("HF_ALT_LAYERS") : "all");
+    }
     static float dy[16 * 160000]; static uint16_t dyb[16 * 160000], dxb[16 * 8192];
     int srv = socket(AF_INET, SOCK_STREAM, 0), one = 1;
     setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
@@ -279,7 +322,9 @@ int main(int argc, char **argv) {
             if (use_hb) atomic_store(&hb_state, 1);
             for (int p = 0; p < np; p++) { pairs[p].tok = wire[p].tok; pairs[p].expert = wire[p].expert; pairs[p].w = wire[p].w; }
             for (int i = 0; i < ntok * H; i++) x[i] = bf16_to_f(xb[i]);
-            int st = run_layer(layer, ntok, x, np, pairs, y);
+            int alt = (hdr[3] & 8) && tab_alt[layer][0].base && tab_alt[layer][1].base && tab_alt[layer][2].base;
+            if (alt && (++n_alt_req % 20000) == 1) fprintf(stderr, "alt-table requests: %ld\n", n_alt_req);
+            int st = run_layer_t(alt ? tab_alt : tab, layer, ntok, x, np, pairs, y);
             int f32 = (hdr[3] & 4) != 0;   // flag bit2 (2026-11-17): reply with fp32 partial sums instead of bf16
             if (!f32) for (int i = 0; i < ntok * H; i++) yb[i] = f_to_bf16(y[i]);
             if (use_hb) hb_stop();

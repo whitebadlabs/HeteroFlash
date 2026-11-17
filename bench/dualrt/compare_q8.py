@@ -31,6 +31,8 @@ for dname, a in acc.items():
     k, dn, sm = np.concatenate(a["kld"]), np.concatenate(a["dnll"]), np.concatenate(a["same"]); allk.append(k); alld.append(dn); alls.append(sm)
     res[dname] = {"tokens": int(k.size), "kld_mean": float(k.mean()), "kld_p99": float(np.percentile(k, 99)), "dnll_mean": float(dn.mean()), "same_top": float(sm.mean())}
 k, dn, sm = np.concatenate(allk), np.concatenate(alld), np.concatenate(alls)
+if os.environ.get("HF_PERTOKEN"):   # 2026-11-17: per-token arrays (chunk order) for paired comparisons without the captures
+    np.savez_compressed(os.environ["HF_PERTOKEN"], dnll=dn.astype(np.float32), kld=k.astype(np.float32), same=sm.astype(np.int8))
 res["_overall"] = {"tokens": int(k.size), "chunks_scored": min(len(files), n_chunk), "chunks_total": n_chunk, "kld_mean": float(k.mean()),
                    "kld_p99": float(np.percentile(k, 99)), "dnll_mean": float(dn.mean()), "dnll_se": float(dn.std() / np.sqrt(dn.size)), "same_top": float(sm.mean())}
 json.dump(res, open(out, "w"), indent=1); print(json.dumps(res["_overall"]))

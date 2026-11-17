@@ -108,6 +108,11 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
            -e HF_STICKY_BETA=$STICKY_BETA -e HF_STICKY_W=${STICKY_W:-3} -e HF_STICKY_STATS=/tr/sticky_stats.json -e HF_FQ_NO_RESTORE=1)
     rm -f $TR/sticky_stats.json
   fi
+  if [ -n "${DROP_K:-}${DROP_TAU:-}" ]; then   # 2026-11-17 frontier: training-free expert dropping, chained before the logits hook
+    RARGS=(-e PYTHONPATH=/dhook -e HF_CHAIN_HOOK=/hook/sitecustomize.py -v $H/ops/r17/drop_hook:/dhook:ro
+           -e HF_DROP_K=${DROP_K:-8} -e HF_DROP_TAU=${DROP_TAU:-0} -e HF_DROP_RENORM=${DROP_RENORM:-0} -e HF_DROP_STATS=/tr/drop_stats.json -e HF_FQ_NO_RESTORE=1)
+    rm -f $TR/drop_stats.json
+  fi
   if start -e HF_TRACE_DIR=/tr/raw -e HF_TRACE_CONTROL=/tr/control.json "${RARGS[@]}" -v $TR:/tr -v $H/src/trace_hook:/hook:ro \
        -- --enforce-eager --max-model-len 4096 --max-num-batched-tokens 2048; then
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1
@@ -119,7 +124,8 @@ if [ $MODE != speed ] && [ $MODE != mtp ]; then
     echo "$(t) logits files: $(ls $TR/raw/logits_*.npy 2>/dev/null | wc -l)"
     [ -s $TR/remote_stats.jsonl ] && { tail -1 $TR/remote_stats.jsonl; cp $TR/remote_stats.jsonl $OUT/${TAG}_remote_stats.jsonl; }
     [ -s $TR/sticky_stats.json ] && { cat $TR/sticky_stats.json; echo; cp $TR/sticky_stats.json $OUT/${TAG}_sticky_stats.json; }
-    docker run --rm -v $H:/h -v $TR:/tr -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG -I /h/src/control_kld.py compare \
+    [ -s $TR/drop_stats.json ] && { cat $TR/drop_stats.json; echo; cp $TR/drop_stats.json $OUT/${TAG}_drop_stats.json; }
+    docker run --rm ${PERTOKEN:+-e HF_PERTOKEN=$PERTOKEN} -v $H:/h -v $TR:/tr -v $(dirname $REF):/ref:ro --entrypoint python3 $IMG -I /h/src/control_kld.py compare \
       /ref/$(basename $REF) /tr/raw /h/data/q_eval_balanced_v1.manifest.json /h/results/2026-11-08-route3/${TAG}_vs_q8_bal.json 2>&1 | tail -3
   else
     docker logs hf-r3 > $OUT/${TAG}_quality_serve.log 2>&1; echo "$(t) quality server NOT healthy"; grep -iE "error|Traceback" $OUT/${TAG}_quality_serve.log | tail -8

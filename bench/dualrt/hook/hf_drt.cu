@@ -118,6 +118,10 @@ __global__ void wait_add_kernel(Slot *slots, const unsigned long long *seqs, int
   for (int i = threadIdx.x; i < T * HMB_H; i += blockDim.x) out[i] = __float2bfloat16(__bfloat162float(out[i]) + y[i]);
 }
 
+// 2026-11-17 frontier: per-layer "alt" (lower-bit) CPU expert table, set at run time; bit i = MoE layer index i (0 = layer 3).
+// Applied to decode/split windows only: prefill chunks are packed with layer_idx | 0x100 and keep the main table.
+static std::atomic<unsigned long long> alt_mask{0};
+static std::atomic<long long> st_alt{0};
 static int keepalive_us = 0;            // >0: send a 0x00 byte when the link has been idle this long (EEE keep-awake)
 static double last_tx = 0;
 static inline double now_us();
@@ -198,7 +202,10 @@ static void relay_loop(int flags) {
       unsigned int us = 0;
       if (nt > 0) {
         unsigned int magic = 0x31584648u;
-        unsigned short hdr[4] = {(unsigned short)s->layer, (unsigned short)nt, (unsigned short)(pairs.size() / 8), (unsigned short)flags};
+        int lay = s->layer & 0xFF; bool pre = (s->layer & 0x100) != 0;
+        bool alt = !pre && ((alt_mask.load(std::memory_order_relaxed) >> lay) & 1ull);
+        if (alt) st_alt++;
+        unsigned short hdr[4] = {(unsigned short)lay, (unsigned short)nt, (unsigned short)(pairs.size() / 8), (unsigned short)(flags | (alt ? 8 : 0))};
         buf.resize(4 + 8 + pairs.size() + (size_t)nt * HMB_H * 2);
         unsigned char *p = buf.data();
         memcpy(p, &magic, 4); memcpy(p + 4, hdr, 8); memcpy(p + 12, pairs.data(), pairs.size());
@@ -249,7 +256,8 @@ void mb_init(int64_t slots, std::string host, int64_t port, int64_t flags) {
   cudaDeviceSynchronize();
   sock_fd = socket(AF_INET, SOCK_STREAM, 0);
   int one = 1; setsockopt(sock_fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
-  { int us = 50; setsockopt(sock_fd, SOL_SOCKET, SO_BUSY_POLL, &us, sizeof us); }   // kernel busy-poll on the reply path
+  { int us = 50; int rc = setsockopt(sock_fd, SOL_SOCKET, SO_BUSY_POLL, &us, sizeof us);   // kernel busy-poll on the reply path
+    fprintf(stderr, "[hf-drt] relay SO_BUSY_POLL %d us: rc %d (%s)\n", us, rc, rc ? strerror(errno) : "ok"); }
   sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = htons((uint16_t)port); inet_pton(AF_INET, host.c_str(), &a.sin_addr);
   if (connect(sock_fd, (sockaddr *)&a, sizeof a)) throw std::runtime_error("connect expert_server");
   relay_run = true;
@@ -274,8 +282,49 @@ void mb_wait_add(int64_t slot, torch::Tensor out) {
 }
 
 std::vector<int64_t> mb_stats() { return {st_req.load(), st_pairs.load(), st_us.load(), st_rt_us.load(),
-                                          sd_req.load(), sd_pairs.load(), sd_us.load(), sd_rt_us.load()}; }
+                                          sd_req.load(), sd_pairs.load(), sd_us.load(), sd_rt_us.load(), st_alt.load()}; }
+void mb_set_alt(int64_t mask) { alt_mask.store((unsigned long long)mask); }
 std::vector<int64_t> mb_slot_info(int64_t slot) { Slot *s = h_slots + slot; return {(int64_t)s->server_us, (int64_t)s->relay_us, (int64_t)s->npairs}; }
+
+// ------------------------------------------------------------------------------------------------ expert drop (2026-11-17)
+// Training-free routed-expert dropping, one thread per token, graph-capturable (parameters read from device memory):
+// expert i of a token is dropped when rank_i >= kmax[layer] or w_i < tau * sum_j w_j (rank by weight, ties by slot).
+// Dropped: id -> -1 (assign/pack/relay skip it on both devices), weight -> 0. renorm != 0 rescales the kept weights to
+// the original sum ("active"); 0 keeps the original top-8 normalisation ("ref8").
+__global__ void drop_kernel(const int64_t *ids64, const int *ids32, const float *w, int T, const int *kmax, int layer,
+                            const float *tau_rn, int64_t *o64, int *o32, float *ow) {
+  int t = blockIdx.x * blockDim.x + threadIdx.x;
+  if (t >= T) return;
+  const int K = kmax[layer]; const float tau = tau_rn[0], rn = tau_rn[1];
+  float wv[HMB_K], tot = 0.f, kept = 0.f; bool keep[HMB_K];
+#pragma unroll
+  for (int i = 0; i < HMB_K; i++) { wv[i] = w[t * HMB_K + i]; tot += wv[i]; }
+#pragma unroll
+  for (int i = 0; i < HMB_K; i++) {
+    int r = 0;
+#pragma unroll
+    for (int j = 0; j < HMB_K; j++) r += (wv[j] > wv[i]) || (wv[j] == wv[i] && j < i);
+    keep[i] = r < K && wv[i] >= tau * tot;
+    if (keep[i]) kept += wv[i];
+  }
+  float sc = (rn != 0.f && kept > 0.f) ? tot / kept : 1.f;
+#pragma unroll
+  for (int i = 0; i < HMB_K; i++) {
+    int k = t * HMB_K + i;
+    ow[k] = keep[i] ? wv[i] * sc : 0.f;
+    if (o64) o64[k] = keep[i] ? ids64[k] : -1; else o32[k] = keep[i] ? ids32[k] : -1;
+  }
+}
+
+void drop(torch::Tensor ids, torch::Tensor w, torch::Tensor kmax, int64_t layer, torch::Tensor tau_rn, torch::Tensor oids, torch::Tensor ow) {
+  int T = (int)ids.size(0);
+  TORCH_CHECK(ids.size(1) == HMB_K && ids.is_contiguous() && w.is_contiguous() && w.scalar_type() == at::kFloat && oids.scalar_type() == ids.scalar_type());
+  bool is64 = ids.scalar_type() == at::kLong;
+  if (T == 0) return;
+  drop_kernel<<<(T + 127) / 128, 128, 0, at::cuda::getCurrentCUDAStream()>>>(
+      is64 ? ids.data_ptr<int64_t>() : nullptr, is64 ? nullptr : ids.data_ptr<int>(), w.data_ptr<float>(), T, kmax.data_ptr<int>(), (int)layer,
+      tau_rn.data_ptr<float>(), is64 ? oids.data_ptr<int64_t>() : nullptr, is64 ? nullptr : oids.data_ptr<int>(), ow.data_ptr<float>());
+}
 
 // ------------------------------------------------------------------------------------------------ assign
 // stats per layer: [calls, sum U, sum cap, sum resident-in-union]
@@ -648,7 +697,7 @@ std::vector<int64_t> dense_stats() { return {st_dreq.load(), st_dus.load(), st_d
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("mb_init", &mb_init); m.def("mb_pack", &mb_pack); m.def("mb_wait_add", &mb_wait_add); m.def("mb_stats", &mb_stats);
-  m.def("mb_slot_info", &mb_slot_info); m.def("assign", &assign); m.def("q4k_moe", &q4k_moe);
+  m.def("mb_slot_info", &mb_slot_info); m.def("mb_set_alt", &mb_set_alt); m.def("drop", &drop); m.def("assign", &assign); m.def("q4k_moe", &q4k_moe);
   m.def("dense_register", &dense_register); m.def("dense_pack", &dense_pack); m.def("dense_wait_copy", &dense_wait_copy);
   m.def("mxfp8_gemv", &mxfp8_gemv); m.def("dense_stats", &dense_stats);
 }

@@ -22,7 +22,7 @@ DARGS=(-e PYTHONPATH=$( [ "${HF_SPLIT:-0}" = 1 ] && echo /drt/hook || echo /rhoo
 for v in $(env | grep -o '^HF_SPLIT_[A-Z0-9_]*'); do DARGS+=(-e $v=${!v}); done
 if [ $MODE = spec ]; then
   VARGS=(--max-model-len 65536 --max-num-batched-tokens ${MNBT:-8192}
-         --speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}, \"attention_backend\": \"B12X\"}"
+         --speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_N:-3}, \"attention_backend\": \"B12X\"${SPEC_EXTRA:-}}"
          --reasoning-parser glm45 --tool-call-parser glm47 --enable-auto-tool-choice --chat-template /tmpl.jinja
          --default-chat-template-kwargs.reasoning_effort=high)
 else

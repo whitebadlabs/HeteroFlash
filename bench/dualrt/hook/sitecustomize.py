@@ -21,6 +21,13 @@ Env:
   HF_SPLIT_GGUF / HF_SPLIT_IDX  Q4_K GGUF + expert index (runtime/gguf_expert_index.py format)
   HF_SPLIT_COUNT path      count decode-window routes per layer (hot-set calibration), dumped every 2000 MoE calls
   HF_SPLIT_STATS path      assign + exchange counters, dumped every 2000 MoE calls
+2026-11-17 speed-quality frontier (all switchable at run time on one boot, CUDA graphs stay valid):
+  HF_SPLIT_DROP 0|1        compile the expert-drop kernel into layers 3-44 (no-op until set): per-layer kmax, tau, renorm
+                           (req file drt_drop.req: "K TAU RENORM" or "json {layer: K, ...} TAU RENORM")
+  HF_SPLIT_FRSPEC ids.json FR-Spec draft head: the drafter's argmax over these lm_head rows only (GPU, no exchange);
+                           gates[2] switches it (req drt_gates.req "LMH KDA FRS")
+  HF_SPLIT_ALT_LAYERS l,.. decode windows of these layers use the workstation's alt (lower-bit) expert table
+                           (server env HF_ALT_*); req file drt_alt.req: "l1,l2,..." or "none"
 If HF_CHAIN_HOOK points to another sitecustomize.py (e.g. the logits-capture trace hook), it is executed first.
 """
 import os
@@ -57,6 +64,8 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
     _LMH_VG = int(os.environ.get("HF_SPLIT_LMHEAD_VG", "0"))   # >0: lm_head rows [0, VG) on the GPU, the rest on the CPU (lid 0)
     _CKPT = os.environ.get("HF_SPLIT_CKPT", "/m")
     _KDA_HC = int(os.environ.get("HF_SPLIT_KDA_HC", "0"))   # >0: q/k/v rows of the last HC heads of every KDA layer on the CPU
+    _DROP = os.environ.get("HF_SPLIT_DROP", "0") == "1"
+    _FRS = os.environ.get("HF_SPLIT_FRSPEC", "")
     _tl = threading.local()
     _layer_re = re.compile(r"layers\.(\d+)\.")
     _S = {"ext": None, "buf": None, "pool": None, "calls": 0, "done": False, "pw_done": False, "fm_done": False}
@@ -75,6 +84,8 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hf_drt.cu")
                 ext = load(name="hf_drt", sources=[src], extra_cuda_cflags=["-O3", "--use_fast_math"], verbose=False)
                 ext.mb_init((_LAST - _FIRST + 1) * _NSUB, _host, int(_port), _FLAGS)
+                if os.environ.get("HF_SPLIT_ALT_LAYERS"):
+                    m, Ls = _alt_mask(os.environ["HF_SPLIT_ALT_LAYERS"]); ext.mb_set_alt(m); _log(f"alt expert table on layers {Ls} at start")
                 _S["ext"] = ext
                 _log(f"mailbox up: mode={_MODE} A={_A} B={_B} maxT={_SPLIT_MAXT} f32={_F32} flags={_FLAGS}")
         return _S["ext"]
@@ -94,8 +105,11 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 "stats": torch.zeros(nl, 4, dtype=torch.int64, device=device),
                 "ab": torch.tensor([_A, _B], dtype=torch.float32, device=device),
                 # run-time switches read by the kernels (CUDA graphs stay valid): [lm_head split on, KDA split on]
-                "gates": torch.tensor([int(os.environ.get("HF_SPLIT_LMH_ON", "1")), int(os.environ.get("HF_SPLIT_KDA_ON", "1"))],
-                                      dtype=torch.int32, device=device),
+                "gates": torch.tensor([int(os.environ.get("HF_SPLIT_LMH_ON", "1")), int(os.environ.get("HF_SPLIT_KDA_ON", "1")),
+                                       int(os.environ.get("HF_SPLIT_FRS_ON", "1" if _FRS else "0"))], dtype=torch.int32, device=device),
+                "drop_k": torch.full((nl,), int(os.environ.get("HF_SPLIT_DROP_K", "8")), dtype=torch.int32, device=device),
+                "drop_tr": torch.tensor([float(os.environ.get("HF_SPLIT_DROP_TAU", "0")), float(os.environ.get("HF_SPLIT_DROP_RENORM", "0"))],
+                                        dtype=torch.float32, device=device),
                 "counts": torch.zeros(nl, _NE, dtype=torch.int64, device=device),
             }
             if _S["pool"] is None:   # resident pool not loaded yet: dummy bases, every slot -1 (all routes to the CPU)
@@ -252,6 +266,12 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         ext = _ext()
         si = ext.dense_register(0, 4096, V - _LMH_VG)
         _S["lmh"] = {"W": W, "S": S, "Wc": Wc, "Sc": Sc, "V": V, "si": si}
+        if _FRS:   # FR-Spec draft-only head: rows of the frequent ids (exact FP8 bytes + E8M0 scales of the checkpoint)
+            fids = torch.tensor(json.load(open(_FRS))["ids"], dtype=torch.long)
+            w8f = _ckpt_get("lm_head.weight").view(torch.uint8)
+            _S["frs"] = {"W": w8f[fids].contiguous().to(device), "S": s8[fids].contiguous().to(device), "ids": fids.to(device)}
+            del w8f
+            _log(f"FR-Spec draft head: {fids.numel()} rows ({_S['frs']['W'].numel() / 1e6:.0f} MB FP8), switch gates[2]")
         _log(f"lm_head split: GPU rows 0-{_LMH_VG - 1}, workstation rows {_LMH_VG}-{V - 1} (dense slot {si})")
 
     _LOAD_REQ = os.environ.get("HF_SPLIT_LOAD_REQ", "/out/drt_load.req")
@@ -283,11 +303,11 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             return
         import torch
         try:
-            v = [int(t) for t in open(_G_REQ).read().split()[:2]]
+            v = [int(t) for t in open(_G_REQ).read().split()[:3]]
             torch.cuda.synchronize()
-            _S["buf"]["gates"].copy_(torch.tensor(v, dtype=torch.int32))
+            _S["buf"]["gates"][: len(v)].copy_(torch.tensor(v, dtype=torch.int32))
             torch.cuda.synchronize()
-            _log(f"split switches set: lm_head={v[0]} kda={v[1]}")
+            _log(f"split switches set: {_S['buf']['gates'].tolist()} (lm_head, kda, frspec)")
         except Exception as ex:  # noqa: BLE001
             _log(f"bad gates request: {ex!r}")
         os.remove(_G_REQ)
@@ -302,6 +322,44 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         except Exception as ex:  # noqa: BLE001
             _log(f"bad ab request: {ex!r}")
         os.remove(_AB_REQ)
+
+    _D_REQ = os.environ.get("HF_SPLIT_DROP_REQ", "/out/drt_drop.req")
+    _ALT_REQ = os.environ.get("HF_SPLIT_ALT_REQ", "/out/drt_alt.req")
+
+    def _alt_mask(spec):
+        spec = spec.strip()
+        if spec in ("", "none"):
+            return 0, []
+        Ls = [int(v) for v in spec.split(",") if v.strip()]
+        return sum(1 << (L - _FIRST) for L in Ls if _FIRST <= L <= _LAST), Ls
+
+    def _maybe_set_drop_alt():
+        if _S.get("ah_calls", 0) % 16 or _S["buf"] is None:
+            return
+        import torch
+        if os.path.exists(_D_REQ):
+            try:
+                parts = open(_D_REQ).read().split()
+                if parts[0] == "json":
+                    per = {int(k): int(v) for k, v in json.loads(parts[1]).items()}; kk = [per.get(L, 8) for L in range(_FIRST, _LAST + 1)]
+                    tau, rn = float(parts[2]), float(parts[3])
+                else:
+                    kk = [int(parts[0])] * (_LAST - _FIRST + 1); tau, rn = float(parts[1]), float(parts[2])
+                torch.cuda.synchronize()
+                _S["buf"]["drop_k"].copy_(torch.tensor(kk, dtype=torch.int32)); _S["buf"]["drop_tr"].copy_(torch.tensor([tau, rn], dtype=torch.float32))
+                torch.cuda.synchronize()
+                _log(f"expert drop set: kmax {kk if len(set(kk)) > 1 else kk[0]} tau {tau} renorm {rn} (compiled in: {_DROP})")
+            except Exception as ex:  # noqa: BLE001
+                _log(f"bad drop request: {ex!r}")
+            os.remove(_D_REQ)
+        if os.path.exists(_ALT_REQ):
+            try:
+                m, Ls = _alt_mask(open(_ALT_REQ).read())
+                _ext().mb_set_alt(m)
+                _log(f"alt expert table on layers {Ls} (mask {m:#x})")
+            except Exception as ex:  # noqa: BLE001
+                _log(f"bad alt request: {ex!r}")
+            os.remove(_ALT_REQ)
 
     def torch_tensor(v):
         import torch
@@ -353,6 +411,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         _maybe_lazy_load()
         _maybe_set_ab()
         _maybe_set_gates()
+        _maybe_set_drop_alt()
         L = _S.get("lmh")
         T = int(hidden_states.shape[0])
         if L is None or embedding_bias is not None or T == 0 or T > 16:
@@ -372,6 +431,33 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         ext.mxfp8_gemv(L["Wc"], L["Sc"], x, out.narrow(1, _LMH_VG, L["V"] - _LMH_VG), g, 0)   # split off: GPU does these rows
         ext.dense_wait_copy(L["si"], T, out, _LMH_VG, 0, -1, g)
         return out if dt == torch.bfloat16 else out.to(dt)
+
+    def _top_tokens(orig, self, lm_head, hidden_states, embedding_bias=None):
+        """Draft argmax (LogitsProcessor.get_top_tokens, used by the MTP drafter only). gates[2] = 1: FR-Spec sub-head
+        on the GPU, no exchange; 0: the full split head (as _apply_head). Both branches are captured; kernels no-op by gate."""
+        import torch
+        F, L = _S.get("frs"), _S.get("lmh")
+        T = int(hidden_states.shape[0])
+        if F is None or L is None or "proto" not in L or embedding_bias is not None or T == 0 or T > 16 \
+                or getattr(self, "soft_cap", None) is not None or getattr(self, "scale", 1.0) != 1.0:
+            return orig(self, lm_head, hidden_states, embedding_bias)
+        ext = _ext(); g = _S["buf"]["gates"]
+        fr = g[2:3]
+        gl = g[0:1] * (1 - fr)            # exchange on: lm_head split on and FR-Spec off
+        gwc = g[0:1] + 2 * fr             # GPU computes the workstation's rows: split off and FR-Spec off (== 0)
+        x = hidden_states.to(torch.bfloat16).contiguous()
+        ext.dense_pack(L["si"], x, gl)
+        out = torch.empty(T, L["V"], dtype=torch.bfloat16, device=x.device)
+        ext.mxfp8_gemv(L["W"], L["S"], x, out, fr, 0)
+        ext.mxfp8_gemv(L["Wc"], L["Sc"], x, out.narrow(1, _LMH_VG, L["V"] - _LMH_VG), gwc, 0)
+        ext.dense_wait_copy(L["si"], T, out, _LMH_VG, 0, -1, gl)
+        sub = torch.empty(T, F["W"].shape[0], dtype=torch.bfloat16, device=x.device)
+        ext.mxfp8_gemv(F["W"], F["S"], x, sub, fr, 1)
+        tok = torch.where(fr.bool(), F["ids"][sub.argmax(dim=-1)], out.argmax(dim=-1))
+        _S["frs_calls"] = _S.get("frs_calls", 0) + 1
+        if _S["frs_calls"] == 1:
+            _log("FR-Spec get_top_tokens path active")
+        return tok
 
     # ------------------------------------------------------------------ KDA q/k/v projection rows by head (stage M3b)
     def _load_kda(model, device):
@@ -455,7 +541,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             ms = _ext().mb_stats()
             json.dump({"mode": _MODE, "A": _A, "B": _B, "f32": _F32, "nres": _NRES, "moe_calls": _S["calls"],
                        "per_layer_calls_U_cap_R": {str(L): st[L - _FIRST] for L in range(_FIRST, _LAST + 1)},
-                       "mailbox_req_pairs_serverus_relayus": ms[:4], "mailbox_decode_T<=4_req_pairs_serverus_relayus": ms[4:],
+                       "mailbox_req_pairs_serverus_relayus": ms[:4], "mailbox_decode_T<=4_req_pairs_serverus_relayus": ms[4:8], "alt_requests": ms[8] if len(ms) > 8 else 0,
                        "dense_req_serverus_relayus": _ext().dense_stats()}, open(_STATS, "w"))
 
     # ------------------------------------------------------------------ the MoE path
@@ -469,6 +555,10 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         w = topk_weights.float().contiguous()
         ids = topk_ids.contiguous()
         li = L - _FIRST
+        if _DROP:
+            ids2, w2 = torch.empty_like(ids), torch.empty_like(w)
+            ext.drop(ids, w, b["drop_k"], li, b["drop_tr"], ids2, w2)
+            ids, w = ids2, w2
         if T <= _SPLIT_MAXT:
             if _COUNT:
                 b["counts"][li].index_add_(0, ids.reshape(-1).long(), torch.ones_like(ids.reshape(-1), dtype=torch.int64))
@@ -480,7 +570,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             return y.to(x.dtype)
         chunks = [(t0, min(T, t0 + _MAXT)) for t0 in range(0, T, _MAXT)]
         for c, (t0, t1) in enumerate(chunks[:_NSUB]):
-            ext.mb_pack(li * _NSUB + c, li, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), b["remote_all"])
+            ext.mb_pack(li * _NSUB + c, li | 0x100, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), b["remote_all"])
         _tl.mb = (li, chunks, (xb, ids, w))
         return torch.zeros_like(x)
 
@@ -494,7 +584,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             if n < len(chunks):
                 xb, ids, w = rest
                 a0, a1 = chunks[n]
-                ext.mb_pack(li * _NSUB + n % _NSUB, li, xb[a0:a1].contiguous(), ids[a0:a1].contiguous(), w[a0:a1].contiguous(), b["remote_all"])
+                ext.mb_pack(li * _NSUB + n % _NSUB, li | 0x100, xb[a0:a1].contiguous(), ids[a0:a1].contiguous(), w[a0:a1].contiguous(), b["remote_all"])
         return out
 
     def _install():
@@ -538,6 +628,13 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             def _apply_head(self, lm_head, hidden_states, embedding_bias=None, _orig=orig_ah):
                 return _apply_head_split(_orig, self, lm_head, hidden_states, embedding_bias)
             lp.LogitsProcessor._apply_head = _apply_head
+            if _FRS and hasattr(lp.LogitsProcessor, "get_top_tokens"):
+                orig_tt = lp.LogitsProcessor.get_top_tokens
+
+                def get_top_tokens(self, lm_head, hidden_states, embedding_bias=None, _orig=orig_tt):
+                    return _top_tokens(_orig, self, lm_head, hidden_states, embedding_bias)
+                lp.LogitsProcessor.get_top_tokens = get_top_tokens
+                _log("FR-Spec get_top_tokens hook installed")
             _S["lp_done"] = True
             _log("lm_head hook installed")
         bl = sys.modules.get("vllm.model_executor.model_loader.base_loader")
