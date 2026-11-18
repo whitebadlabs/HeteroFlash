@@ -49,3 +49,12 @@ Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; MaxQ NIC coales
   A0.2 32.13 (CPU-bound: blocked 12.1, rt 1.57); k7 A0.5 without deferral 27.65 (blocked 9.5).
   Reading: deferral alone ~+1% (acceptance loss eats the 6 ms); deferral lets the CPU take more experts: +21% at A0.35.
 - 08:50 PT queued d1_points3.log (tmux d1r): k7 A0.35 / A0.25 without deferral, defer-all A0.28, defer-all A0.35 again.
+- 09:10 PT attribution points (d1_points3.log, rounds 3-4): without deferral, lower A is SLOWER: k7 A0.35 25.19
+  (blocked 30.0 ms/window), A0.25 24.25 (blocked 44.0). With deferral: A0.35 32.44 (again), **A0.28 33.26** (80.0 ms/cycle,
+  2.662/cycle, blocked 1.7). So deferral is what lets the CPU take more experts. Acceptance falls as more is deferred
+  (2.91 k7 -> 2.78 defall A0.7 -> 2.76 A0.35 -> 2.66 A0.28): the quality cost is the open question.
+  All points pooled: d1_speed_all.jsonl. d1 stopped 09:11 PT (DONE d1).
+- 09:12 PT quality screen dq1 launched (tmux -L hfrt dq1, agree mode with MNBT=4 so windows match the spec verify
+  window T=4 and the remote share matches serving; 7-chunk subset; ref_k8 capture kept as the same-boot reference):
+  ref_k8, k7, k7_defall_a07, k7_defall_a035, k7_defall_a028, k7_late8, k7_a035, k8_defall_a035 -> dq1.log.
+  Note: the deferred share depends on A (A0.35 defers ~2/3 of the routed output), so quality is measured at each A.
