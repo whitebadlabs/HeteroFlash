@@ -22,6 +22,12 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
   k7 25.62, tau0.04 24.32, k7tau0.04 25.75. Anchor tau0.08 ok (-0.09); kdaoff -0.40, all in cold round 1 (20.88, then 23.83/24.01).
 - **README.md** in this dir: frontier table + recommendation (k7 25.6 tok/s at the bar; tau0.04 24.3 strictly inside).
 
+## Step 3 (running)
+- `es` stopped 00:28 PT (port 47201 closed, GPUs 2 MiB). Cap check: 2.0 GHz cap held a busy core at 2.26 GHz vs 4.58 uncapped; restore verified 5487604.
+- PR #64825 slowed-CPU rerun on the MaxQ (task 6, GPU 0): `tmux -L hfsc` session `slowcpu`, `/srv/sweep/slowcpu/run_slowcpu.sh`,
+  log `/srv/sweep/slowcpu/logs/run.log`, results `/srv/sweep/slowcpu/results/`. Levels F55 F30 F20 F12 C4F20 (trap restores scaling_max_freq;
+  after a cut, check `sort -u /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq` = 5487604 and rerun only missing levels with LEVELS=...).
+
 ## f2 speed boot (22:19-23:22 PT): ANCHOR FAILED, points not trusted
 - f2 aggregate (all 15 req, measured): kdaoff 21.33 (f1 23.21, miss 1.88), tau0.08_kdaoff 26.26 (f1 26.39, ok),
   k7_kdaoff 23.11, tau0.04_kdaoff 21.05, k7tau0.04_kdaoff 23.96. `f2_frontier_speed.json`, `f2_points.log`.
