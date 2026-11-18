@@ -22,6 +22,9 @@ P=(
  "tau0.08_kdaoff|1 0 0|8 0.08 0|none"
  "k6tau0.08_kdaoff|1 0 0|6 0.08 0|none"
  "alt15_k4_kdaoff|1 0 0|4 0 0|$ALT15"
+ "k7_kdaoff|1 0 0|7 0 0|none"
+ "tau0.04_kdaoff|1 0 0|8 0.04 0|none"
+ "k7tau0.04_kdaoff|1 0 0|7 0.04 0|none"
 )
 # POINTS_ONLY="name1 name2": run only these points (e.g. the non-dominated ones in later rounds); R0: first round number
 if [ -n "${POINTS_ONLY:-}" ]; then Q=(); for p in "${P[@]}"; do [[ " $POINTS_ONLY " == *" ${p%%|*} "* ]] && Q+=("$p"); done; P=("${Q[@]}"); fi

@@ -1,0 +1,4 @@
+00:23:39Z started fq2 (agree)
+00:34:55Z healthy; mem used 111 GiB
+00:36:15Z resident pool live; cuda free 10.8 / 130.7 GB
+00:36:19Z pass tau0.08: drop [8 0.08 0] alt [none] gates [1 0 0]

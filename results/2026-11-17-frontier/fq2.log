@@ -1,0 +1,7 @@
+02:10:16Z started fq2 (agree)
+02:21:33Z healthy; mem used 113 GiB
+02:22:46Z resident pool live; cuda free 10.8 / 130.7 GB
+02:22:51Z pass tau0.08: drop [8 0.08 0] alt [none] gates [1 0 0]
+02:58:15Z tau0.08 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.076817587018013, "kld_p99": 1.0051639080047607, "dnll_mean": 0.031312305480241776, "dnll_se": 0.002247154096181664, "same_top": 0.9136924147605896}
+02:59:37Z pass k7: drop [7 0 0] alt [none] gates [1 0 0]
