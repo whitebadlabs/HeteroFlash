@@ -87,7 +87,9 @@ Code: `bench/dualrt/` (hook `hook/sitecustomize.py`, CUDA extension `hook/hf_drt
   (`results/2026-11-08-balanced-eval/control_exl3_3.5bpw.json`, key `_overall`). A point is *inside* the bar only if
   all three metrics are at least as good as the control's.
 - **Anchors.** Every speed boot re-runs reference points from the first boot. If an anchor misses by more than
-  0.3 tok/s, the boot's other points are not trusted. That rule rejected one boot (finding F9).
+  0.3 tok/s, the boot's other points are not trusted. That rule rejected boot f2 (finding F8). Boot f3, which holds
+  the recommended point, also missed it on one anchor by 0.40 tok/s, entirely in its cold first round; its other
+  anchor matched within 0.1. f3's results are therefore reported as same-boot comparisons (section 4.4).
 
 ## 4. Measured results
 
@@ -139,7 +141,7 @@ The rows use different workloads, so compare within a group of rows, not across 
 | same, direct 10G link + MTP drafting | prose | 17.0 | `results/2026-11-07-e2e-v1/README.md` |
 | "config B": vLLM, FP8 fixed path, **all** routed experts on the workstation CPU, mailbox, MTP-3 (3 reps) | essay / chat / agent | 16.58 / 15.43 / 18.00 | `results/2026-11-17-dualrt/cfgB_base_r1_client.jsonl` |
 | dual-memory split, same session (3 reps) | essay / chat / agent | 22.82 / 22.05 / 23.03 | `results/2026-11-17-dualrt/m4_final_g11a7_client.jsonl` |
-| frontier boot f1: split, KDA split on | 15-request pool | 20.75 | `results/2026-11-17-frontier/f1_frontier_speed.json` (`base`) |
+| frontier boot f1: split, KDA split on | 15-request pool | 20.75 (21.8 on warm rounds 2-3) | `results/2026-11-17-frontier/f1_frontier_speed.json` (`base`) |
 | f1: KDA split off (lossless) | 15-request pool | 23.21 | same file (`kdaoff`) |
 | f1: KDA split off + workstation NIC interrupt coalescing off (lossless) | 15-request pool | 24.68 | same file (`coal_kdaoff_c0`, 6 rounds, ABBA) |
 | **f3: top-7 experts + KDA split off (recommended)** | 15-request pool | **25.62** (25.7 on warm rounds 2-3, derived) | `results/2026-11-17-frontier/f3_frontier_speed.json` (`k7_kdaoff`) |
@@ -181,6 +183,7 @@ outside): top-5 27.1, top-6 + tau 0.08 27.6, top-4 with 3-bit experts on 15 CPU 
 **Recommended operating point: top-7 with the KDA split off, 25.7 tok/s on warm rounds** (25.62 pooled, including the
 cold first round).
 
+- Boot f3 missed the 0.3 tok/s anchor rule on one anchor (section 3), so read these as same-boot comparisons.
 - That is about +7.5% over lossless on the same boot (23.9, derived from rounds 2-3) and +10% over f1's lossless 23.2.
 - dNLL and KLD are inside the control bar.
 - Same-top-1 is 93.88% against the control's 93.97%, so it fails the strict all-three rule by 0.1 point. With a top-1
@@ -250,16 +253,14 @@ criterion was set below bf16 resolution (`results/2026-11-16-dualmem/README.md`,
   recovers part of it.
 
 **F7. Splitting the linear-attention projections does not pay.** *Measured; specific to this runtime.* On the same
-boot, turning the KDA head split off raised throughput from 20.75 to 23.21 tok/s (cycle 138.9 -> 122.8 ms) with no
-quality change (`f1_frontier_speed.json`, `base` vs `kdaoff`). One extra exchange per linear-attention layer (34 per
-pass) costs more latency than the bandwidth it saves.
+boot, turning the KDA head split off raised throughput from 21.8 to 23.2 tok/s on warm rounds (+6%; pooled 20.75 ->
+23.21, where the pooled split-on figure includes that boot's cold first round), with no quality change
+(`f1_frontier_speed.json`, `base` vs `kdaoff`, per-round values). The split adds one exchange per linear-attention
+layer (34 per pass), and that latency costs more than the bandwidth it saves. The vocabulary-projection split, one
+large exchange, is kept; its own benefit was not resolved beyond trajectory noise in a 1-rep comparison
+(`results/2026-11-17-dualrt/README.md`, section 3).
 
-**F8. The vocabulary-projection split does pay.** *Measured, 1 rep.* Same boot: 20.07 -> 20.85 tok/s essay
-(119.2 -> 114.7 ms per cycle) and 19.74 -> 21.89 tok/s chat (`results/2026-11-17-dualrt/README.md`, section 3,
-`m4_g00` vs `m4_g10`). One large exchange that halves a large read is worth it; many small exchanges are not
-(compare F7).
-
-**F9. Two benchmark pitfalls: KV-cache size variance and cold first rounds.** *Known classes of problem, stated
+**F8. Two benchmark pitfalls: KV-cache size variance and cold first rounds.** *Known classes of problem, stated
 because they nearly produced wrong conclusions here.*
 - **KV-cache size.** One boot came up with a 230,589-token KV cache instead of 302,193 at the same memory-utilisation
   setting (non-torch memory +1.8 GiB; the cause is unexplained). Long agent prompts were then evicted from the prefix
@@ -287,8 +288,8 @@ because they nearly produced wrong conclusions here.*
 - **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. There are no
   downstream task scores for top-7 yet; the agent-suite scores in `results/2026-11-09-audit/` are for config B.
 - **Speed is batch 1, greedy,** on one hardware pair and one link type (TCP over 10GBASE-T).
-- **Unexplained:** the KV-size difference between boots (F9), and a race between the hook's 30-second stats-dump
-  thread and CUDA-graph capture that failed one boot (`results/2026-11-17-frontier/f2_bootfail_2217/`).
+- **Unexplained:** the KV-size difference between boots (F8), and a race between the hook's 30-second stats-dump
+  thread and CUDA-graph capture that failed one boot (described in `results/2026-11-17-frontier/README.md`).
 - **The hot set** is calibrated on agent-suite prompts only; the top 120 experts per layer cover 66% of routes
   in-sample (`results/2026-11-17-dualrt/hotset_calib.json`).
 - **Not built:** an MLA projection split, a shared-expert split, a split draft layer.
@@ -316,7 +317,8 @@ The scripts were written for two specific machines and still contain host-specif
 7. **Speed frontier:** boot once with `bench/dualrt/boot_frontier.sh <tag>`, pinning the KV cache with
    `EXTRA_ARGS="--kv-cache-memory-bytes <bytes>"`. Then run `POINTS_ONLY="..." ROUNDS=3 bash bench/dualrt/run_f1_points.sh`
    and aggregate with `frontier_agg.py`.
-8. **Quality:** `bench/dualrt/run_frontier_quality.sh "<name>|<k> <tau> 0|none|1 0 0" ...` (eager, 16-token batches),
+8. **Quality:** build the token file `data/q_eval_balanced_v1.tokens.json` from the manifest (not tracked; it holds
+   the tokenized eval text), then run `bench/dualrt/run_frontier_quality.sh "<name>|<k> <tau> 0|none|1 0 0" ...` (eager, 16-token batches),
    scored with `compare_q8.py` against the Q8 proxy logits; paired comparisons with `paired_quality.py`.
 
 Unit tests for the analysis code: `python3 -m unittest discover -s tests -v`.
