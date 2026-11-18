@@ -58,3 +58,24 @@ Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; MaxQ NIC coales
   window T=4 and the remote share matches serving; 7-chunk subset; ref_k8 capture kept as the same-boot reference):
   ref_k8, k7, k7_defall_a07, k7_defall_a035, k7_defall_a028, k7_late8, k7_a035, k8_defall_a035 -> dq1.log.
   Note: the deferred share depends on A (A0.35 defers ~2/3 of the routed output), so quality is measured at each A.
+- 10:27 PT dq1 COMPLETE (all 8 passes, 7/7 chunks each; no partials). The driving Claude session died ~10:56 PT after it
+  finished; resumed 11:05 PT. Measured, 7-chunk subset, agree mode MNBT=4 (vs Q8 proxy: dNLL / KLD / top-1; paired vs same-boot ref_k8 KLD):
+  | point | dNLL vs Q8 | KLD vs Q8 | top-1 | KLD vs ref_k8 |
+  |---|---|---|---|---|
+  | ref_k8 | +0.0056 | 0.018 | 95.8% | - |
+  | k7 | +0.0071 | 0.027 | 95.2% | 0.0160 +-0.0006 |
+  | k7_a035 (no deferral) | +0.0061 | 0.026 | 95.2% | 0.0161 |
+  | k7_late8 | +0.0075 | 0.022 | 95.5% | **0.0131 +-0.0005** |
+  | k7_defall_a07 | +0.228 | 0.309 | 81.8% | 0.304 |
+  | k7_defall_a035 | +0.323 | 0.407 | 77.9% | 0.402 |
+  | k7_defall_a028 | +0.366 | 0.451 | 76.7% | 0.447 |
+  | k8_defall_a035 | +0.311 | 0.394 | 78.2% | 0.390 |
+  Reading: deferring the whole remote partial one layer (untrained) is ~10x past the bar (0.042) at every A; A alone is
+  free (k7_a035 = k7) and the drop is not the cause (k8_defall = k7_defall). KLD is flat along chunk position (0.29-0.35
+  per 170-token bin at A0.7), so it is a per-token effect, not KV-cache contamination. The 32-33 tok/s defer-all points
+  are therefore out. Only "late" (dropped low-weight experts computed on the workstation and added one layer late) keeps
+  quality: k7_late8 is closer to k8 than k7 is. Partial-layer deferral has no speed case (at low A the undeferred layers
+  block again: 30 ms/window measured at k7 A0.35), so it is not screened.
+- Next: d2 speed boot (DEFER+LATE, KV pinned): k7, k7_late8, k6, k6_late interleaved x3 (no warm-up kept). If k6_late
+  beats same-boot k7 by > 0.5 tok/s it joins the full-length quality boot (dq2: FULL=1 MNBT=4 KEEPCAP=k7; k7, k7_late8,
+  [k6_late], k7_defall_a035 last).
