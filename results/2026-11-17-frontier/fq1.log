@@ -1,0 +1,16 @@
+21:37:57Z started fq1 (agree)
+21:48:44Z healthy; mem used 111 GiB
+21:49:59Z resident pool live; cuda free 10.9 / 130.7 GB
+21:50:03Z pass base: drop [8 0 0] alt [none] gates [1 0 0]
+22:36:54Z base logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.027272317558526993, "kld_p99": 0.3733959496021271, "dnll_mean": 0.004374485928565264, "dnll_se": 0.0013875784566070317, "same_top": 0.9501466155052185}
+22:38:35Z pass k4: drop [4 0 0] alt [none] gates [1 0 0]
+23:08:58Z k4 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.15574009716510773, "kld_p99": 1.5570728778839111, "dnll_mean": 0.08855810016393661, "dnll_se": 0.0031439698508129894, "same_top": 0.8692511320114136}
+23:10:28Z pass k4rn: drop [4 0 1] alt [none] gates [1 0 0]
+23:41:33Z k4rn logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.1740483194589615, "kld_p99": 2.0326449871063232, "dnll_mean": 0.12342885881662369, "dnll_se": 0.0034300286263926655, "same_top": 0.8664616346359253}
+23:42:51Z pass k6: drop [6 0 0] alt [none] gates [1 0 0]
+00:21:42Z k6 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.05918654799461365, "kld_p99": 0.7353923916816711, "dnll_mean": 0.018076760694384575, "dnll_se": 0.001984326009149811, "same_top": 0.9238013625144958}
+00:22:54Z DONE fq1
