@@ -181,3 +181,21 @@ destination GPU; the token's own GPU is not a send). **Load imbalance**: busiest
 - Placements are per layer and static; no cross-layer (N -> N+1) placement was simulated. Only one random home GPU
   per token (no DP-rank structure, no node hierarchy).
 - The correlated placement is a simple greedy search, not an optimum.
+
+## Follow-up 2026-11-18 afternoon: redundant-expert (copy) budget (scripts/copies.py, results/copies/)
+Gate fixed before results: correlated + R copies keeps >= 15% fewer sends than DefaultEplbPolicy + the same R copies,
+with p95 per-2048-token-batch imbalance <= 1.15 or <= Default + 0.05, on holdout. Fit on calib mix; R per GPU
+{1, 2, 25% of E/G}; routing rule (ours): copy on home GPU, else on a GPU already sent to, else least-loaded copy.
+Parity: with R = 0 the copies code reproduces out/glm.json exactly.
+- **Static copies (from calib load): no-go everywhere.** Sends stay 14-26% lower, but p95 batch imbalance stays about
+  2x Default's (e.g. GLM 8 GPUs R9: 2.84 vs 1.37; Qwen 8 GPUs R8: 1.76 vs 1.20).
+- **Per-batch copies (planner sees the batch, an optimistic bound): go in some cells.** GLM 8 GPUs R9 -20% sends,
+  p95 1.28 vs 1.37; GLM 16 R5 -19%, 1.28 vs 1.52; Qwen 8 R8 -26%, 1.17 vs 1.20; Qwen 16 R4 -24%, 1.20 vs 1.35;
+  Qwen 32 R2 -19%, 1.31 vs 1.60. GLM at 32 GPUs misses on sends (-14 to -15%).
+- Most "go" cells pass on the Default + 0.05 clause: Default itself has p95 batch imbalance of 1.2-2.6.
+- Least-loaded-copy routing (extra check, results/copies/summary_balance.md): balance improves for all, but the
+  correlated send cut falls to ~9-11% at the 25% budget (GLM: no go; Qwen still passes some cells).
+- Anti-paired placement (pairs spread apart, as in "Patterns behind Chaos"): +4-10% sends vs Default, better balance.
+- Caveats: GLM pooled p95 is mostly long_context batches (14 of 20); "mix" batches are task-ordered, not interleaved.
+Reading: correlation-aware placement pays only together with a dynamic, per-batch replica planner (MegaFlux-style);
+the static version should be dropped. Next: a causal planner that uses the previous batch's counts, not the current one's.

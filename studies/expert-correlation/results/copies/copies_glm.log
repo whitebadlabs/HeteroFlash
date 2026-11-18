@@ -1,0 +1,236 @@
+13:22:00 E 288 K 8 layers 42 sets ['code', 'instruction_following', 'knowledge_qa', 'long_context', 'math', 'multilingual', 'writing_chat', 'mix'] {'code': 3419, 'instruction_following': 3999, 'knowledge_qa': 4041, 'long_context': 30000, 'math': 2457, 'multilingual': 3998, 'writing_chat': 5703, 'mix': 53617}
+13:22:42 calib matrices done
+13:23:49 G8 primaries ready (68s)
+13:23:54 G8_R0_default 4s  mix: sends 4.641 imb 1.163 imb_b p50/p95 1.3249744233630953/1.4928181966145833
+13:24:04 G8_R1_default 10s  mix: sends 4.508 imb 1.161 imb_b p50/p95 1.3071405319940477/1.4805501302083335
+13:24:19 G8_R2_default 15s  mix: sends 4.404 imb 1.165 imb_b p50/p95 1.30712890625/1.484101795014881
+13:24:52 G8_R9_default 33s  mix: sends 3.966 imb 1.130 imb_b p50/p95 1.2400251116071428/1.3915812174479165
+13:24:59 G8_R0_corr_static 7s  mix: sends 3.707 imb 1.799 imb_b p50/p95 2.286923363095238/2.95794677734375
+13:25:10 G8_R1_corr_static 11s  mix: sends 3.598 imb 1.793 imb_b p50/p95 2.272501627604167/2.945219494047619
+13:25:25 G8_R2_corr_static 15s  mix: sends 3.535 imb 1.787 imb_b p50/p95 2.2490466889880953/2.950471423921131
+13:26:03 G8_R9_corr_static 38s  mix: sends 3.241 imb 1.746 imb_b p50/p95 2.1514195033482144/2.8073672340029763
+13:26:30 G8_R1_corr_dynamic 26s  mix: sends 3.569 imb 1.672 imb_b p50/p95 2.0305524553571432/2.656046549479167
+13:26:59 G8_R2_corr_dynamic 29s  mix: sends 3.487 imb 1.548 imb_b p50/p95 1.8059256417410714/2.387773786272321
+13:28:17 G8_R9_corr_dynamic 78s  mix: sends 3.106 imb 1.097 imb_b p50/p95 1.1252848307291665/1.3014613560267858
+13:30:26 G16 primaries ready (130s)
+13:30:34 G16_R0_default 8s  mix: sends 6.127 imb 1.295 imb_b p50/p95 1.6471586681547619/1.866914295014881
+13:30:51 G16_R1_default 17s  mix: sends 5.900 imb 1.274 imb_b p50/p95 1.5645577566964286/1.8068033854166667
+13:31:26 G16_R2_default 35s  mix: sends 5.745 imb 1.248 imb_b p50/p95 1.5155203683035714/1.741670154389881
+13:32:12 G16_R5_default 46s  mix: sends 5.466 imb 1.191 imb_b p50/p95 1.3674432663690477/1.5477759951636905
+13:32:20 G16_R0_corr_static 9s  mix: sends 4.909 imb 2.213 imb_b p50/p95 2.949614025297619/4.032319568452381
+13:32:38 G16_R1_corr_static 18s  mix: sends 4.741 imb 2.218 imb_b p50/p95 2.8823009672619047/4.017397925967262
+13:33:01 G16_R2_corr_static 23s  mix: sends 4.651 imb 2.188 imb_b p50/p95 2.840680803571429/3.9043375651041665
+13:33:39 G16_R5_corr_static 38s  mix: sends 4.518 imb 2.077 imb_b p50/p95 2.642113095238095/3.6503964378720237
+13:34:01 G16_R1_corr_dynamic 23s  mix: sends 4.815 imb 1.507 imb_b p50/p95 1.8463774181547619/2.3868524460565474
+13:34:38 G16_R2_corr_dynamic 36s  mix: sends 4.706 imb 1.281 imb_b p50/p95 1.4153413318452381/1.7806454613095237
+13:35:49 G16_R5_corr_dynamic 71s  mix: sends 4.404 imb 1.092 imb_b p50/p95 1.1266276041666667/1.2816569010416667
+13:37:49 G32 primaries ready (121s)
+13:37:55 G32_R0_default 6s  mix: sends 7.064 imb 1.610 imb_b p50/p95 2.289946056547619/2.720319475446429
+13:38:14 G32_R1_default 18s  mix: sends 6.797 imb 1.410 imb_b p50/p95 1.9368024553571428/2.335205078125
+13:38:39 G32_R2_default 25s  mix: sends 6.653 imb 1.343 imb_b p50/p95 1.7355143229166665/2.190511067708333
+13:38:45 G32_R0_corr_static 7s  mix: sends 5.890 imb 2.552 imb_b p50/p95 3.8066871279761907/5.132672991071429
+13:39:05 G32_R1_corr_static 19s  mix: sends 5.685 imb 2.409 imb_b p50/p95 3.591796875/4.792503720238095
+13:39:44 G32_R2_corr_static 39s  mix: sends 5.627 imb 2.336 imb_b p50/p95 3.381254650297619/4.448788597470238
+13:40:58 G32_R1_corr_dynamic 74s  mix: sends 5.833 imb 1.295 imb_b p50/p95 1.5315057663690477/1.8792201450892858
+13:42:50 G32_R2_corr_dynamic 112s  mix: sends 5.669 imb 1.149 imb_b p50/p95 1.2516973586309523/1.4738304501488095
+13:42:50 wrote /tmp/ecorr-copies-20261118/copies_glm.json
+
+## copies_glm.json.ckpt  (E=288, layers=42)
+
+Simulated replay on holdout. 'tasks' = mean over task types for sends/imb; imb_b p50/p95 over full 2048-token batches pooled across task types (full batches per set: {'code': 1, 'instruction_following': 1, 'knowledge_qa': 1, 'long_context': 14, 'math': 1, 'multilingual': 1, 'writing_chat': 2, 'mix': 26}). 'mix' = mix holdout (task-ordered concatenation, so its batches are mostly single-task). vs (a) = vs DefaultEplbPolicy at the same R.
+
+| G | R | policy | sends tasks | vs (a) | imb tasks | imb_b p50/p95 tasks | sends mix | vs (a) | imb mix | imb_b p50/p95 mix | kappa p50/p95 mix | kappa_slot p95 mix | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 8 | 0 | default | 4.656 | +0.0% | 1.254 | 1.333/1.467 | 4.641 | +0.0% | 1.163 | 1.325/1.493 | 3.035/5.086 | 5.086 |  |
+| 8 | 0 | corr_static | 3.857 | -17.2% | 1.765 | 2.438/2.979 | 3.707 | -20.1% | 1.799 | 2.287/2.958 | 3.035/5.086 | 5.086 |  |
+| 8 | 1 | default | 4.473 | +0.0% | 1.239 | 1.343/1.466 | 4.508 | +0.0% | 1.161 | 1.307/1.481 | 3.035/5.086 | 4.869 | dup copies 12 |
+| 8 | 1 | corr_static | 3.710 | -17.0% | 1.743 | 2.421/2.960 | 3.598 | -20.2% | 1.793 | 2.273/2.945 | 3.035/5.086 | 4.896 |  |
+| 8 | 1 | corr_dynamic | 3.706 | -17.1% | 1.510 | 2.166/2.670 | 3.569 | -20.8% | 1.672 | 2.031/2.656 | 3.035/5.086 | 3.934 | sees the batch |
+| 8 | 2 | default | 4.367 | +0.0% | 1.229 | 1.308/1.459 | 4.404 | +0.0% | 1.165 | 1.307/1.484 | 3.035/5.086 | 4.691 | dup copies 27 |
+| 8 | 2 | corr_static | 3.636 | -16.7% | 1.716 | 2.401/2.965 | 3.535 | -19.8% | 1.787 | 2.249/2.950 | 3.035/5.086 | 4.824 |  |
+| 8 | 2 | corr_dynamic | 3.605 | -17.4% | 1.389 | 1.951/2.387 | 3.487 | -20.8% | 1.548 | 1.806/2.388 | 3.035/5.086 | 3.275 | sees the batch |
+| 8 | 9 | default | 3.923 | +0.0% | 1.166 | 1.245/1.367 | 3.966 | +0.0% | 1.130 | 1.240/1.392 | 3.035/5.086 | 4.501 | dup copies 176 |
+| 8 | 9 | corr_static | 3.308 | -15.7% | 1.604 | 2.306/2.844 | 3.241 | -18.3% | 1.746 | 2.151/2.807 | 3.035/5.086 | 4.722 |  |
+| 8 | 9 | corr_dynamic | 3.137 | -20.0% | 1.102 | 1.148/1.283 | 3.106 | -21.7% | 1.097 | 1.125/1.301 | 3.035/5.086 | 2.092 | sees the batch |
+| 16 | 0 | default | 6.136 | +0.0% | 1.500 | 1.711/1.822 | 6.127 | +0.0% | 1.295 | 1.647/1.867 | 3.035/5.086 | 5.086 |  |
+| 16 | 0 | corr_static | 5.045 | -17.8% | 2.280 | 3.162/4.083 | 4.909 | -19.9% | 2.213 | 2.950/4.032 | 3.035/5.086 | 5.086 |  |
+| 16 | 1 | default | 5.855 | +0.0% | 1.393 | 1.596/1.757 | 5.900 | +0.0% | 1.274 | 1.565/1.807 | 3.035/5.086 | 4.695 | dup copies 18 |
+| 16 | 1 | corr_static | 4.835 | -17.4% | 2.196 | 3.117/4.072 | 4.741 | -19.6% | 2.218 | 2.882/4.017 | 3.035/5.086 | 4.800 |  |
+| 16 | 1 | corr_dynamic | 4.860 | -17.0% | 1.475 | 1.952/2.411 | 4.815 | -18.4% | 1.507 | 1.846/2.387 | 3.035/5.086 | 3.403 | sees the batch |
+| 16 | 2 | default | 5.702 | +0.0% | 1.340 | 1.545/1.706 | 5.745 | +0.0% | 1.248 | 1.516/1.742 | 3.035/5.086 | 4.550 | dup copies 29 |
+| 16 | 2 | corr_static | 4.734 | -17.0% | 2.132 | 3.067/3.984 | 4.651 | -19.1% | 2.188 | 2.841/3.904 | 3.035/5.086 | 4.704 |  |
+| 16 | 2 | corr_dynamic | 4.715 | -17.3% | 1.268 | 1.480/1.805 | 4.706 | -18.1% | 1.281 | 1.415/1.781 | 3.035/5.086 | 2.827 | sees the batch |
+| 16 | 5 | default | 5.423 | +0.0% | 1.228 | 1.404/1.519 | 5.466 | +0.0% | 1.191 | 1.367/1.548 | 3.035/5.086 | 4.591 | dup copies 64 |
+| 16 | 5 | corr_static | 4.582 | -15.5% | 1.933 | 2.858/3.671 | 4.518 | -17.4% | 2.077 | 2.642/3.650 | 3.035/5.086 | 4.772 |  |
+| 16 | 5 | corr_dynamic | 4.407 | -18.7% | 1.091 | 1.135/1.276 | 4.404 | -19.4% | 1.092 | 1.127/1.282 | 3.035/5.086 | 2.137 | sees the batch |
+| 32 | 0 | default | 7.071 | +0.0% | 1.946 | 2.370/2.641 | 7.064 | +0.0% | 1.610 | 2.290/2.720 | 3.035/5.086 | 5.086 |  |
+| 32 | 0 | corr_static | 5.984 | -15.4% | 2.877 | 3.993/5.024 | 5.890 | -16.6% | 2.552 | 3.807/5.133 | 3.035/5.086 | 5.086 |  |
+| 32 | 1 | default | 6.764 | +0.0% | 1.610 | 1.935/2.260 | 6.797 | +0.0% | 1.410 | 1.937/2.335 | 3.035/5.086 | 4.539 | dup copies 15 |
+| 32 | 1 | corr_static | 5.751 | -15.0% | 2.568 | 3.773/4.637 | 5.685 | -16.4% | 2.409 | 3.592/4.793 | 3.035/5.086 | 4.613 |  |
+| 32 | 1 | corr_dynamic | 5.811 | -14.1% | 1.340 | 1.586/1.910 | 5.833 | -14.2% | 1.295 | 1.532/1.879 | 3.035/5.086 | 2.888 | sees the batch |
+| 32 | 2 | default | 6.618 | +0.0% | 1.504 | 1.755/2.038 | 6.653 | +0.0% | 1.343 | 1.736/2.191 | 3.035/5.086 | 4.597 | dup copies 25 |
+| 32 | 2 | corr_static | 5.684 | -14.1% | 2.363 | 3.601/4.380 | 5.627 | -15.4% | 2.336 | 3.381/4.449 | 3.035/5.086 | 4.628 |  |
+| 32 | 2 | corr_dynamic | 5.638 | -14.8% | 1.182 | 1.284/1.463 | 5.669 | -14.8% | 1.149 | 1.252/1.474 | 3.035/5.086 | 2.354 | sees the batch |
+
+Go/no-go (fixed before results: >= 15% fewer sends than (a) at the same R AND p95 batch imbalance <= 1.15 or <= (a)+0.05; judged on task-pooled batches and on mix):
+- G8 R1 corr_static [tasks]: send cut vs (a) 17.0%, p95 imb_b 2.960 (a: 1.466) -> no-go
+- G8 R1 corr_static [mix]: send cut vs (a) 20.2%, p95 imb_b 2.945 (a: 1.481) -> no-go
+- G8 R1 corr_dynamic [tasks]: send cut vs (a) 17.1%, p95 imb_b 2.670 (a: 1.466) -> no-go
+- G8 R1 corr_dynamic [mix]: send cut vs (a) 20.8%, p95 imb_b 2.656 (a: 1.481) -> no-go
+- G8 R2 corr_static [tasks]: send cut vs (a) 16.7%, p95 imb_b 2.965 (a: 1.459) -> no-go
+- G8 R2 corr_static [mix]: send cut vs (a) 19.8%, p95 imb_b 2.950 (a: 1.484) -> no-go
+- G8 R2 corr_dynamic [tasks]: send cut vs (a) 17.4%, p95 imb_b 2.387 (a: 1.459) -> no-go
+- G8 R2 corr_dynamic [mix]: send cut vs (a) 20.8%, p95 imb_b 2.388 (a: 1.484) -> no-go
+- G8 R9 corr_static [tasks]: send cut vs (a) 15.7%, p95 imb_b 2.844 (a: 1.367) -> no-go
+- G8 R9 corr_static [mix]: send cut vs (a) 18.3%, p95 imb_b 2.807 (a: 1.392) -> no-go
+- G8 R9 corr_dynamic [tasks]: send cut vs (a) 20.0%, p95 imb_b 1.283 (a: 1.367) -> GO
+- G8 R9 corr_dynamic [mix]: send cut vs (a) 21.7%, p95 imb_b 1.301 (a: 1.392) -> GO
+- G16 R1 corr_static [tasks]: send cut vs (a) 17.4%, p95 imb_b 4.072 (a: 1.757) -> no-go
+- G16 R1 corr_static [mix]: send cut vs (a) 19.6%, p95 imb_b 4.017 (a: 1.807) -> no-go
+- G16 R1 corr_dynamic [tasks]: send cut vs (a) 17.0%, p95 imb_b 2.411 (a: 1.757) -> no-go
+- G16 R1 corr_dynamic [mix]: send cut vs (a) 18.4%, p95 imb_b 2.387 (a: 1.807) -> no-go
+- G16 R2 corr_static [tasks]: send cut vs (a) 17.0%, p95 imb_b 3.984 (a: 1.706) -> no-go
+- G16 R2 corr_static [mix]: send cut vs (a) 19.1%, p95 imb_b 3.904 (a: 1.742) -> no-go
+- G16 R2 corr_dynamic [tasks]: send cut vs (a) 17.3%, p95 imb_b 1.805 (a: 1.706) -> no-go
+- G16 R2 corr_dynamic [mix]: send cut vs (a) 18.1%, p95 imb_b 1.781 (a: 1.742) -> GO
+- G16 R5 corr_static [tasks]: send cut vs (a) 15.5%, p95 imb_b 3.671 (a: 1.519) -> no-go
+- G16 R5 corr_static [mix]: send cut vs (a) 17.4%, p95 imb_b 3.650 (a: 1.548) -> no-go
+- G16 R5 corr_dynamic [tasks]: send cut vs (a) 18.7%, p95 imb_b 1.276 (a: 1.519) -> GO
+- G16 R5 corr_dynamic [mix]: send cut vs (a) 19.4%, p95 imb_b 1.282 (a: 1.548) -> GO
+- G32 R1 corr_static [tasks]: send cut vs (a) 15.0%, p95 imb_b 4.637 (a: 2.260) -> no-go
+- G32 R1 corr_static [mix]: send cut vs (a) 16.4%, p95 imb_b 4.793 (a: 2.335) -> no-go
+- G32 R1 corr_dynamic [tasks]: send cut vs (a) 14.1%, p95 imb_b 1.910 (a: 2.260) -> no-go
+- G32 R1 corr_dynamic [mix]: send cut vs (a) 14.2%, p95 imb_b 1.879 (a: 2.335) -> no-go
+- G32 R2 corr_static [tasks]: send cut vs (a) 14.1%, p95 imb_b 4.380 (a: 2.038) -> no-go
+- G32 R2 corr_static [mix]: send cut vs (a) 15.4%, p95 imb_b 4.449 (a: 2.191) -> no-go
+- G32 R2 corr_dynamic [tasks]: send cut vs (a) 14.8%, p95 imb_b 1.463 (a: 2.038) -> no-go
+- G32 R2 corr_dynamic [mix]: send cut vs (a) 14.8%, p95 imb_b 1.474 (a: 2.191) -> no-go
+13:42:55 E 288 K 8 layers 42 sets ['code', 'instruction_following', 'knowledge_qa', 'long_context', 'math', 'multilingual', 'writing_chat', 'mix'] {'code': 3419, 'instruction_following': 3999, 'knowledge_qa': 4041, 'long_context': 30000, 'math': 2457, 'multilingual': 3998, 'writing_chat': 5703, 'mix': 53617}
+13:44:01 calib matrices done
+13:44:02 G8 primaries ready (0s)
+13:44:02 G8_R0_default (checkpoint)
+13:44:02 G8_R1_default (checkpoint)
+13:44:02 G8_R2_default (checkpoint)
+13:44:02 G8_R9_default (checkpoint)
+13:44:02 G8_R0_corr_static (checkpoint)
+13:44:02 G8_R1_corr_static (checkpoint)
+13:44:02 G8_R2_corr_static (checkpoint)
+13:44:02 G8_R9_corr_static (checkpoint)
+13:44:02 G8_R1_corr_dynamic (checkpoint)
+13:44:02 G8_R2_corr_dynamic (checkpoint)
+13:44:02 G8_R9_corr_dynamic (checkpoint)
+13:45:20 G8_R0_anti 78s  mix: sends 4.967 imb 1.062 imb_b p50/p95 1.1722005208333335/1.2527087983630953
+13:46:45 G8_R1_anti 85s  mix: sends 4.775 imb 1.072 imb_b p50/p95 1.1856805710565474/1.2641078404017856
+13:48:24 G8_R2_anti 99s  mix: sends 4.647 imb 1.077 imb_b p50/p95 1.1771182105654763/1.2862374441964286
+13:50:44 G8_R9_anti 140s  mix: sends 4.128 imb 1.056 imb_b p50/p95 1.118989490327381/1.2242228190104167
+13:50:44 G16 primaries ready (0s)
+13:50:44 G16_R0_default (checkpoint)
+13:50:44 G16_R1_default (checkpoint)
+13:50:44 G16_R2_default (checkpoint)
+13:50:44 G16_R5_default (checkpoint)
+13:50:44 G16_R0_corr_static (checkpoint)
+13:50:44 G16_R1_corr_static (checkpoint)
+13:50:44 G16_R2_corr_static (checkpoint)
+13:50:44 G16_R5_corr_static (checkpoint)
+13:50:44 G16_R1_corr_dynamic (checkpoint)
+13:50:44 G16_R2_corr_dynamic (checkpoint)
+13:50:44 G16_R5_corr_dynamic (checkpoint)
+13:52:26 G16_R0_anti 101s  mix: sends 6.526 imb 1.143 imb_b p50/p95 1.3788597470238095/1.5118931361607144
+13:54:05 G16_R1_anti 100s  mix: sends 6.271 imb 1.127 imb_b p50/p95 1.3341703869047619/1.4764055524553572
+13:55:56 G16_R2_anti 111s  mix: sends 6.096 imb 1.124 imb_b p50/p95 1.3311244419642856/1.4792306082589286
+13:58:47 G16_R5_anti 170s  mix: sends 5.765 imb 1.084 imb_b p50/p95 1.1911272321428572/1.3662748790922619
+13:58:47 G32 primaries ready (0s)
+13:58:47 G32_R0_default (checkpoint)
+13:58:47 G32_R1_default (checkpoint)
+13:58:47 G32_R2_default (checkpoint)
+13:58:47 G32_R0_corr_static (checkpoint)
+13:58:47 G32_R1_corr_static (checkpoint)
+13:58:47 G32_R2_corr_static (checkpoint)
+13:58:47 G32_R1_corr_dynamic (checkpoint)
+13:58:47 G32_R2_corr_dynamic (checkpoint)
+13:59:47 G32_R0_anti 60s  mix: sends 7.373 imb 1.359 imb_b p50/p95 1.8652808779761905/2.1434384300595237
+14:00:57 G32_R1_anti 69s  mix: sends 7.140 imb 1.241 imb_b p50/p95 1.6299293154761907/1.9269787016369047
+14:02:22 G32_R2_anti 86s  mix: sends 6.996 imb 1.197 imb_b p50/p95 1.5129278273809523/1.8267647879464286
+14:02:22 wrote /tmp/ecorr-copies-20261118/copies_glm.json
+
+## copies_glm.json.ckpt  (E=288, layers=42)
+
+Simulated replay on holdout. 'tasks' = mean over task types for sends/imb; imb_b p50/p95 over full 2048-token batches pooled across task types (full batches per set: {'code': 1, 'instruction_following': 1, 'knowledge_qa': 1, 'long_context': 14, 'math': 1, 'multilingual': 1, 'writing_chat': 2, 'mix': 26}). 'mix' = mix holdout (task-ordered concatenation, so its batches are mostly single-task). vs (a) = vs DefaultEplbPolicy at the same R.
+
+| G | R | policy | sends tasks | vs (a) | imb tasks | imb_b p50/p95 tasks | sends mix | vs (a) | imb mix | imb_b p50/p95 mix | kappa p50/p95 mix | kappa_slot p95 mix | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 8 | 0 | default | 4.656 | +0.0% | 1.254 | 1.333/1.467 | 4.641 | +0.0% | 1.163 | 1.325/1.493 | 3.035/5.086 | 5.086 |  |
+| 8 | 0 | corr_static | 3.857 | -17.2% | 1.765 | 2.438/2.979 | 3.707 | -20.1% | 1.799 | 2.287/2.958 | 3.035/5.086 | 5.086 |  |
+| 8 | 0 | anti | 4.992 | +7.2% | 1.141 | 1.180/1.217 | 4.967 | +7.0% | 1.062 | 1.172/1.253 | 3.035/5.086 | 5.086 | intra-cosel x0.79, swap cap hit 0 layers |
+| 8 | 1 | default | 4.473 | +0.0% | 1.239 | 1.343/1.466 | 4.508 | +0.0% | 1.161 | 1.307/1.481 | 3.035/5.086 | 4.869 | dup copies 12 |
+| 8 | 1 | corr_static | 3.710 | -17.0% | 1.743 | 2.421/2.960 | 3.598 | -20.2% | 1.793 | 2.273/2.945 | 3.035/5.086 | 4.896 |  |
+| 8 | 1 | corr_dynamic | 3.706 | -17.1% | 1.510 | 2.166/2.670 | 3.569 | -20.8% | 1.672 | 2.031/2.656 | 3.035/5.086 | 3.934 | sees the batch |
+| 8 | 1 | anti | 4.750 | +6.2% | 1.131 | 1.187/1.242 | 4.775 | +5.9% | 1.072 | 1.186/1.264 | 3.035/5.086 | 4.842 | intra-cosel x0.80, swap cap hit 0 layers |
+| 8 | 2 | default | 4.367 | +0.0% | 1.229 | 1.308/1.459 | 4.404 | +0.0% | 1.165 | 1.307/1.484 | 3.035/5.086 | 4.691 | dup copies 27 |
+| 8 | 2 | corr_static | 3.636 | -16.7% | 1.716 | 2.401/2.965 | 3.535 | -19.8% | 1.787 | 2.249/2.950 | 3.035/5.086 | 4.824 |  |
+| 8 | 2 | corr_dynamic | 3.605 | -17.4% | 1.389 | 1.951/2.387 | 3.487 | -20.8% | 1.548 | 1.806/2.388 | 3.035/5.086 | 3.275 | sees the batch |
+| 8 | 2 | anti | 4.618 | +5.8% | 1.123 | 1.175/1.254 | 4.647 | +5.5% | 1.077 | 1.177/1.286 | 3.035/5.086 | 4.674 | intra-cosel x0.81, swap cap hit 0 layers |
+| 8 | 9 | default | 3.923 | +0.0% | 1.166 | 1.245/1.367 | 3.966 | +0.0% | 1.130 | 1.240/1.392 | 3.035/5.086 | 4.501 | dup copies 176 |
+| 8 | 9 | corr_static | 3.308 | -15.7% | 1.604 | 2.306/2.844 | 3.241 | -18.3% | 1.746 | 2.151/2.807 | 3.035/5.086 | 4.722 |  |
+| 8 | 9 | corr_dynamic | 3.137 | -20.0% | 1.102 | 1.148/1.283 | 3.106 | -21.7% | 1.097 | 1.125/1.301 | 3.035/5.086 | 2.092 | sees the batch |
+| 8 | 9 | anti | 4.096 | +4.4% | 1.079 | 1.128/1.191 | 4.128 | +4.1% | 1.056 | 1.119/1.224 | 3.035/5.086 | 4.476 | intra-cosel x0.89, swap cap hit 0 layers |
+| 16 | 0 | default | 6.136 | +0.0% | 1.500 | 1.711/1.822 | 6.127 | +0.0% | 1.295 | 1.647/1.867 | 3.035/5.086 | 5.086 |  |
+| 16 | 0 | corr_static | 5.045 | -17.8% | 2.280 | 3.162/4.083 | 4.909 | -19.9% | 2.213 | 2.950/4.032 | 3.035/5.086 | 5.086 |  |
+| 16 | 0 | anti | 6.540 | +6.6% | 1.329 | 1.416/1.472 | 6.526 | +6.5% | 1.143 | 1.379/1.512 | 3.035/5.086 | 5.086 | intra-cosel x0.64, swap cap hit 0 layers |
+| 16 | 1 | default | 5.855 | +0.0% | 1.393 | 1.596/1.757 | 5.900 | +0.0% | 1.274 | 1.565/1.807 | 3.035/5.086 | 4.695 | dup copies 18 |
+| 16 | 1 | corr_static | 4.835 | -17.4% | 2.196 | 3.117/4.072 | 4.741 | -19.6% | 2.218 | 2.882/4.017 | 3.035/5.086 | 4.800 |  |
+| 16 | 1 | corr_dynamic | 4.860 | -17.0% | 1.475 | 1.952/2.411 | 4.815 | -18.4% | 1.507 | 1.846/2.387 | 3.035/5.086 | 3.403 | sees the batch |
+| 16 | 1 | anti | 6.239 | +6.6% | 1.230 | 1.337/1.450 | 6.271 | +6.3% | 1.127 | 1.334/1.476 | 3.035/5.086 | 4.673 | intra-cosel x0.66, swap cap hit 0 layers |
+| 16 | 2 | default | 5.702 | +0.0% | 1.340 | 1.545/1.706 | 5.745 | +0.0% | 1.248 | 1.516/1.742 | 3.035/5.086 | 4.550 | dup copies 29 |
+| 16 | 2 | corr_static | 4.734 | -17.0% | 2.132 | 3.067/3.984 | 4.651 | -19.1% | 2.188 | 2.841/3.904 | 3.035/5.086 | 4.704 |  |
+| 16 | 2 | corr_dynamic | 4.715 | -17.3% | 1.268 | 1.480/1.805 | 4.706 | -18.1% | 1.281 | 1.415/1.781 | 3.035/5.086 | 2.827 | sees the batch |
+| 16 | 2 | anti | 6.067 | +6.4% | 1.198 | 1.326/1.429 | 6.096 | +6.1% | 1.124 | 1.331/1.479 | 3.035/5.086 | 4.543 | intra-cosel x0.67, swap cap hit 0 layers |
+| 16 | 5 | default | 5.423 | +0.0% | 1.228 | 1.404/1.519 | 5.466 | +0.0% | 1.191 | 1.367/1.548 | 3.035/5.086 | 4.591 | dup copies 64 |
+| 16 | 5 | corr_static | 4.582 | -15.5% | 1.933 | 2.858/3.671 | 4.518 | -17.4% | 2.077 | 2.642/3.650 | 3.035/5.086 | 4.772 |  |
+| 16 | 5 | corr_dynamic | 4.407 | -18.7% | 1.091 | 1.135/1.276 | 4.404 | -19.4% | 1.092 | 1.127/1.282 | 3.035/5.086 | 2.137 | sees the batch |
+| 16 | 5 | anti | 5.740 | +5.8% | 1.107 | 1.216/1.329 | 5.765 | +5.5% | 1.084 | 1.191/1.366 | 3.035/5.086 | 4.555 | intra-cosel x0.71, swap cap hit 0 layers |
+| 32 | 0 | default | 7.071 | +0.0% | 1.946 | 2.370/2.641 | 7.064 | +0.0% | 1.610 | 2.290/2.720 | 3.035/5.086 | 5.086 |  |
+| 32 | 0 | corr_static | 5.984 | -15.4% | 2.877 | 3.993/5.024 | 5.890 | -16.6% | 2.552 | 3.807/5.133 | 3.035/5.086 | 5.086 |  |
+| 32 | 0 | anti | 7.371 | +4.2% | 1.723 | 1.902/2.107 | 7.373 | +4.4% | 1.359 | 1.865/2.143 | 3.035/5.086 | 5.086 | intra-cosel x0.50, swap cap hit 0 layers |
+| 32 | 1 | default | 6.764 | +0.0% | 1.610 | 1.935/2.260 | 6.797 | +0.0% | 1.410 | 1.937/2.335 | 3.035/5.086 | 4.539 | dup copies 15 |
+| 32 | 1 | corr_static | 5.751 | -15.0% | 2.568 | 3.773/4.637 | 5.685 | -16.4% | 2.409 | 3.592/4.793 | 3.035/5.086 | 4.613 |  |
+| 32 | 1 | corr_dynamic | 5.811 | -14.1% | 1.340 | 1.586/1.910 | 5.833 | -14.2% | 1.295 | 1.532/1.879 | 3.035/5.086 | 2.888 | sees the batch |
+| 32 | 1 | anti | 7.115 | +5.2% | 1.401 | 1.610/1.837 | 7.140 | +5.0% | 1.241 | 1.630/1.927 | 3.035/5.086 | 4.512 | intra-cosel x0.51, swap cap hit 0 layers |
+| 32 | 2 | default | 6.618 | +0.0% | 1.504 | 1.755/2.038 | 6.653 | +0.0% | 1.343 | 1.736/2.191 | 3.035/5.086 | 4.597 | dup copies 25 |
+| 32 | 2 | corr_static | 5.684 | -14.1% | 2.363 | 3.601/4.380 | 5.627 | -15.4% | 2.336 | 3.381/4.449 | 3.035/5.086 | 4.628 |  |
+| 32 | 2 | corr_dynamic | 5.638 | -14.8% | 1.182 | 1.284/1.463 | 5.669 | -14.8% | 1.149 | 1.252/1.474 | 3.035/5.086 | 2.354 | sees the batch |
+| 32 | 2 | anti | 6.970 | +5.3% | 1.307 | 1.512/1.719 | 6.996 | +5.2% | 1.197 | 1.513/1.827 | 3.035/5.086 | 4.493 | intra-cosel x0.53, swap cap hit 0 layers |
+
+Go/no-go (fixed before results: >= 15% fewer sends than (a) at the same R AND p95 batch imbalance <= 1.15 or <= (a)+0.05; judged on task-pooled batches and on mix):
+- G8 R1 corr_static [tasks]: send cut vs (a) 17.0%, p95 imb_b 2.960 (a: 1.466) -> no-go
+- G8 R1 corr_static [mix]: send cut vs (a) 20.2%, p95 imb_b 2.945 (a: 1.481) -> no-go
+- G8 R1 corr_dynamic [tasks]: send cut vs (a) 17.1%, p95 imb_b 2.670 (a: 1.466) -> no-go
+- G8 R1 corr_dynamic [mix]: send cut vs (a) 20.8%, p95 imb_b 2.656 (a: 1.481) -> no-go
+- G8 R2 corr_static [tasks]: send cut vs (a) 16.7%, p95 imb_b 2.965 (a: 1.459) -> no-go
+- G8 R2 corr_static [mix]: send cut vs (a) 19.8%, p95 imb_b 2.950 (a: 1.484) -> no-go
+- G8 R2 corr_dynamic [tasks]: send cut vs (a) 17.4%, p95 imb_b 2.387 (a: 1.459) -> no-go
+- G8 R2 corr_dynamic [mix]: send cut vs (a) 20.8%, p95 imb_b 2.388 (a: 1.484) -> no-go
+- G8 R9 corr_static [tasks]: send cut vs (a) 15.7%, p95 imb_b 2.844 (a: 1.367) -> no-go
+- G8 R9 corr_static [mix]: send cut vs (a) 18.3%, p95 imb_b 2.807 (a: 1.392) -> no-go
+- G8 R9 corr_dynamic [tasks]: send cut vs (a) 20.0%, p95 imb_b 1.283 (a: 1.367) -> GO
+- G8 R9 corr_dynamic [mix]: send cut vs (a) 21.7%, p95 imb_b 1.301 (a: 1.392) -> GO
+- G16 R1 corr_static [tasks]: send cut vs (a) 17.4%, p95 imb_b 4.072 (a: 1.757) -> no-go
+- G16 R1 corr_static [mix]: send cut vs (a) 19.6%, p95 imb_b 4.017 (a: 1.807) -> no-go
+- G16 R1 corr_dynamic [tasks]: send cut vs (a) 17.0%, p95 imb_b 2.411 (a: 1.757) -> no-go
+- G16 R1 corr_dynamic [mix]: send cut vs (a) 18.4%, p95 imb_b 2.387 (a: 1.807) -> no-go
+- G16 R2 corr_static [tasks]: send cut vs (a) 17.0%, p95 imb_b 3.984 (a: 1.706) -> no-go
+- G16 R2 corr_static [mix]: send cut vs (a) 19.1%, p95 imb_b 3.904 (a: 1.742) -> no-go
+- G16 R2 corr_dynamic [tasks]: send cut vs (a) 17.3%, p95 imb_b 1.805 (a: 1.706) -> no-go
+- G16 R2 corr_dynamic [mix]: send cut vs (a) 18.1%, p95 imb_b 1.781 (a: 1.742) -> GO
+- G16 R5 corr_static [tasks]: send cut vs (a) 15.5%, p95 imb_b 3.671 (a: 1.519) -> no-go
+- G16 R5 corr_static [mix]: send cut vs (a) 17.4%, p95 imb_b 3.650 (a: 1.548) -> no-go
+- G16 R5 corr_dynamic [tasks]: send cut vs (a) 18.7%, p95 imb_b 1.276 (a: 1.519) -> GO
+- G16 R5 corr_dynamic [mix]: send cut vs (a) 19.4%, p95 imb_b 1.282 (a: 1.548) -> GO
+- G32 R1 corr_static [tasks]: send cut vs (a) 15.0%, p95 imb_b 4.637 (a: 2.260) -> no-go
+- G32 R1 corr_static [mix]: send cut vs (a) 16.4%, p95 imb_b 4.793 (a: 2.335) -> no-go
+- G32 R1 corr_dynamic [tasks]: send cut vs (a) 14.1%, p95 imb_b 1.910 (a: 2.260) -> no-go
+- G32 R1 corr_dynamic [mix]: send cut vs (a) 14.2%, p95 imb_b 1.879 (a: 2.335) -> no-go
+- G32 R2 corr_static [tasks]: send cut vs (a) 14.1%, p95 imb_b 4.380 (a: 2.038) -> no-go
+- G32 R2 corr_static [mix]: send cut vs (a) 15.4%, p95 imb_b 4.449 (a: 2.191) -> no-go
+- G32 R2 corr_dynamic [tasks]: send cut vs (a) 14.8%, p95 imb_b 1.463 (a: 2.038) -> no-go
+- G32 R2 corr_dynamic [mix]: send cut vs (a) 14.8%, p95 imb_b 1.474 (a: 2.191) -> no-go

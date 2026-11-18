@@ -1,0 +1,17 @@
+13:20:10 E 288 K 8 layers 42 sets ['code', 'mix'] {'code': 3419, 'mix': 53617}
+13:20:45 calib matrices done
+13:21:36 G8 primaries ready (51s)
+13:21:38 G8_R0_default 3s  mix: sends 4.641 imb 1.163 imb_b p50/p95 1.3249744233630953/1.4928181966145833
+13:21:42 G8_R0_corr_static 3s  mix: sends 3.707 imb 1.799 imb_b p50/p95 2.286923363095238/2.95794677734375
+13:21:42 wrote /tmp/ecorr-copies-20261118/parity_glm.json
+
+## parity_glm.json.ckpt  (E=288, layers=42)
+
+Simulated replay on holdout. 'tasks' = mean over task types for sends/imb; imb_b p50/p95 over full 2048-token batches pooled across task types (full batches per set: {'code': 1, 'mix': 26}). 'mix' = mix holdout (task-ordered concatenation, so its batches are mostly single-task). vs (a) = vs DefaultEplbPolicy at the same R.
+
+| G | R | policy | sends tasks | vs (a) | imb tasks | imb_b p50/p95 tasks | sends mix | vs (a) | imb mix | imb_b p50/p95 mix | kappa p50/p95 mix | kappa_slot p95 mix | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 8 | 0 | default | 4.655 | +0.0% | 1.276 | 1.288/1.288 | 4.641 | +0.0% | 1.163 | 1.325/1.493 | 3.035/5.086 | 5.086 |  |
+| 8 | 0 | corr_static | 4.012 | -13.8% | 1.598 | 1.629/1.629 | 3.707 | -20.1% | 1.799 | 2.287/2.958 | 3.035/5.086 | 5.086 |  |
+
+Go/no-go (fixed before results: >= 15% fewer sends than (a) at the same R AND p95 batch imbalance <= 1.15 or <= (a)+0.05; judged on task-pooled batches and on mix):
