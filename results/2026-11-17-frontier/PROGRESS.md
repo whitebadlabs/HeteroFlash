@@ -15,11 +15,12 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
   tau0.04 +0.0055 (SE 0.0014)/0.030/94.9%: inside the bar on all three, close to base (+0.0044/0.027/95.0%).
   k7tau0.04 +0.0112 (SE 0.0017)/0.040/93.8%: dNLL and KLD inside the bar, top-1 0.2 pt under. fq2 DONE 22:03 PT.
 
-## Running
-- **Speed boot f3** (= f2 config + `--kv-cache-memory-bytes 8181829386`, i.e. f1's 7.62 GiB / 302,193-token KV cache),
-  `tmux -L hfrt` session `f3`, boot log `/srv/vllm-research/work/cache/r17/f3.log`; then the same 5 points x 3 rounds
-  (session `f3pts`, log `f3_points.log`). Stop with `touch results/2026-11-17-dualrt/f3.stop`.
-- MaxQ expert server `es` still up (needed by f3).
+## Done since the 19:19 outage
+- fq2 quality: k7, tau0.04, k7tau0.04 scored (commits 4d9c682, b805915, 696a026).
+- f2 speed boot: anchor failed (KV cache smaller), kept unused (99b7872).
+- **f3 speed boot** (KV pinned to f1's 302,193 tokens), 3 rounds, all 15 req (measured): kdaoff 22.81, tau0.08_kdaoff 26.30,
+  k7 25.62, tau0.04 24.32, k7tau0.04 25.75. Anchor tau0.08 ok (-0.09); kdaoff -0.40, all in cold round 1 (20.88, then 23.83/24.01).
+- **README.md** in this dir: frontier table + recommendation (k7 25.6 tok/s at the bar; tau0.04 24.3 strictly inside).
 
 ## f2 speed boot (22:19-23:22 PT): ANCHOR FAILED, points not trusted
 - f2 aggregate (all 15 req, measured): kdaoff 21.33 (f1 23.21, miss 1.88), tau0.08_kdaoff 26.26 (f1 26.39, ok),
@@ -33,9 +34,9 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
 - 19:19 outage handling: k7 partial in `partial_fq2_pre1919/` (unused); fq2 resumed 19:39 with the unscored passes only (fq2b.log).
 
 ## Next
-1. (running as f3, see above) Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
+1. DONE (as f3) Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
    (3 rounds). If the anchors miss f1 by more than 0.3 tok/s, do not trust the new points.
-2. Final frontier summary (README in this dir) + task 35 post.
+2. DONE Final frontier summary (README in this dir) + task 35 post.
 3. Stop `es` on the MaxQ. Then the PR #64825 slowed-CPU rerun (task 6) on the MaxQ. Then SendMessage "MAXQ RELEASED".
    Then FlashInfer #9464 rerun on the Spark (task 2).
 
