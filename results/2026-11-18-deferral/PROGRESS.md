@@ -152,3 +152,11 @@ Exact next steps:
   Subset->full calibration differs: k7 x1.4 (0.027 -> 0.038), defall x1.09 (0.407 -> 0.444); use ~1.1-1.4 when reading dq3.
 - 14:20 PT dq3 started (dq3c). Queued d3 speed chain (tmux -L hfrt d3c, bench/dualrt/run_d3_chain.sh, log cache/r18/d3c.log):
   waits DQ3_DONE, boots d3 (HF_SPLIT_DEFER=1, KV pinned), WARMUP + 3 rounds of k7/k7_a05/k6/k6_a05/k5/k5_a05 -> d3_speed.jsonl, D3_DONE.
+
+- 15:41 PT dq3 DONE (7-chunk subset, agree MNBT=4; vs Q8 dNLL / KLD / top-1; worst domain; paired vs k7):
+  k7 +0.0071 / 0.027 / 95.2%; k6 +0.0093 / 0.042 / 93.7% (knowledge_qa 0.062); k5 +0.0282 / 0.079 / 90.8% (instr 0.150, paired 0.056).
+  Deferral of 10-11 layers at A 0.35: dQ1 (3-12) 0.159, dQ2 (13-22) 0.132, dQ3 (23-32) 0.085, dQ4 (33-43) 0.128; even 0.191, odd 0.264
+  (even+odd 0.455 vs defer-all 0.402: roughly additive, slightly super-additive per half).
+  STOP RULE APPLIED: only one 10-layer group (dQ3) is under 0.1 on the subset, and at x1.1-1.4 subset->full it lands at
+  ~0.09-0.12, i.e. on the bar with nothing left for anything else. => Deferral is a NO-GO for HeteroFlash; per-layer A is not built.
+  k5: subset 0.079 x1.4 ~ 0.11 full and instruction_following 0.150 => likely fails 0.1; full eval only if d3 shows k5 well ahead of k6.
