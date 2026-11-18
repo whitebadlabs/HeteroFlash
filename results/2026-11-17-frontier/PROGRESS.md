@@ -10,12 +10,17 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
 - Lossless: MaxQ i40e coalescing off (temporary, restored): KDA off 24.7, top-4 30.4.
 - Quality, boot fq1 (agree mode, 41 chunks vs Q8 proxy): base +0.0044/0.027/95.0%; top-6 +0.0181/0.059/92.4%;
   top-4 +0.0886/0.156/86.9%; top-4 renorm +0.1234/0.174/86.6%.
+- Quality, boot fq2 (same method): tau0.08 +0.0313 (SE 0.0022)/0.077/91.4% (fq2.log, e98224b);
+  k7 +0.0099 (SE 0.0016)/0.037/93.9% (fq2b.log, 19:39 resume): dNLL and KLD inside the bar, top-1 0.1 pt under it.
 
 ## Running
-- **fq2 quality boot** on the Spark, `tmux -L hfrt` session `fq2`, log `results/2026-11-17-frontier/fq2.log`.
-  Passes: tau0.08, k7, tau0.04, k7tau0.04 (~40 min each after a ~13 min boot).
-  The pre-outage partial (tau0.08, chunk 16/41) is kept in `partial_fq2_pre1653/`. Do not use it.
-- **MaxQ expert server** (CPU only), `tmux -L hfrt` session `es` on the MaxQ, log `/srv/cache/heteroflash/dualrt/es_f1.log`.
+- 19:19 PT power cut (3rd today): k7 was cut at chunk 16/41; its partial is in `partial_fq2_pre1919/` (with fq2.log, fq2_stats.json,
+  fq2_serve.log as of the cut). Do not use it. tau0.08 had completed and is committed (e98224b).
+- **fq2 quality boot, resumed 19:39 PT** on the Spark, `tmux -L hfrt` session `fq2`, log `results/2026-11-17-frontier/fq2b.log`.
+  Remaining passes only: k7 (done 20:34 PT), tau0.04 (running), k7tau0.04 (~40 min each after a ~13 min boot). fq2.log keeps the tau0.08 pass.
+  The pre-16:53 partial (tau0.08, chunk 16/41) stays in `partial_fq2_pre1653/`. Do not use it.
+- **MaxQ expert server** (CPU only), `tmux -L hfrt` session `es` on the MaxQ, restarted 19:37 PT, log
+  `/srv/cache/heteroflash/dualrt/es_f1.log` (pre-cut log copied to es_f1_pre1919.log).
 
 ## Next
 1. Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
@@ -29,10 +34,14 @@ MaxQ expert server (wait for "listening on 47201", ~2 min):
 ```
 cd /srv/cache/heteroflash/runtime-v1 && tmux -L hfrt new -d -s es "HF_ALT_GGUF=/srv/models/gguf/GLM-5.3-Flash-Q8attn-q3_Kimexp.gguf HF_ALT_IDX=/srv/cache/heteroflash/dualrt/q3_Kimexp.idx HF_ALT_LAYERS=26,27,28,29,30,31,33,34,36,38,40,41,42,43,44 HF_DENSE_PACK=/srv/cache/heteroflash/dualrt/dense_lmh_kda32.pack HF_BIND=WS_LINK_IP OMP_NUM_THREADS=32 OMP_PLACES=cores OMP_PROC_BIND=close OMP_WAIT_POLICY=active /srv/cache/heteroflash/dualrt/expert_server_gguf_v5 serve 47201 /srv/models/gguf/GLM-5.3-Flash-Q8attn-G0_q4kimexp.gguf q4k_experts.idx 2>&1 | tee /srv/cache/heteroflash/dualrt/es_f1.log"
 ```
-Quality boot (Spark; reusing the tag wipes the old capture dir):
+Quality boot (Spark; reusing the tag wipes the old capture dir). Relaunch ONLY the passes that have no
+q_fq2_<pass>_vs_q8_bal.json yet, and write a NEW log file (fq2.log holds tau0.08, fq2b.log the 19:39 resume).
+First move any partial q_fq2_<pass>_* files + results/2026-11-17-dualrt/fq2_{stats.json,serve.log} into partial_fq2_pre<HHMM>/.
+As launched 19:39 PT:
 ```
-H=/srv/vllm-research/work/HeteroFlash; tmux -L hfrt new -d -s fq2 "QTAG=fq2 bash $H/bench/dualrt/run_frontier_quality.sh \"tau0.08|8 0.08 0|none|1 0 0\" \"k7|7 0 0|none|1 0 0\" \"tau0.04|8 0.04 0|none|1 0 0\" \"k7tau0.04|7 0.04 0|none|1 0 0\" > $H/results/2026-11-17-frontier/fq2.log 2>&1"
+H=/srv/vllm-research/work/HeteroFlash; tmux -L hfrt new -d -s fq2 "QTAG=fq2 bash $H/bench/dualrt/run_frontier_quality.sh \"k7|7 0 0|none|1 0 0\" \"tau0.04|8 0.04 0|none|1 0 0\" \"k7tau0.04|7 0.04 0|none|1 0 0\" > $H/results/2026-11-17-frontier/fq2b.log 2>&1"
 ```
+A pass counts only with "logits files: 41" and chunks_scored == chunks_total == 41.
 Speed boot: `tmux -L hfrt new -d -s f2 "bash $H/bench/dualrt/boot_frontier.sh f2 > /srv/vllm-research/work/cache/r17/f2.log 2>&1"`,
 then `TAG=f2 POINTS_ONLY="..." ROUNDS=3 bash bench/dualrt/run_f1_points.sh`, stop with `touch results/2026-11-17-dualrt/f2.stop`.
 Push to Forgejo from the NAS: `NAS_PATH`.
