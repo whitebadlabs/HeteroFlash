@@ -13,18 +13,18 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
 - Quality, boot fq2 (same method): tau0.08 +0.0313 (SE 0.0022)/0.077/91.4% (fq2.log, e98224b);
   k7 +0.0099 (SE 0.0016)/0.037/93.9% (fq2b.log, 19:39 resume): dNLL and KLD inside the bar, top-1 0.1 pt under it.
   tau0.04 +0.0055 (SE 0.0014)/0.030/94.9%: inside the bar on all three, close to base (+0.0044/0.027/95.0%).
+  k7tau0.04 +0.0112 (SE 0.0017)/0.040/93.8%: dNLL and KLD inside the bar, top-1 0.2 pt under. fq2 DONE 22:03 PT.
 
 ## Running
-- 19:19 PT power cut (3rd today): k7 was cut at chunk 16/41; its partial is in `partial_fq2_pre1919/` (with fq2.log, fq2_stats.json,
-  fq2_serve.log as of the cut). Do not use it. tau0.08 had completed and is committed (e98224b).
-- **fq2 quality boot, resumed 19:39 PT** on the Spark, `tmux -L hfrt` session `fq2`, log `results/2026-11-17-frontier/fq2b.log`.
-  Remaining passes only: k7 (done 20:34 PT), tau0.04 (done 21:19 PT), k7tau0.04 (running) (~40 min each after a ~13 min boot). fq2.log keeps the tau0.08 pass.
-  The pre-16:53 partial (tau0.08, chunk 16/41) stays in `partial_fq2_pre1653/`. Do not use it.
-- **MaxQ expert server** (CPU only), `tmux -L hfrt` session `es` on the MaxQ, restarted 19:37 PT, log
-  `/srv/cache/heteroflash/dualrt/es_f1.log` (pre-cut log copied to es_f1_pre1919.log).
+- **Speed boot f2** on the Spark (spec mode, NIC defaults: EEE on, MaxQ coalescing adaptive 50/50, as f1), `tmux -L hfrt`
+  session `f2`, boot log `/srv/vllm-research/work/cache/r17/f2.log`; points k7_kdaoff tau0.04_kdaoff k7tau0.04_kdaoff +
+  anchors kdaoff tau0.08_kdaoff, 3 interleaved rounds (session `f2pts`, log `results/2026-11-17-frontier/f2_points.log`).
+  Anchors from f1_frontier_speed.json (all 15 req): kdaoff 23.21, tau0.08_kdaoff 26.39 tok/s; miss by >0.3 = don't trust.
+- MaxQ expert server `es` still up (needed by f2).
+- 19:19 outage handling: k7 partial in `partial_fq2_pre1919/` (unused); fq2 resumed 19:39 with the unscored passes only (fq2b.log).
 
 ## Next
-1. Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
+1. (running) Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
    (3 rounds). If the anchors miss f1 by more than 0.3 tok/s, do not trust the new points.
 2. Final frontier summary (README in this dir) + task 35 post.
 3. Stop `es` on the MaxQ. Then the PR #64825 slowed-CPU rerun (task 6) on the MaxQ. Then SendMessage "MAXQ RELEASED".

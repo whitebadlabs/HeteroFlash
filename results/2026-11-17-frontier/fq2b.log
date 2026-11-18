@@ -8,3 +8,6 @@
 05:19:34Z tau0.04 logits files: 41
 {"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.029737262055277824, "kld_p99": 0.42744502425193787, "dnll_mean": 0.005478385370224714, "dnll_se": 0.0014413460627844185, "same_top": 0.9485968947410583}
 05:20:52Z pass k7tau0.04: drop [7 0.04 0] alt [none] gates [1 0 0]
+06:02:02Z k7tau0.04 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.040236346423625946, "kld_p99": 0.528327226638794, "dnll_mean": 0.011236054822802544, "dnll_se": 0.0016609511574797288, "same_top": 0.9382733702659607}
+06:03:14Z DONE fq2
