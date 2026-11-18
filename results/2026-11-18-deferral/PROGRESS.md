@@ -100,3 +100,47 @@ Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; MaxQ NIC coales
   0.1 budget after calibrating subset -> full with dq2 k7, deferral is a no-go (best case ~+1 tok/s) and per-layer A
   is not built.
 - 11:58 PT d2 pooled (rounds 1-3, d2_speed.jsonl): k7 26.44, k6 27.70, k7_late8 24.20, k6_late 23.57 tok/s; k6_late not added to dq2. dq2 booting.
+- 12:52 PT dq2 k7 full (41/41, MNBT=4): KLD 0.0378, dNLL +0.0096 (frontier fq2 k7 MNBT16: 0.037/+0.0099), so MNBT does not change non-deferred quality and frontier full-eval drop-K numbers are reusable. Subset/full calibration for k7: 0.027 -> 0.038.
+
+## HANDOVER 2026-11-18 12:56 PT (researcher session -> "Topic: Expert Correlation Research" lane)
+Running now, unattended (Spark, tmux -L hfrt; never touch tmux main):
+- `d2c` = bench/dualrt/run_d2_chain.sh (log cache/r18/d2c.log). d2 speed done (d2_speed.jsonl). Now in dq2 (full 41
+  chunks, agree MNBT=4, KEEPCAP=k7, ~42 min/pass, log dq2.log): k7 DONE (KLD 0.0378, dNLL +0.0096, 41/41);
+  k7_late8 started 20:52Z (ends ~13:35 PT); then k7_defall_a035 (~14:20 PT); then `CHAIN_DONE` in d2c.log.
+  The chain's MaxQ GPU check from the Spark fails (no ssh Spark->MaxQ); check from the NAS: `ssh maxq nvidia-smi`
+  (12:50 PT: both MaxQ GPUs idle; es up in tmux -L hfrt on the MaxQ, 239 GB RAM free).
+- `dq3c` = bench/dualrt/run_dq3_chain.sh (log cache/r18/dq3c.log): waits for CHAIN_DONE, then dq3 = 7-chunk subset,
+  agree MNBT=4, KEEPCAP=k7 -> dq3.log, ends `DQ3_DONE` (~9 passes x ~7.5 min + boot, ~15:40 PT):
+  k7, k6, k5 (A 0.7); k7 + deferral at A 0.35 of layers 3-12 (dQ1) / 13-22 (dQ2) / 23-32 (dQ3) / 33-43 (dQ4) /
+  even (deven) / odd (dodd). even + odd vs defer-all (subset 0.402 paired) = additivity check.
+Tools: `python3 bench/dualrt/defer_table.py results/2026-11-18-deferral dq3 k7 k7 k6 k5 k7_dQ1 ...` prints
+dNLL/KLD/top-1, worst domain, code, paired KLD (same for dq2 with ref k7).
+
+Findings so far (all measured):
+- Defer-all fails KLD < 0.1 at every A (subset 0.31/0.41/0.45 at A 0.7/0.35/0.28); lower A defers more, so an A sweep
+  below 0.35 cannot help. Not run, on purpose.
+- Late experts keep quality but lose speed (k7_late8 24.2, k6_late 23.6 vs k7 26.4): out.
+- Under KLD < 0.1 the drop-K axis reopens: frontier full-eval k6 KLD 0.059 / dNLL +0.0181 / top-1 92.4%, but
+  instruction_following 0.103 (> 0.1); speed k6 27.70 vs k7 26.44 same boot (d2). k5 quality never measured (dq3).
+- Free lever: balance rule A 0.5 without deferral, k7 27.65 vs 26.61 at A 0.7 (d1 same boot); A alone does not change
+  quality (dq1 paired k7_a035 0.0161 vs k7 0.0160). Not yet combined with k6/k5.
+- No tool-calling domain in q_eval_balanced_v1; code (MBPP) is the closest. Flag in the README.
+- Old 0.042 bar: inside it only k7 (0.038 full) and tau0.04; k7 at A 0.5 should be the fastest point inside 0.042
+  (needs the d3 confirmation below).
+
+Stop rule (fixed before dq3 results): calibrate subset -> full with k7 (0.027 -> 0.038, x1.4). If fewer than ~10
+deferred layers fit under 0.1 (full), deferral is a no-go (best case ~+1 tok/s, ~0.4% per deferred layer) and per-layer
+A is not built. If a layer subset fits: per-layer A is needed for speed (blocking is uniform per layer at global A 0.35);
+a ready, compiled (not yet unit-tested) hook patch is at /srv/vllm-research/work/cache/r18/perlayer/sitecustomize.py (copy committed at bench/dualrt/hook_perlayer/)
+(`ab` becomes [nl,2]; drt_ab.req "A B [json {layer: A}]"; assign gets b["ab"][li]). Test with bench/dualrt/test_defer.py
+before copying into bench/dualrt/hook/, and only when no boot is running.
+
+Exact next steps:
+1. After DQ3_DONE: defer_table.py on dq2 and dq3; post results to task 36.
+2. d3 speed boot (spec, KV pinned; see "How to relaunch", tag d3, HF_SPLIT_DEFER=1): WARMUP=1 + 3 interleaved rounds
+   via run_defer_points2.sh: k7 A0.7 (ref), k7 A0.5, k6 A0.7, k6 A0.5, k5 A0.7, k5 A0.5 (+ any deferral candidate
+   with per-layer A). Entries "name|K 0 0|DEFER|A -1|0".
+3. dq4 full 41-chunk quality for finalists (k5 if subset k5 x1.4 < 0.1; any deferral candidate; optionally k7 A0.5).
+4. README.md in the frontier format: fastest point with KLD < 0.1 (with the per-domain caveat: instruction_following
+   for k6), fastest inside 0.042, dNLL/top-1, per-domain, where 0.042 falls. Commit as Carmen Lok <lok@whitebad.com>, no
+   co-author; push with _admin/research/heteroflash/r17/push_forgejo.sh (Forgejo only). Final post on task 36, status done.

@@ -1,0 +1,7 @@
+19:58:25Z started dq2 (agree)
+20:09:12Z healthy; mem used 112 GiB
+20:10:25Z resident pool live; cuda free 5.5 / 130.7 GB
+20:10:30Z pass k7: drop [7 0 0] alt [none] gates [1 0 0] defer [none 0] ab [env] mnbt 4
+20:50:55Z k7 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunk_ids": null, "chunks_total": 41, "kld_mean": 0.03778528422117233, "kld_p99": 0.5072726011276245, "dnll_mean": 0.009634886868298054, "dnll_se": 0.0016169662264985082, "same_top": 0.9403476119041443}
+20:52:31Z pass k7_late8: drop [7 0 0] alt [none] gates [1 0 0] defer [none 1] ab [env] mnbt 4
