@@ -1,0 +1,4 @@
+{"point": "k6_late", "tok_s": 23.57, "ms_per_cycle": 124.9, "committed_per_cycle": 2.944, "moe_blocked_ms_per_window": 25.903, "round_trip_ms": 0.78, "server_ms": 0.637, "per_round_tok_s": [["1", 23.49], ["2", 23.41], ["3", 23.83]]}
+{"point": "k6", "tok_s": 27.7, "ms_per_cycle": 104.4, "committed_per_cycle": 2.891, "moe_blocked_ms_per_window": 5.9, "round_trip_ms": 0.855, "server_ms": 0.715, "per_round_tok_s": [["1", 27.82], ["2", 27.4], ["3", 27.89]]}
+{"point": "k7_late8", "tok_s": 24.2, "ms_per_cycle": 121.9, "committed_per_cycle": 2.95, "moe_blocked_ms_per_window": 16.643, "round_trip_ms": 0.722, "server_ms": 0.573, "per_round_tok_s": [["1", 24.16], ["2", 24.3], ["3", 24.15]]}
+{"point": "k7", "tok_s": 26.44, "ms_per_cycle": 110.3, "committed_per_cycle": 2.917, "moe_blocked_ms_per_window": 5.81, "round_trip_ms": 0.956, "server_ms": 0.814, "per_round_tok_s": [["1", 26.47], ["2", 26.42], ["3", 26.44]]}

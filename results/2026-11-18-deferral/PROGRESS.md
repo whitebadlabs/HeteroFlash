@@ -79,3 +79,24 @@ Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; MaxQ NIC coales
 - Next: d2 speed boot (DEFER+LATE, KV pinned): k7, k7_late8, k6, k6_late interleaved x3 (no warm-up kept). If k6_late
   beats same-boot k7 by > 0.5 tok/s it joins the full-length quality boot (dq2: FULL=1 MNBT=4 KEEPCAP=k7; k7, k7_late8,
   [k6_late], k7_defall_a035 last).
+- 11:05 PT d2 speed boot started (tmux -L hfrt d2, HF_SPLIT_DEFER=1 HF_SPLIT_LATE=1, KV pinned). Driver died ~11:13 PT
+  (Manager restart); resumed 11:17 PT. MaxQ GPUs idle (no compute apps), coalescing off (rx-usecs 0, adaptive off).
+- 11:17 PT chain launched so a driver death no longer stalls the study: `tmux -L hfrt d2c` runs
+  `bench/dualrt/run_d2_chain.sh` (log cache/r18/d2c.log): waits for READY d2 -> run_defer_points2.sh (now takes a 5th
+  field LATE and WARMUP=1) warm-up + 3 interleaved rounds of k7 / k7_late8 / k6 / k6_late (A 0.7) -> d2_points.log ->
+  stop d2 -> defer_agg.py rounds 1-3 -> d2_speed.jsonl -> dq2 (FULL=1 MNBT=4 KEEPCAP=k7: k7, k7_late8, [k6_late if
+  > same-boot k7 + 0.5 tok/s], k7_defall_a035 last) -> dq2.log, then CHAIN_DONE.
+- 11:39 PT Carmen (Model Fundamentals room): go/no-go is now **KLD < 0.1** vs Q8 (replaces the 0.042 control bar). Still
+  report dNLL, top-1 and per-domain (code especially), and where the old bar falls.
+- 11:48 PT researcher session took over. d2 rounds 1-2 (same boot, pooled later): k7 26.4, k7_late8 24.2, k6 27.8,
+  k6_late 23.5 tok/s. The late slot doubles decode requests (42 -> 83/window) and blocked time (5.8 -> 16.7 ms/window).
+  Not sweeping A below 0.35 for defer-all: dq1 KLD rises as A falls (0.31/0.41/0.45), so lower A cant reach 0.1.
+  Under 0.1 the drop-K axis reopens (frontier full-eval top-6 KLD 0.059; top-5 never measured).
+  Per-layer GPU blocking at k7 A0.35 without deferral is uniform (0.66-0.74 ms/layer, d1_k7_a035_r4_waits.json), so
+  any layer subset needs a per-layer A to turn its deferral into speed (global A makes the other layers block).
+- 11:48 PT queued `bench/dualrt/run_dq3_chain.sh` (tmux -L hfrt dq3c, log cache/r18/dq3c.log): waits for CHAIN_DONE,
+  then dq3 = 7-chunk subset, agree MNBT=4, KEEPCAP=k7: k7, k6, k5 (A 0.7), k7 + deferral of 3-12 / 13-22 / 23-32 /
+  33-43 / even / odd (A 0.35) -> dq3.log. Stop rule (set before results): if fewer than ~10 deferred layers fit the
+  0.1 budget after calibrating subset -> full with dq2 k7, deferral is a no-go (best case ~+1 tok/s) and per-layer A
+  is not built.
+- 11:58 PT d2 pooled (rounds 1-3, d2_speed.jsonl): k7 26.44, k6 27.70, k7_late8 24.20, k6_late 23.57 tok/s; k6_late not added to dq2. dq2 booting.
