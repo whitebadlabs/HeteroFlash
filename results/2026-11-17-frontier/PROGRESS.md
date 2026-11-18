@@ -20,7 +20,9 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
 - f2 speed boot: anchor failed (KV cache smaller), kept unused (99b7872).
 - **f3 speed boot** (KV pinned to f1's 302,193 tokens), 3 rounds, all 15 req (measured): kdaoff 22.81, tau0.08_kdaoff 26.30,
   k7 25.62, tau0.04 24.32, k7tau0.04 25.75. Anchor tau0.08 ok (-0.09); kdaoff -0.40, all in cold round 1 (20.88, then 23.83/24.01).
-- **README.md** in this dir: frontier table + recommendation (k7 25.6 tok/s at the bar; tau0.04 24.3 strictly inside).
+- **README.md** in this dir: frontier table + recommendation (k7 25.7 tok/s warm, +7.5% same boot, at the bar by my reading; tau0.04 +1.6% only).
+  Corrected 2026-11-18 after review: gains vs the warm same-boot kdaoff (23.9), anchor rule not met cleanly, base quality row is KDA off.
+  Open follow-up: clean f3 confirmation with a warm-up point (needs es + boot).
 
 ## Step 3 DONE (2026-11-18)
 - `es` stopped 00:28 PT. PR #64825 slowed-CPU rerun ran on MaxQ GPU 0 00:29-01:35 PT. Results and draft are in
@@ -63,7 +65,7 @@ As launched 19:39 PT:
 H=/srv/vllm-research/work/HeteroFlash; tmux -L hfrt new -d -s fq2 "QTAG=fq2 bash $H/bench/dualrt/run_frontier_quality.sh \"k7|7 0 0|none|1 0 0\" \"tau0.04|8 0.04 0|none|1 0 0\" \"k7tau0.04|7 0.04 0|none|1 0 0\" > $H/results/2026-11-17-frontier/fq2b.log 2>&1"
 ```
 A pass counts only with "logits files: 41" and chunks_scored == chunks_total == 41.
-Speed boot: `tmux -L hfrt new -d -s f2 "bash $H/bench/dualrt/boot_frontier.sh f2 > /srv/vllm-research/work/cache/r17/f2.log 2>&1"`,
+Speed boot (pin the KV cache, see f2; run one throwaway warm-up point first): `tmux -L hfrt new -d -s f3 "EXTRA_ARGS=\"--kv-cache-memory-bytes 8181829386\" bash $H/bench/dualrt/boot_frontier.sh f3 > /srv/vllm-research/work/cache/r17/f3.log 2>&1"`,
 then `TAG=f2 POINTS_ONLY="..." ROUNDS=3 bash bench/dualrt/run_f1_points.sh`, stop with `touch results/2026-11-17-dualrt/f2.stop`.
 Push to Forgejo from the NAS: `NAS_PATH`.
 Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; NIC toggles are temporary and the restore is verified.

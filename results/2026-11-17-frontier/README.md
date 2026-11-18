@@ -14,8 +14,8 @@ Every lever below is a run-time switch on one boot, so speed points are interlea
 
 | point (KDA split off unless noted) | tok/s | dNLL (SE) | KLD | top-1 | vs bar |
 |---|---|---|---|---|---|
-| base, KDA split on | 20.8 (f1) | +0.0044 (0.0014) | 0.027 | 95.0% | inside (lossless) |
-| kdaoff | 23.2 (f1); 22.8 (f3) | lossless (same math) | | | inside |
+| base, KDA split on | 20.8 (f1) | +0.0044 (11-17 split run, bf16 exchange) | | | inside |
+| kdaoff (lossless reference) | 23.2 (f1); 23.9 (f3 rounds 2-3; 22.8 incl. cold round 1) | +0.0044 (0.0014) | 0.027 | 95.0% | inside |
 | kdaoff + MaxQ i40e coalescing off | 24.7 (f1, ABBA) | lossless | | | inside |
 | **tau0.04** (drop routed experts with weight < 0.04) | **24.3 (f3)** | +0.0055 (0.0014) | 0.030 | 94.9% | **inside** |
 | **k7** (top-7 of 8 experts) | **25.6 (f3)** | +0.0099 (0.0016) | 0.037 | 93.9% | **at the bar** (top-1 0.1 pt under) |
@@ -44,16 +44,25 @@ Speed files: `f1_frontier_speed.json`, `f3_frontier_speed.json`. Quality files: 
 
 ## Recommendation
 
-- **Best point at the control bar: k7 + KDA split off, 25.6 tok/s measured.** That is +10% over lossless kdaoff on the same boot (22.8, or 23.2 on f1).
+Same-boot comparison on f3 rounds 2-3 (warm; measured): kdaoff 23.9, tau0.04 24.3, k7 25.7, k7tau0.04 25.6, tau0.08 26.4.
+
+- **Best point at the control bar: k7 + KDA split off, 25.7 tok/s.**
+  - That is about +1.8 tok/s (+7.5%) over lossless kdaoff on the same boot. Against f1's kdaoff (23.2) it is +10%.
   - dNLL +0.0099 and KLD 0.037 are inside the bar.
-  - top-1 93.9% vs 94.0% is within one SE.
-- **Strictly inside the bar on every metric: tau0.04, 24.3 tok/s** (+6.5% same boot). Its quality is almost the base's.
-- k7 + tau0.04 adds nothing over k7: +0.1 tok/s, within noise, for slightly worse quality.
+  - top-1 93.9% vs 94.0% fails the strict all-three rule by 0.1 pt. Calling it "at the bar" is my reading, based on a top-1 SE of about 0.12 pt.
+- **Strictly inside on every metric: tau0.04**, but it buys almost nothing. It is +0.4 tok/s (+1.6%) on the same boot, inside the ±0.5 measurement band.
+- k7 + tau0.04 adds nothing over k7.
+- **Anchor rule not met cleanly on f3.**
+  - kdaoff is -0.40 vs f1 pooled (cold round 1) and about +0.7 on warm rounds. tau0.08 matches f1 within 0.1.
+  - Read the f3 numbers as same-boot comparisons.
+  - A clean confirmation needs `es` and a boot again: one throwaway warm-up point first, then the 5 points.
 - Add the lossless lever, MaxQ i40e interrupt coalescing off.
   - Measured: +1.4 tok/s on kdaoff, +2.6 on top-4.
   - Not yet measured with k7. **Modeled** k7 + coalescing off: ~27 tok/s.
   - Making it permanent is a NIC setting on the MaxQ, so it needs Carmen's OK.
-- Everything faster than ~26 tok/s costs quality past the bar: top-6, tau0.08, top-5, top-4. This frontier is flat. Within the bar, accuracy-for-speed buys about +10%, nowhere near the 80 tok/s goal. The remaining gap is the per-cycle floor (~100-115 ms with ~2.9 tokens committed per cycle): exchange latency plus CPU expert time.
+- Everything faster than ~26 tok/s costs quality past the bar: top-6, tau0.08, top-5, top-4.
+- Within the bar, trading accuracy buys about +7-10%, nowhere near the 80 tok/s goal. The limit is the per-cycle floor (~100-115 ms at ~2.9 tokens committed per cycle): exchange latency plus CPU expert time.
+- Speed-boot note: pin the KV cache with `EXTRA_ARGS="--kv-cache-memory-bytes 8181829386"`. f2 came up 24% smaller at the same utilisation; the cause is not yet explained.
 
 ## Outages
 
