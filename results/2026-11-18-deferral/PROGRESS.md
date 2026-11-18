@@ -144,3 +144,11 @@ Exact next steps:
 4. README.md in the frontier format: fastest point with KLD < 0.1 (with the per-domain caveat: instruction_following
    for k6), fastest inside 0.042, dNLL/top-1, per-domain, where 0.042 falls. Commit as Carmen Lok <lok@whitebad.com>, no
    co-author; push with _admin/research/heteroflash/r17/push_forgejo.sh (Forgejo only). Final post on task 36, status done.
+
+- 14:20 PT (lane session) dq2 DONE, full 41 chunks, agree MNBT=4 (vs Q8: dNLL / KLD / top-1; worst domain; code; paired vs k7):
+  k7 +0.0096 / 0.038 / 94.0%, instr 0.060, code 0.034 / 97.2%.
+  k7_late8 +0.0087 / 0.030 / 94.5%, instr 0.039, code 0.028 / 97.0%, paired 0.0268 (quality ok, but 24.2 tok/s: out on speed).
+  k7_defall_a035 +0.3575 / 0.444 / 77.2%, long_context 0.629, code 0.451 / 84.3%, paired 0.432. Fails KLD < 0.1.
+  Subset->full calibration differs: k7 x1.4 (0.027 -> 0.038), defall x1.09 (0.407 -> 0.444); use ~1.1-1.4 when reading dq3.
+- 14:20 PT dq3 started (dq3c). Queued d3 speed chain (tmux -L hfrt d3c, bench/dualrt/run_d3_chain.sh, log cache/r18/d3c.log):
+  waits DQ3_DONE, boots d3 (HF_SPLIT_DEFER=1, KV pinned), WARMUP + 3 rounds of k7/k7_a05/k6/k6_a05/k5/k5_a05 -> d3_speed.jsonl, D3_DONE.
