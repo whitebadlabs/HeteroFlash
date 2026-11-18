@@ -1,0 +1,8 @@
+{"point": "k7_a05", "tok_s": 27.72, "ms_per_cycle": 105.7, "committed_per_cycle": 2.931, "moe_blocked_ms_per_window": 9.61, "round_trip_ms": 1.105, "server_ms": 0.963, "per_round_tok_s": [["2", 27.72]]}
+{"point": "k7_defall_a02", "tok_s": 32.65, "ms_per_cycle": 83.6, "committed_per_cycle": 2.73, "moe_blocked_ms_per_window": 12.4, "round_trip_ms": 1.566, "server_ms": 1.425, "per_round_tok_s": [["2", 32.65]]}
+{"point": "k7_defall_a035", "tok_s": 32.48, "ms_per_cycle": 85.2, "committed_per_cycle": 2.767, "moe_blocked_ms_per_window": 0.77, "round_trip_ms": 1.35, "server_ms": 1.192, "per_round_tok_s": [["2", 32.48]]}
+{"point": "k7_defall_a05", "tok_s": 28.79, "ms_per_cycle": 97.5, "committed_per_cycle": 2.808, "moe_blocked_ms_per_window": 0.27, "round_trip_ms": 1.128, "server_ms": 0.968, "per_round_tok_s": [["2", 28.79]]}
+{"point": "k7_defall", "tok_s": 27.12, "ms_per_cycle": 102.7, "committed_per_cycle": 2.784, "moe_blocked_ms_per_window": 0.185, "round_trip_ms": 0.974, "server_ms": 0.825, "per_round_tok_s": [["2", 27.15], ["3", 27.08]]}
+{"point": "k7", "tok_s": 26.78, "ms_per_cycle": 108.8, "committed_per_cycle": 2.913, "moe_blocked_ms_per_window": 5.81, "round_trip_ms": 0.957, "server_ms": 0.814, "per_round_tok_s": [["2", 26.81], ["3", 26.75]]}
+{"point": "kdaoff_defall", "tok_s": 25.42, "ms_per_cycle": 108.6, "committed_per_cycle": 2.762, "moe_blocked_ms_per_window": 0.165, "round_trip_ms": 1.082, "server_ms": 0.931, "per_round_tok_s": [["2", 25.35], ["3", 25.5]]}
+{"point": "kdaoff", "tok_s": 24.77, "ms_per_cycle": 115.8, "committed_per_cycle": 2.868, "moe_blocked_ms_per_window": 5.895, "round_trip_ms": 1.062, "server_ms": 0.917, "per_round_tok_s": [["2", 24.66], ["3", 24.89]]}
