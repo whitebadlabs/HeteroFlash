@@ -199,3 +199,13 @@ Parity: with R = 0 the copies code reproduces out/glm.json exactly.
 - Caveats: GLM pooled p95 is mostly long_context batches (14 of 20); "mix" batches are task-ordered, not interleaved.
 Reading: correlation-aware placement pays only together with a dynamic, per-batch replica planner (MegaFlux-style);
 the static version should be dropped. Next: a causal planner that uses the previous batch's counts, not the current one's.
+
+## Follow-up 2: causal copy planner (scripts/causal.py, results/causal/) - NO-GO
+A copy planner that sees only past batches (lag-1 or EMA 0.5) keeps the send cut but loses the balance. p95 batch
+imbalance is about the same as correlated placement with no copies (Qwen 8 GPUs R8: 1.63 vs 1.08 for the see-the-batch
+bound; GLM 16 GPUs R5: 2.41 vs 1.29). It fails the gate in all cells, on interleaved mixed-request streams (3 shuffles)
+and on per-task streams. Stricter reference: give Default the same see-the-batch planner. Then even the bound passes only on
+Qwen (8 GPUs R8, 16 R4, 32 R2: 17-22% fewer sends); on GLM it cuts 10-16% and fails p95. Every per-batch planner
+replaces 80-97% of its copy slots each batch (weights would move every step). R=0 parity with out/glm.json is exact.
+Open (inferred): 2048-token batches here are mostly prefill from 1-3 requests; in decode-heavy continuous batching,
+consecutive steps share most requests, so lag-1 could predict far better. Next: a decode-step stream with overlapping requests.
