@@ -1,0 +1,118 @@
+{
+ "f1:k4_kdaoff": {
+  "rounds": [
+   2,
+   3
+  ],
+  "essay": 36.47,
+  "all": 27.82,
+  "chat4": 24.55,
+  "hermes": 29.9
+ },
+ "f1:k5_kdaoff": {
+  "rounds": [
+   2,
+   3
+  ],
+  "essay": 34.8,
+  "all": 27.33,
+  "chat4": 24.06,
+  "hermes": 29.52
+ },
+ "f1:k6_kdaoff": {
+  "rounds": [
+   2,
+   3
+  ],
+  "essay": 31.84,
+  "all": 25.97,
+  "chat4": 23.39,
+  "hermes": 27.59
+ },
+ "f1:k6tau0.08_kdaoff": {
+  "rounds": [
+   2,
+   3
+  ],
+  "essay": 33.2,
+  "all": 27.82,
+  "chat4": 24.85,
+  "hermes": 29.87
+ },
+ "f1:kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 19.49,
+  "all": 23.37,
+  "chat4": 21.98,
+  "hermes": 25.14
+ },
+ "f1:tau0.08_kdaoff": {
+  "rounds": [
+   2,
+   3
+  ],
+  "essay": 24.11,
+  "all": 26.53,
+  "chat4": 24.58,
+  "hermes": 28.52
+ },
+ "f2:k7_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 25.92,
+  "all": 25.56,
+  "chat4": 23.35,
+  "hermes": 27.43
+ },
+ "f2:k7tau0.04_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 33.86,
+  "all": 24.93,
+  "chat4": 24.46,
+  "hermes": 24.52
+ },
+ "f2:kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 24.21,
+  "all": 22.69,
+  "chat4": 21.93,
+  "hermes": 23.12
+ },
+ "f2:tau0.04_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 21.81,
+  "all": 21.22,
+  "chat4": 21.58,
+  "hermes": 20.89
+ },
+ "f2:tau0.08_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": 31.11,
+  "all": 28.02,
+  "chat4": 26.04,
+  "hermes": 29.31
+ }
+}

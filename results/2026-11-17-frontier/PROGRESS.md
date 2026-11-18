@@ -16,15 +16,24 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
   k7tau0.04 +0.0112 (SE 0.0017)/0.040/93.8%: dNLL and KLD inside the bar, top-1 0.2 pt under. fq2 DONE 22:03 PT.
 
 ## Running
-- **Speed boot f2** on the Spark (spec mode, NIC defaults: EEE on, MaxQ coalescing adaptive 50/50, as f1), `tmux -L hfrt`
-  session `f2`, boot log `/srv/vllm-research/work/cache/r17/f2.log`; points k7_kdaoff tau0.04_kdaoff k7tau0.04_kdaoff +
-  anchors kdaoff tau0.08_kdaoff, 3 interleaved rounds (session `f2pts`, log `results/2026-11-17-frontier/f2_points.log`).
-  Anchors from f1_frontier_speed.json (all 15 req): kdaoff 23.21, tau0.08_kdaoff 26.39 tok/s; miss by >0.3 = don't trust.
-- MaxQ expert server `es` still up (needed by f2).
+- **Speed boot f3** (= f2 config + `--kv-cache-memory-bytes 8181829386`, i.e. f1's 7.62 GiB / 302,193-token KV cache),
+  `tmux -L hfrt` session `f3`, boot log `/srv/vllm-research/work/cache/r17/f3.log`; then the same 5 points x 3 rounds
+  (session `f3pts`, log `f3_points.log`). Stop with `touch results/2026-11-17-dualrt/f3.stop`.
+- MaxQ expert server `es` still up (needed by f3).
+
+## f2 speed boot (22:19-23:22 PT): ANCHOR FAILED, points not trusted
+- f2 aggregate (all 15 req, measured): kdaoff 21.33 (f1 23.21, miss 1.88), tau0.08_kdaoff 26.26 (f1 26.39, ok),
+  k7_kdaoff 23.11, tau0.04_kdaoff 21.05, k7tau0.04_kdaoff 23.96. `f2_frontier_speed.json`, `f2_points.log`.
+- Cause found: f2's KV cache was 230,589 tokens vs f1's 302,193 (non-torch memory +1.8 GiB at the same 0.84 util:
+  consumed 94.67 vs 92.85 GiB). Hermes long prompts then miss the prefix cache and re-prefill: short Hermes items take
+  ~5 s instead of ~0.9 s, while 300-token decode items match f1 (exchange per-request times are equal or lower than f1).
+  Prefix-cache hit rate on f2: 6377/19549 = 33%. The penalty depends on eviction order, so it hits points unequally.
+- f2 boot 1 (22:04 PT) failed at FULL CUDA-graph capture: the hook's 30 s stats-dump thread ran CUDA ops on a side
+  stream during capture. Race, same code as f1. Logs in `f2_bootfail_2217/`. Retry unchanged came up 22:36 PT.
 - 19:19 outage handling: k7 partial in `partial_fq2_pre1919/` (unused); fq2 resumed 19:39 with the unscored passes only (fq2b.log).
 
 ## Next
-1. (running) Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
+1. (running as f3, see above) Speed boot f2 (`boot_frontier.sh`) for k7 / tau0.04 / k7tau0.04, interleaved with the anchors kdaoff and tau0.08_kdaoff
    (3 rounds). If the anchors miss f1 by more than 0.3 tok/s, do not trust the new points.
 2. Final frontier summary (README in this dir) + task 35 post.
 3. Stop `es` on the MaxQ. Then the PR #64825 slowed-CPU rerun (task 6) on the MaxQ. Then SendMessage "MAXQ RELEASED".

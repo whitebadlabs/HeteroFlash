@@ -1,0 +1,237 @@
+{
+ "k7_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": {
+   "tok_s": 25.33,
+   "per_round": [
+    25.09,
+    25.92,
+    25.0
+   ],
+   "commit": 2.803,
+   "ms_cycle": 110.7
+  },
+  "chat4": {
+   "tok_s": 22.67,
+   "per_round": [
+    22.33,
+    23.33,
+    22.37
+   ],
+   "commit": 2.609,
+   "ms_cycle": 115.1
+  },
+  "hermes": {
+   "tok_s": 23.2,
+   "per_round": [
+    21.6,
+    27.13,
+    21.7
+   ],
+   "commit": 3.132,
+   "ms_cycle": 135.0
+  },
+  "all": {
+   "tok_s": 23.11,
+   "per_round": [
+    22.08,
+    25.41,
+    22.15
+   ],
+   "commit": 2.882,
+   "ms_cycle": 124.7
+  }
+ },
+ "k7tau0.04_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": {
+   "tok_s": 33.31,
+   "per_round": [
+    33.86,
+    33.22,
+    32.88
+   ],
+   "commit": 3.938,
+   "ms_cycle": 118.2
+  },
+  "chat4": {
+   "tok_s": 23.78,
+   "per_round": [
+    23.03,
+    24.14,
+    24.21
+   ],
+   "commit": 2.701,
+   "ms_cycle": 113.6
+  },
+  "hermes": {
+   "tok_s": 23.31,
+   "per_round": [
+    21.44,
+    24.36,
+    24.42
+   ],
+   "commit": 3.075,
+   "ms_cycle": 131.9
+  },
+  "all": {
+   "tok_s": 23.96,
+   "per_round": [
+    22.58,
+    24.69,
+    24.74
+   ],
+   "commit": 2.954,
+   "ms_cycle": 123.3
+  }
+ },
+ "kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": {
+   "tok_s": 22.22,
+   "per_round": [
+    21.55,
+    24.21,
+    21.15
+   ],
+   "commit": 2.586,
+   "ms_cycle": 116.4
+  },
+  "chat4": {
+   "tok_s": 21.38,
+   "per_round": [
+    21.5,
+    21.17,
+    21.47
+   ],
+   "commit": 2.617,
+   "ms_cycle": 122.4
+  },
+  "hermes": {
+   "tok_s": 21.18,
+   "per_round": [
+    20.28,
+    20.48,
+    23.0
+   ],
+   "commit": 3.147,
+   "ms_cycle": 148.6
+  },
+  "all": {
+   "tok_s": 21.33,
+   "per_round": [
+    20.83,
+    20.96,
+    22.25
+   ],
+   "commit": 2.876,
+   "ms_cycle": 134.9
+  }
+ },
+ "tau0.04_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": {
+   "tok_s": 21.7,
+   "per_round": [
+    21.78,
+    21.81,
+    21.52
+   ],
+   "commit": 2.438,
+   "ms_cycle": 112.3
+  },
+  "chat4": {
+   "tok_s": 21.3,
+   "per_round": [
+    21.41,
+    21.3,
+    21.19
+   ],
+   "commit": 2.576,
+   "ms_cycle": 121.0
+  },
+  "hermes": {
+   "tok_s": 20.79,
+   "per_round": [
+    20.83,
+    20.7,
+    20.83
+   ],
+   "commit": 3.168,
+   "ms_cycle": 152.4
+  },
+  "all": {
+   "tok_s": 21.05,
+   "per_round": [
+    21.12,
+    21.01,
+    21.02
+   ],
+   "commit": 2.852,
+   "ms_cycle": 135.5
+  }
+ },
+ "tau0.08_kdaoff": {
+  "rounds": [
+   1,
+   2,
+   3
+  ],
+  "essay": {
+   "tok_s": 24.45,
+   "per_round": [
+    17.5,
+    31.11,
+    29.94
+   ],
+   "commit": 2.639,
+   "ms_cycle": 107.9
+  },
+  "chat4": {
+   "tok_s": 25.19,
+   "per_round": [
+    25.84,
+    25.15,
+    24.61
+   ],
+   "commit": 2.633,
+   "ms_cycle": 104.5
+  },
+  "hermes": {
+   "tok_s": 27.35,
+   "per_round": [
+    29.07,
+    26.72,
+    26.41
+   ],
+   "commit": 3.097,
+   "ms_cycle": 113.2
+  },
+  "all": {
+   "tok_s": 26.26,
+   "per_round": [
+    26.64,
+    26.3,
+    25.85
+   ],
+   "commit": 2.865,
+   "ms_cycle": 109.1
+  }
+ }
+}
