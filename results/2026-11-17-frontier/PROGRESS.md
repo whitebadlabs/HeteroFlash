@@ -12,12 +12,13 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
   top-4 +0.0886/0.156/86.9%; top-4 renorm +0.1234/0.174/86.6%.
 - Quality, boot fq2 (same method): tau0.08 +0.0313 (SE 0.0022)/0.077/91.4% (fq2.log, e98224b);
   k7 +0.0099 (SE 0.0016)/0.037/93.9% (fq2b.log, 19:39 resume): dNLL and KLD inside the bar, top-1 0.1 pt under it.
+  tau0.04 +0.0055 (SE 0.0014)/0.030/94.9%: inside the bar on all three, close to base (+0.0044/0.027/95.0%).
 
 ## Running
 - 19:19 PT power cut (3rd today): k7 was cut at chunk 16/41; its partial is in `partial_fq2_pre1919/` (with fq2.log, fq2_stats.json,
   fq2_serve.log as of the cut). Do not use it. tau0.08 had completed and is committed (e98224b).
 - **fq2 quality boot, resumed 19:39 PT** on the Spark, `tmux -L hfrt` session `fq2`, log `results/2026-11-17-frontier/fq2b.log`.
-  Remaining passes only: k7 (done 20:34 PT), tau0.04 (running), k7tau0.04 (~40 min each after a ~13 min boot). fq2.log keeps the tau0.08 pass.
+  Remaining passes only: k7 (done 20:34 PT), tau0.04 (done 21:19 PT), k7tau0.04 (running) (~40 min each after a ~13 min boot). fq2.log keeps the tau0.08 pass.
   The pre-16:53 partial (tau0.08, chunk 16/41) stays in `partial_fq2_pre1653/`. Do not use it.
 - **MaxQ expert server** (CPU only), `tmux -L hfrt` session `es` on the MaxQ, restarted 19:37 PT, log
   `/srv/cache/heteroflash/dualrt/es_f1.log` (pre-cut log copied to es_f1_pre1919.log).

@@ -5,3 +5,6 @@
 04:33:59Z k7 logits files: 41
 {"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.03734632208943367, "kld_p99": 0.5055917501449585, "dnll_mean": 0.009948324412107468, "dnll_se": 0.0015744792703851858, "same_top": 0.9387502074241638}
 04:35:19Z pass tau0.04: drop [8 0.04 0] alt [none] gates [1 0 0]
+05:19:34Z tau0.04 logits files: 41
+{"tokens": 41943, "chunks_scored": 41, "chunks_total": 41, "kld_mean": 0.029737262055277824, "kld_p99": 0.42744502425193787, "dnll_mean": 0.005478385370224714, "dnll_se": 0.0014413460627844185, "same_top": 0.9485968947410583}
+05:20:52Z pass k7tau0.04: drop [7 0.04 0] alt [none] gates [1 0 0]
