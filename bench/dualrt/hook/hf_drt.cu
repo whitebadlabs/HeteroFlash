@@ -1,4 +1,4 @@
-// HeteroFlash Bet 1 dual-memory runtime (2026-11-17): graph-capturable GPU <-> workstation-CPU exchange + GPU Q4_K
+// HeteroFlash Bet 1 dual-memory runtime (2026-11-17; 2026-11-18: GPU wait timers + gated pack/wait for deferral): graph-capturable GPU <-> workstation-CPU exchange + GPU Q4_K
 // routed experts, so every MoE layer reads both memories at once.
 //
 // Mailbox v2 (extends ops/route3/remote_hook/hf_mailbox.cu, same HFX1/HFY1 wire protocol):
@@ -81,8 +81,19 @@ static std::atomic<bool> relay_run{false};
 static std::atomic<long long> st_req{0}, st_pairs{0}, st_us{0}, st_rt_us{0};
 static std::atomic<long long> sd_req{0}, sd_pairs{0}, sd_us{0}, sd_rt_us{0};   // decode-size windows only (T <= 4)
 
+// 2026-11-18 deferral study: GPU-side wait timers (globaltimer ns). Per slot and bucket (0: T <= 4 decode, 1: larger):
+// [n, blocked_ns (wait kernel start -> reply seen), overlap_ns (pack -> wait kernel start: GPU work done meanwhile),
+//  zero-wait count (reply already there, < 2 us)]. Host-mapped, one writer at a time (stream order), read without CUDA ops.
+#define WST 4
+static long long *h_wst = nullptr, *d_wst = nullptr;     // [2][n_slots][WST]
+static long long *h_dwst = nullptr, *d_dwst = nullptr;   // dense: [DMAXSLOT][2] (n, blocked_ns)
+static unsigned long long *d_tpack = nullptr;            // [n_slots] pack time
+__device__ __forceinline__ unsigned long long gtimer() { unsigned long long t; asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(t)); return t; }
+
 __global__ void pack_kernel(Slot *slots, unsigned long long *seqs, int slot, int layer_idx, const __nv_bfloat16 *x,
-                            const int64_t *ids64, const int *ids32, const float *w, const bool *remote, int T) {
+                            const int64_t *ids64, const int *ids32, const float *w, const bool *remote, int T,
+                            const int *gate, int want, unsigned long long *tpack) {
+  if (gate && *gate != want) return;      // 2026-11-18: run-time switch (late-expert slot), CUDA graphs stay valid
   Slot *s = slots + slot;
   int tid = threadIdx.x;
   for (int i = tid; i < T * HMB_K; i += blockDim.x) {
@@ -102,16 +113,26 @@ __global__ void pack_kernel(Slot *slots, unsigned long long *seqs, int slot, int
     __threadfence_system();
     s->req_flag = q;
     __threadfence_system();
+    if (tpack) tpack[slot] = gtimer();
   }
 }
 
-__global__ void wait_add_kernel(Slot *slots, const unsigned long long *seqs, int slot, __nv_bfloat16 *out, int T) {
+__global__ void wait_add_kernel(Slot *slots, const unsigned long long *seqs, int slot, __nv_bfloat16 *out, int T,
+                                const int *gate, int gwant, long long *wst, const unsigned long long *tpack, int nslots) {
+  if (gate && *gate != gwant) return;     // 2026-11-18: deferral switch (this wait runs at layer L or at L+1)
   Slot *s = slots + slot;
   __shared__ unsigned long long want;
   if (threadIdx.x == 0) {
     want = seqs[slot];
+    unsigned long long t0 = gtimer();
     while (s->done_flag != want) { __nanosleep(100); }
     __threadfence_system();
+    if (wst) {
+      unsigned long long t1 = gtimer();
+      volatile long long *w = wst + ((size_t)(T <= 4 ? 0 : 1) * nslots + slot) * WST;
+      long long b = (long long)(t1 - t0);
+      w[0] = w[0] + 1; w[1] = w[1] + b; w[2] = w[2] + (long long)(t0 - tpack[slot]); if (b < 2000) w[3] = w[3] + 1;
+    }
   }
   __syncthreads();
   const volatile float *y = s->y;
@@ -253,6 +274,12 @@ void mb_init(int64_t slots, std::string host, int64_t port, int64_t flags) {
   if (cudaMalloc((void **)&d_dseq, sizeof(unsigned long long) * DMAXSLOT) != cudaSuccess) throw std::runtime_error("cudaMalloc d");
   cudaMemset(d_dseq, 0, sizeof(unsigned long long) * DMAXSLOT);
   cudaMemset(d_seq, 0, sizeof(unsigned long long) * n_slots);
+  if (cudaHostAlloc((void **)&h_wst, sizeof(long long) * 2 * n_slots * WST, cudaHostAllocMapped) != cudaSuccess) throw std::runtime_error("cudaHostAlloc wst");
+  memset(h_wst, 0, sizeof(long long) * 2 * n_slots * WST); cudaHostGetDevicePointer((void **)&d_wst, h_wst, 0);
+  if (cudaHostAlloc((void **)&h_dwst, sizeof(long long) * DMAXSLOT * 2, cudaHostAllocMapped) != cudaSuccess) throw std::runtime_error("cudaHostAlloc dwst");
+  memset(h_dwst, 0, sizeof(long long) * DMAXSLOT * 2); cudaHostGetDevicePointer((void **)&d_dwst, h_dwst, 0);
+  if (cudaMalloc((void **)&d_tpack, sizeof(unsigned long long) * n_slots) != cudaSuccess) throw std::runtime_error("cudaMalloc tpack");
+  cudaMemset(d_tpack, 0, sizeof(unsigned long long) * n_slots);
   cudaDeviceSynchronize();
   sock_fd = socket(AF_INET, SOCK_STREAM, 0);
   int one = 1; setsockopt(sock_fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
@@ -265,21 +292,26 @@ void mb_init(int64_t slots, std::string host, int64_t port, int64_t flags) {
   relay.detach();
 }
 
-void mb_pack(int64_t slot, int64_t layer_idx, torch::Tensor x, torch::Tensor ids, torch::Tensor w, torch::Tensor remote) {
+static const int *gate_ptr(torch::Tensor g);
+void mb_pack(int64_t slot, int64_t layer_idx, torch::Tensor x, torch::Tensor ids, torch::Tensor w, torch::Tensor remote, torch::Tensor gate, int64_t want) {
   int T = (int)x.size(0);
   TORCH_CHECK(T <= HMB_MAXT && ids.size(1) == HMB_K && x.size(1) == HMB_H && x.scalar_type() == at::kBFloat16 && x.is_contiguous());
   TORCH_CHECK(w.scalar_type() == at::kFloat && w.is_contiguous() && ids.is_contiguous());
   bool is64 = ids.scalar_type() == at::kLong;
   pack_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(
       d_slots, d_seq, (int)slot, (int)layer_idx, (const __nv_bfloat16 *)x.data_ptr(), is64 ? ids.data_ptr<int64_t>() : nullptr,
-      is64 ? nullptr : ids.data_ptr<int>(), w.data_ptr<float>(), remote.data_ptr<bool>(), T);
+      is64 ? nullptr : ids.data_ptr<int>(), w.data_ptr<float>(), remote.data_ptr<bool>(), T, gate_ptr(gate), (int)want, d_tpack);
 }
 
-void mb_wait_add(int64_t slot, torch::Tensor out) {
+void mb_wait_add(int64_t slot, torch::Tensor out, torch::Tensor gate, int64_t want) {
   int T = (int)out.size(0);
   TORCH_CHECK(out.is_contiguous() && out.scalar_type() == at::kBFloat16 && T <= HMB_MAXT);
-  wait_add_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_slots, d_seq, (int)slot, (__nv_bfloat16 *)out.data_ptr(), T);
+  wait_add_kernel<<<1, 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_slots, d_seq, (int)slot, (__nv_bfloat16 *)out.data_ptr(), T,
+      gate_ptr(gate), (int)want, d_wst, d_tpack, n_slots);
 }
+// flat [2][n_slots][WST]: n, blocked_ns, overlap_ns, zero-wait count (host memory only: no CUDA call)
+std::vector<int64_t> mb_wait_stats() { std::vector<int64_t> v(2 * n_slots * WST); for (size_t i = 0; i < v.size(); i++) v[i] = ((volatile long long *)h_wst)[i]; return v; }
+std::vector<int64_t> dense_wait_stats() { std::vector<int64_t> v(2 * n_dslots); for (size_t i = 0; i < v.size(); i++) v[i] = ((volatile long long *)h_dwst)[i]; return v; }
 
 std::vector<int64_t> mb_stats() { return {st_req.load(), st_pairs.load(), st_us.load(), st_rt_us.load(),
                                           sd_req.load(), sd_pairs.load(), sd_us.load(), sd_rt_us.load(), st_alt.load()}; }
@@ -591,11 +623,16 @@ __global__ void dense_pack_kernel(DSlot *slots, unsigned long long *seqs, int si
 
 // out[t, col0 + j] = y[t, j] for j < N (row stride ldo); every block waits for the reply flag.
 __global__ void dense_wait_copy_kernel(DSlot *slots, const unsigned long long *seqs, int si, const __nv_bfloat16 *y, int T, int N,
-                                       __nv_bfloat16 *out, int ldo, int col0, int ycol0, int nc, const int *gate) {
+                                       __nv_bfloat16 *out, int ldo, int col0, int ycol0, int nc, const int *gate, long long *dwst) {
   if (gate && *gate == 0) return;
   DSlot *s = slots + si;
   __shared__ unsigned long long want;
-  if (threadIdx.x == 0) { want = seqs[si]; while (s->done_flag != want) { __nanosleep(100); } __threadfence_system(); }
+  if (threadIdx.x == 0) {
+    want = seqs[si]; unsigned long long t0 = gtimer();
+    while (s->done_flag != want) { __nanosleep(100); }
+    __threadfence_system();
+    if (dwst && blockIdx.x == 0) { volatile long long *w = dwst + (size_t)si * 2; w[0] = w[0] + 1; w[1] = w[1] + (long long)(gtimer() - t0); }
+  }
   __syncthreads();
   const volatile unsigned short *yv = (const volatile unsigned short *)y;
   unsigned short *o = (unsigned short *)out;
@@ -619,7 +656,7 @@ void dense_wait_copy(int64_t si, int64_t T, torch::Tensor out, int64_t col0, int
   if (nc < 0) nc = N - ycol0;
   int blocks = (int)std::min<int64_t>(64, (T * nc + 1023) / 1024);
   dense_wait_copy_kernel<<<std::max(blocks, 1), 1024, 0, at::cuda::getCurrentCUDAStream()>>>(d_dslots, d_dseq, (int)si, d_dy[si], (int)T, N,
-      (__nv_bfloat16 *)out.data_ptr(), (int)out.stride(0), (int)col0, (int)ycol0, (int)nc, gate_ptr(gate));
+      (__nv_bfloat16 *)out.data_ptr(), (int)out.stride(0), (int)col0, (int)ycol0, (int)nc, gate_ptr(gate), d_dwst);
 }
 
 // MXFP8 (E4M3 + E8M0 per 32 along K) row GEMV: out[t, r] = bf16(sum_k W[r,k] * 2^(S[r,k/32]-127) * x[t,k]), r < N.
@@ -700,4 +737,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("mb_slot_info", &mb_slot_info); m.def("mb_set_alt", &mb_set_alt); m.def("drop", &drop); m.def("assign", &assign); m.def("q4k_moe", &q4k_moe);
   m.def("dense_register", &dense_register); m.def("dense_pack", &dense_pack); m.def("dense_wait_copy", &dense_wait_copy);
   m.def("mxfp8_gemv", &mxfp8_gemv); m.def("dense_stats", &dense_stats);
+  m.def("mb_wait_stats", &mb_wait_stats); m.def("dense_wait_stats", &dense_wait_stats);
 }

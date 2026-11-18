@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Score split-hook captures against the Q8_0 BF16-proxy reference: the same arithmetic as src/control_kld.py compare
 (KL(ref || run), dNLL, same top-1, per domain), for captures that hold one file per chunk with rows 1024..2046
-(HF_SPLIT_CAPTURE layout). Chunks without a capture file are skipped and reported.
+(HF_SPLIT_CAPTURE layout). Chunks without a capture file are skipped and reported. env HF_CHUNKS=i,j,..: the
+captures hold only these reference chunks, in this order (subset screens, 2026-11-18).
   compare_q8.py REF.kld CAPDIR MANIFEST OUT.json"""
 import glob, json, os, sys
 import numpy as np
@@ -15,12 +16,14 @@ man = json.load(open(manifest)); dom_of = {}
 for d in man["domains"]:
     for c in range(d["chunks"][0], d["chunks"][1] + 1): dom_of[c] = d["domain"]
 acc = {}
+sub = [int(v) for v in os.environ.get("HF_CHUNKS", "").split(",") if v]   # 2026-11-18: captures of these chunks only, in order
 for c in range(n_chunk):
     raw = np.frombuffer(f.read(n_rec * nv * 2), dtype=np.uint16).reshape(n_rec, nv)
-    if c >= len(files): continue
+    fi = (sub.index(c) if c in sub else None) if sub else c
+    if fi is None or fi >= len(files): continue
     hdr = raw[:, :4].copy().view(np.float32); q = raw[:, 4:4 + n_vocab].astype(np.float32)
     lp_ref = hdr[:, 1:2] + hdr[:, 0:1] * q
-    lp = np.load(files[c])[:n_rec, :n_vocab].astype(np.float32); lp -= np.log(np.exp(lp).sum(1, keepdims=True))
+    lp = np.load(files[fi])[:n_rec, :n_vocab].astype(np.float32); lp -= np.log(np.exp(lp).sum(1, keepdims=True))
     tgt = np.array(toks[c * n_ctx + first + 1: c * n_ctx + first + 1 + n_rec])
     p_ref = np.where(lp_ref > -16.0, np.exp(lp_ref), 0.0)
     kld = (p_ref * (lp_ref - lp)).sum(1); dnll = -lp[np.arange(n_rec), tgt] + lp_ref[np.arange(n_rec), tgt]
@@ -33,6 +36,6 @@ for dname, a in acc.items():
 k, dn, sm = np.concatenate(allk), np.concatenate(alld), np.concatenate(alls)
 if os.environ.get("HF_PERTOKEN"):   # 2026-11-17: per-token arrays (chunk order) for paired comparisons without the captures
     np.savez_compressed(os.environ["HF_PERTOKEN"], dnll=dn.astype(np.float32), kld=k.astype(np.float32), same=sm.astype(np.int8))
-res["_overall"] = {"tokens": int(k.size), "chunks_scored": min(len(files), n_chunk), "chunks_total": n_chunk, "kld_mean": float(k.mean()),
+res["_overall"] = {"tokens": int(k.size), "chunks_scored": min(len(files), len(sub) or n_chunk), "chunk_ids": sub or None, "chunks_total": n_chunk, "kld_mean": float(k.mean()),
                    "kld_p99": float(np.percentile(k, 99)), "dnll_mean": float(dn.mean()), "dnll_se": float(dn.std() / np.sqrt(dn.size)), "same_top": float(sm.mean())}
 json.dump(res, open(out, "w"), indent=1); print(json.dumps(res["_overall"]))

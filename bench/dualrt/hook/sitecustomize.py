@@ -28,6 +28,14 @@ Env:
                            gates[2] switches it (req drt_gates.req "LMH KDA FRS")
   HF_SPLIT_ALT_LAYERS l,.. decode windows of these layers use the workstation's alt (lower-bit) expert table
                            (server env HF_ALT_*); req file drt_alt.req: "l1,l2,..." or "none"
+2026-11-18 expert deferral study (decode-size windows T <= HF_SPLIT_MAXT only; prefill chunks unchanged):
+  HF_SPLIT_DEFER 0|1       compile a second, gated wait per layer: layer L's workstation partial is added after layer
+                           L+1's MoE instead of L's (defer depth 1, the GPU no longer blocks at L). Per-layer mask at run time,
+                           req file drt_defer.req: "none" | "all" | "l1,l2,..." [LATE 0|1]; layer 44 is never deferred.
+  HF_SPLIT_LATE 0|1        with HF_SPLIT_DROP: experts removed by the drop kernel (e.g. expert 8 under k7) are sent to the
+                           workstation in a second slot and added one layer late ("add expert 8 late" vs "drop expert 8");
+                           switched by the LATE field of drt_defer.req (layers 3-43; layer 44 drops them).
+  GPU wait timers (always on): per layer, blocked ns in the wait kernel and GPU work between pack and wait, in the stats dump.
 If HF_CHAIN_HOOK points to another sitecustomize.py (e.g. the logits-capture trace hook), it is executed first.
 """
 import os
@@ -66,6 +74,8 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
     _KDA_HC = int(os.environ.get("HF_SPLIT_KDA_HC", "0"))   # >0: q/k/v rows of the last HC heads of every KDA layer on the CPU
     _DROP = os.environ.get("HF_SPLIT_DROP", "0") == "1"
     _FRS = os.environ.get("HF_SPLIT_FRSPEC", "")
+    _DEFER = os.environ.get("HF_SPLIT_DEFER", "0") == "1"
+    _LATE = os.environ.get("HF_SPLIT_LATE", "0") == "1" and _DROP and _DEFER   # needs both
     _tl = threading.local()
     _layer_re = re.compile(r"layers\.(\d+)\.")
     _S = {"ext": None, "buf": None, "pool": None, "calls": 0, "done": False, "pw_done": False, "fm_done": False}
@@ -111,6 +121,8 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 "drop_tr": torch.tensor([float(os.environ.get("HF_SPLIT_DROP_TAU", "0")), float(os.environ.get("HF_SPLIT_DROP_RENORM", "0"))],
                                         dtype=torch.float32, device=device),
                 "counts": torch.zeros(nl, _NE, dtype=torch.int64, device=device),
+                "defer": torch.zeros(nl, dtype=torch.int32, device=device),     # 1: layer's partial added at layer + 1
+                "late": torch.zeros(1, dtype=torch.int32, device=device),       # 1: dropped experts sent + added late
             }
             if _S["pool"] is None:   # resident pool not loaded yet: dummy bases, every slot -1 (all routes to the CPU)
                 dummy = torch.zeros(64, dtype=torch.uint8, device=device)
@@ -325,6 +337,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
 
     _D_REQ = os.environ.get("HF_SPLIT_DROP_REQ", "/out/drt_drop.req")
     _ALT_REQ = os.environ.get("HF_SPLIT_ALT_REQ", "/out/drt_alt.req")
+    _DEF_REQ = os.environ.get("HF_SPLIT_DEFER_REQ", "/out/drt_defer.req")
 
     def _alt_mask(spec):
         spec = spec.strip()
@@ -352,6 +365,21 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             except Exception as ex:  # noqa: BLE001
                 _log(f"bad drop request: {ex!r}")
             os.remove(_D_REQ)
+        if os.path.exists(_DEF_REQ):
+            try:
+                parts = open(_DEF_REQ).read().split()
+                spec = parts[0] if parts else "none"
+                Ls = list(range(_FIRST, _LAST)) if spec == "all" else ([] if spec == "none" else [int(v) for v in spec.split(",") if v])
+                Ls = [L for L in Ls if _FIRST <= L < _LAST]          # layer 44 has no next MoE layer
+                late = int(parts[1]) if len(parts) > 1 else 0
+                m = [1 if L in Ls else 0 for L in range(_FIRST, _LAST + 1)]
+                torch.cuda.synchronize()
+                _S["buf"]["defer"].copy_(torch.tensor(m, dtype=torch.int32)); _S["buf"]["late"].fill_(late)
+                torch.cuda.synchronize()
+                _log(f"deferral set: layers {Ls} ({len(Ls)}) late {late} (compiled in: defer {_DEFER} late {_LATE})")
+            except Exception as ex:  # noqa: BLE001
+                _log(f"bad defer request: {ex!r}")
+            os.remove(_DEF_REQ)
         if os.path.exists(_ALT_REQ):
             try:
                 m, Ls = _alt_mask(open(_ALT_REQ).read())
@@ -520,7 +548,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             time.sleep(1.0)
             n += 1
             req = (_STATS or _COUNT) + ".req"
-            if os.path.exists(req) or n % 30 == 0:
+            if os.path.exists(req):   # 2026-11-18: request-only (the 30 s dump raced CUDA-graph capture on f2)
                 try:
                     _dump(st)
                     if os.path.exists(req):
@@ -542,7 +570,21 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
             json.dump({"mode": _MODE, "A": _A, "B": _B, "f32": _F32, "nres": _NRES, "moe_calls": _S["calls"],
                        "per_layer_calls_U_cap_R": {str(L): st[L - _FIRST] for L in range(_FIRST, _LAST + 1)},
                        "mailbox_req_pairs_serverus_relayus": ms[:4], "mailbox_decode_T<=4_req_pairs_serverus_relayus": ms[4:8], "alt_requests": ms[8] if len(ms) > 8 else 0,
-                       "dense_req_serverus_relayus": _ext().dense_stats()}, open(_STATS, "w"))
+                       "dense_req_serverus_relayus": _ext().dense_stats(), "wait": _wait_stats()}, open(_STATS, "w"))
+
+    def _wait_stats():
+        """GPU wait timers (host memory, no CUDA op): per MoE layer, decode (T <= 4) and other windows, main slot and late slot:
+        [n, blocked_ns, overlap_ns (pack -> wait start), zero-wait n]; dense slots [n, blocked_ns]."""
+        ext = _ext()
+        if not hasattr(ext, "mb_wait_stats"):
+            return None
+        v = ext.mb_wait_stats(); ns = (_LAST - _FIRST + 1) * _NSUB; out = {}
+        for bk, bn in ((0, "decode"), (1, "other")):
+            for sub, sn in ((0, "main"), (1, "late")):
+                out[f"{bn}_{sn}"] = {str(L): v[((bk * ns) + (L - _FIRST) * _NSUB + sub) * 4:((bk * ns) + (L - _FIRST) * _NSUB + sub) * 4 + 4]
+                                     for L in range(_FIRST, _LAST + 1)}
+        out["dense"] = ext.dense_wait_stats()
+        return out
 
     # ------------------------------------------------------------------ the MoE path
     def _moe_split(L, x, topk_weights, topk_ids):
@@ -555,22 +597,27 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         w = topk_weights.float().contiguous()
         ids = topk_ids.contiguous()
         li = L - _FIRST
+        ids_o, w_o = ids, w
         if _DROP:
             ids2, w2 = torch.empty_like(ids), torch.empty_like(w)
             ext.drop(ids, w, b["drop_k"], li, b["drop_tr"], ids2, w2)
             ids, w = ids2, w2
+        if T <= _SPLIT_MAXT and _LATE and L < _LAST:   # dropped experts -> workstation, second slot, added at L + 1 (gate "late")
+            lost = (ids < 0) & (ids_o >= 0)
+            ext.mb_pack(li * _NSUB + 1, li, xb, torch.where(lost, ids_o, torch.full_like(ids_o, -1)).contiguous(),
+                        torch.where(lost, w_o, torch.zeros_like(w_o)).contiguous(), b["remote_all"], b["late"], 1)
         if T <= _SPLIT_MAXT:
             if _COUNT:
                 b["counts"][li].index_add_(0, ids.reshape(-1).long(), torch.ones_like(ids.reshape(-1), dtype=torch.int64))
             ext.assign(ids, w, P["slot_of"][li], b["ab"], _MODE, b["remote"], b["glist"], b["gcount"], b["gw"], b["stats"][li])
-            ext.mb_pack(li * _NSUB, li, xb, ids, w, b["remote"])
+            ext.mb_pack(li * _NSUB, li, xb, ids, w, b["remote"], _S["none"], 0)
             y = b["y"][: T * _H].view(T, _H)
             ext.q4k_moe(xb, b["glist"], b["gcount"], b["gw"], P["ptrs"], b["hbuf"], y)
             _tl.mb = (li, [(0, T)], None)
             return y.to(x.dtype)
         chunks = [(t0, min(T, t0 + _MAXT)) for t0 in range(0, T, _MAXT)]
         for c, (t0, t1) in enumerate(chunks[:_NSUB]):
-            ext.mb_pack(li * _NSUB + c, li | 0x100, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), b["remote_all"])
+            ext.mb_pack(li * _NSUB + c, li | 0x100, xb[t0:t1].contiguous(), ids[t0:t1].contiguous(), w[t0:t1].contiguous(), b["remote_all"], _S["none"], 0)
         _tl.mb = (li, chunks, (xb, ids, w))
         return torch.zeros_like(x)
 
@@ -579,12 +626,33 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         li, chunks, rest = mb
         b = _S["buf"]
         for c, (t0, t1) in enumerate(chunks):
-            ext.mb_wait_add(li * _NSUB + c % _NSUB, out[t0:t1])
+            ext.mb_wait_add(li * _NSUB + c % _NSUB, out[t0:t1], _S["none"], 0)
             n = c + _NSUB
             if n < len(chunks):
                 xb, ids, w = rest
                 a0, a1 = chunks[n]
-                ext.mb_pack(li * _NSUB + n % _NSUB, li | 0x100, xb[a0:a1].contiguous(), ids[a0:a1].contiguous(), w[a0:a1].contiguous(), b["remote_all"])
+                ext.mb_pack(li * _NSUB + n % _NSUB, li | 0x100, xb[a0:a1].contiguous(), ids[a0:a1].contiguous(), w[a0:a1].contiguous(), b["remote_all"], _S["none"], 0)
+        return out
+
+    def _mb_finish_decode(mb, out):
+        """Decode-size window (one slot per layer). Gated waits: own partial now (defer[li] == 0), and the previous layer's
+        partial (defer[li-1] == 1) and late experts (late == 1) here, one layer late. Both waits are captured either way."""
+        ext = _ext(); b = _S["buf"]
+        li = mb[0]; T = int(out.shape[0])
+        if not _DEFER:
+            ext.mb_wait_add(li * _NSUB, out, _S["none"], 0)
+            return out
+        ext.mb_wait_add(li * _NSUB, out, b["defer"][li:li + 1], 0)
+        p = getattr(_tl, "pend", None)
+        if p is not None and p[0] == li - 1 and p[1] == T:
+            ext.mb_wait_add((li - 1) * _NSUB, out, b["defer"][li - 1:li], 1)
+            if _LATE:
+                ext.mb_wait_add((li - 1) * _NSUB + 1, out, b["late"], 1)
+        elif li > 0:
+            _S["pend_miss"] = _S.get("pend_miss", 0) + 1
+            if _S["pend_miss"] <= 5:
+                _log(f"deferral: no pending layer {li - 1 + _FIRST} before layer {li + _FIRST} (T {T}, pend {p})")
+        _tl.pend = (li, T)
         return out
 
     def _install():
@@ -613,7 +681,10 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
                 out = orig_fwd(self, hidden_states, router_logits, *a, **k)
                 mb = getattr(_tl, "mb", None)
                 _tl.layer, _tl.mb = None, None
-                if mb is not None:
+                if mb is not None and mb[2] is None:
+                    out = _mb_finish_decode(mb, out)
+                elif mb is not None:
+                    _tl.pend = None
                     out = _mb_finish(mb, out)
                 _S["calls"] += 1
                 return out
