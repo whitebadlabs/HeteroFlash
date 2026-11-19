@@ -12,7 +12,10 @@ HeteroFlash takes a third route. It treats the model and the hardware as one des
 GPU, what to compute on a CPU next to its own RAM, at what precision, and which work to skip, approximate or postpone.
 Every one of those choices is measured against the original model's quality.
 
-**Result.** Decode speed and quality against the original weights (KL divergence to a Q8 copy; lower is better):
+**Result: on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at 34-36 tok/s while staying close to
+the original model (KL 0.057-0.065). That is faster than, and 3.7x closer to the original than, the standard 2-bit
+quantization that fits the same Spark.** Decode speed and quality against the original weights (KL divergence to a Q8
+copy; lower is better):
 
 | model | hardware | HeteroFlash (balanced) | HeteroFlash (fastest) | best existing quantization that fits the same hardware |
 |---|---|---|---|---|
