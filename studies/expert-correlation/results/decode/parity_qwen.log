@@ -1,0 +1,11 @@
+15:03:26 parity G8 R0 2s
+15:03:26   def_static   sends 4.661435 vs 4.661435  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:03:26   corr_static  sends 3.431714 vs 3.431714  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35 parity G8 R2 70s
+15:04:35   def_static   sends 4.331696 vs 4.331696  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   def_oracle   sends 4.254520 vs 4.254520  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   def_lag1     sends 4.377816 vs 4.377816  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   def_ema      sends 4.336670 vs 4.336670  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   corr_oracle  sends 3.230083 vs 3.230083  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   corr_lag1    sends 3.276417 vs 3.276417  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK
+15:04:35   corr_ema     sends 3.248425 vs 3.248425  max|d batch imb| 0.00e+00 d churn 0.00e+00 -> OK

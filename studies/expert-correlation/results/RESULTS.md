@@ -218,3 +218,12 @@ fixed there in #27/#28). Measured on calib mix loads: 4-6% of redundant slots ar
 them. Effect on holdout replay (study routing rule) is small and mixed: GLM 8 GPUs R9 p95 batch imbalance 1.39 -> 1.33,
 sends -0.7%; Qwen 8 GPUs R8 1.201 -> 1.200; at R1-R2 within noise either way (GLM 8 GPUs R2 1.48 -> 1.51).
 Reading: a real but low-impact cleanup, worth it mostly at large replica budgets.
+
+## Follow-up 3: decode-step continuous batching (scripts/decode.py, results/decode/) - NO-GO for causal planners
+B = 64 / 256 concurrent decode slots (request overlap step to step 0.995), shuffled mixed-task holdout queue, every 4th
+layer. Decode load is far more stable than the old prefill-heavy batches (cosine of consecutive 2048-token windows
+0.98 vs 0.79), but a single B=64 step predicts the next barely better than the calib prior (0.84 vs 0.83).
+All causal planners (lag-1, EMA 0.5/0.9, lag-1 replanned every 16 steps) fail the gate in every cell against the
+same-planner Default; send cut holds (Qwen 22-26%, GLM 12-15%), p95 step imbalance misses (closest: Qwen B=256
+G8 R8, +0.014..+0.034 over the limit across 3 seeds). Only the see-this-step bound passes (Qwen G8 R8, G16 R4).
+Copy churn 75-96% of slots per replan. Untested next idea (inferred): long-window planner (EMA ~0.1).
