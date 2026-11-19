@@ -12,8 +12,6 @@ HeteroFlash takes a third route. It treats the model and the hardware as one des
 GPU, what to compute on a CPU next to its own RAM, at what precision, and which work to skip, approximate or postpone.
 Every one of those choices is measured against the original model's quality.
 
-The design point: 
-
 **Result:** on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at **34-36 tok/s** and stays close
 to the original model (KL 0.057-0.065). The usual way to fit it on the same Spark, crushing the experts to 2 bits, is
 both slower and 3.7x further from the original.
@@ -24,8 +22,9 @@ Decode speed and quality against the original weights (KL divergence to a Q8 cop
 |---|---|---|---|---|
 | GLM-5.3-Flash (320B-class MoE) | 1 DGX Spark + a workstation's CPU and RAM (no workstation GPU) | **34.3 tok/s, KL 0.057** (top-1 92.8%, every domain within 0.1) | **36.2 tok/s, KL 0.065** (top-1 92.1%) | 2-bit experts (IQ2_XXS), all on the Spark: 27-28 tok/s, KL 0.239 (top-1 84.9%) |
 
-More models are being added (the expert-routing techniques are model-agnostic; see "Union-aware routing on other
-models" below). For scale, the same GLM model on a two-GPU workstation server (3.5-bit EXL3, tensor parallel 2) runs
+Also measured on the same system: top-4 at **38.1 tok/s, KL 0.085** (top-1 90.7%; instruction following 0.134, so
+outside 0.1 in that one domain). The expert-routing technique is also measured on five more MoE models (Qwen3-30B,
+Qwen3.6-35B, gpt-oss-120b, GLM-4.5-Air, Qwen3.8-Flash-Next); see "Union-aware routing on other models" below. For scale, the same GLM model on a two-GPU workstation server (3.5-bit EXL3, tensor parallel 2) runs
 151 tok/s at KL 0.042, and this runtime with all experts on the CPU and none of the techniques runs 15-18 tok/s.
 
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
@@ -80,8 +79,7 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
    important: their rank in the router decides how much they contribute. The strongest picks are always computed.
    The weakest are not simply dropped: each is replaced by its routing weight times that expert's average output.
    On GLM-5.3-Flash this roughly halves the quality cost of the dropped picks (section 4.6); on Qwen3-30B-A3B it does
-   not help, so it is model-specific. Both the rank rule and this stand-in follow an independent public sensitivity
-   study of Kimi K3.1 (full citation to be added with the author's consent).
+   not help, so it is model-specific. Both the rank rule and this stand-in follow the public [Kimi K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity).
 4. **Reuse what is already being read (union-aware routing, a speculative-decoding form of Lynx's batch-aware
    expert selection).** Speculative decoding checks several tokens at once. If
    a weak pick's expert is already being read for another token in the same window, keeping it costs nothing, so it
@@ -436,7 +434,7 @@ because they nearly produced wrong conclusions here.*
   point, or interleave and report rounds separately.
 
 **F9. Rank decides what a routed pick may cost: delaying weak picks is cheap, delaying strong ones is not.**
-*Follows an independent public sensitivity study of Kimi K3.1 (full citation to be added with the author's consent); measured here on GLM-5.3-Flash.*
+*Follows the public [Kimi K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity); measured here on GLM-5.3-Flash.*
 - Deferring the workstation's whole partial sum one layer (so the GPU never waits) buys speed: 32-33 tok/s at
   A 0.28-0.35 against 26.4. But it costs KLD 0.31-0.45 on the subset (full eval 0.444, top-1 77%), because the partial
   carries strong picks too.
