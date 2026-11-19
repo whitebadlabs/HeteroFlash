@@ -46,8 +46,8 @@ model at 3.5 bits sits at KL 0.042.
 
 ## Takeaways
 
-- **On constrained hardware, co-design beats any single trick.** No single change gave more than about 25%. Together they took
-  the system from 6.5 to 36 tok/s.
+- **On constrained hardware, co-design beats any single trick.** Past the first working system, each change gave roughly 5-25%.
+  Together they took it from 6.5 to 36 tok/s.
 - **Not all expert computation is equal.** Ranking expert work by contribution, and approximating instead of
   dropping, buys speed at a fraction of the usual quality cost.
 - **Quality is a dial, not a cliff.** The frontier runs from near-reference quality (KL 0.038 at 26 tok/s) to
