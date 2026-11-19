@@ -166,3 +166,12 @@ Exact next steps:
   Anatomy (derived): each routed pick removed saves ~5-6 ms/cycle (k7 -> k5: -12 ms), so routed experts cost ~45-50 ms of the
   ~110 ms cycle and the fixed path + drafter + overheads ~60 ms. Even perfectly hidden experts cap at ~45-47 tok/s at
   2.9 tokens/cycle; 80 tok/s needs the fixed/draft ~60 ms cut AND more tokens per cycle.
+
+- 17:55 PT dq5 DONE (7-chunk subset, agree MNBT=4; weak picks = ranks > N computed on the workstation, added one layer late):
+  k6_late +0.0059 / 0.028 / 94.7% (paired vs k7 0.0237); k5_late +0.0097 / 0.036 / 93.7% (0.0312); k4_late +0.0223 / 0.054 / 92.5%
+  (0.0492; worst long_context 0.087); k3_late +0.0318 / 0.070 / 91.1% (knowledge_qa 0.112). Compare plain drop on the same subset:
+  k5 0.079, k4 ~0.156 (full). => the rank rule holds on GLM: deferring LOW-weight picks is cheap
+  (low gate weight); deferring the whole remote partial (incl. high-weight picks) is what broke quality (0.40). The GPU needs
+  only the top 4-5 picks on time. Speed is the open question (the late slot doubled server requests in d2). d4 (NVFP4
+  attention) also measures k5_late / k4_late at A 0.5 and A 1.0; dq7 full quality adds k5_late, k4_late. Per-layer deferral
+  map (dq8, Carmen OK 17:3x PT) queued after.

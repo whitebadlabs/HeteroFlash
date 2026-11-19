@@ -1,2 +1,23 @@
-refusing: other containers are running
-wb-convo-build
+00:58:27Z started dq5 (agree)
+01:09:15Z healthy; mem used 113 GiB
+01:10:29Z resident pool live; cuda free 16.2 / 130.7 GB
+01:10:34Z pass k7: drop [7 0 0] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+01:17:56Z k7 logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.026884781196713448, "kld_p99": 0.3254150152206421, "dnll_mean": 0.0070977238938212395, "dnll_se": 0.003199829416839959, "same_top": 0.9519619941711426}
+01:18:27Z pass k6_late: drop [6 0 0] alt [none] gates [1 0 0] defer [none 1] ab [0.7 -1] mnbt 4
+01:26:55Z k6_late logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.028234068304300308, "kld_p99": 0.33497148752212524, "dnll_mean": 0.005872116424143314, "dnll_se": 0.003267525939830959, "same_top": 0.9465158581733704}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.02365349978208542, "kld_se": 0.000869190785704349, "kld_p99": 0.28169742226600647, "same_top": 0.9525206089019775}
+01:27:42Z pass k5_late: drop [5 0 0] alt [none] gates [1 0 0] defer [none 1] ab [0.7 -1] mnbt 4
+01:35:51Z k5_late logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.03572731837630272, "kld_p99": 0.4610229432582855, "dnll_mean": 0.009729303419589996, "dnll_se": 0.0037192618773344843, "same_top": 0.937019944190979}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.031169475987553596, "kld_se": 0.001057356775889574, "kld_p99": 0.3479100465774536, "same_top": 0.9410696625709534}
+01:36:43Z pass k4_late: drop [4 0 0] alt [none] gates [1 0 0] defer [none 1] ab [0.7 -1] mnbt 4
+01:45:11Z k4_late logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.05439913645386696, "kld_p99": 0.6624292135238647, "dnll_mean": 0.022269325330853462, "dnll_se": 0.00459201882607848, "same_top": 0.9248708486557007}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.04919819533824921, "kld_se": 0.001547123450916531, "kld_p99": 0.5735896229743958, "same_top": 0.9268258810043335}
+01:45:58Z pass k3_late: drop [3 0 0] alt [none] gates [1 0 0] defer [none 1] ab [0.7 -1] mnbt 4
+01:54:36Z k3_late logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.06983933597803116, "kld_p99": 0.8568263649940491, "dnll_mean": 0.03176718205213547, "dnll_se": 0.005134791939886509, "same_top": 0.9107666611671448}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.06538911908864975, "kld_se": 0.0020107906796049914, "kld_p99": 0.8099992275238037, "same_top": 0.9120234847068787}
+01:55:25Z DONE dq5
