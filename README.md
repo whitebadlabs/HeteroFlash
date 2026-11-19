@@ -39,7 +39,7 @@ pick beyond the top-K is still kept if its expert is already being read for anot
 expert's weights are loaded anyway, so keeping the pick costs no extra memory reads. It builds on the batch-aware expert selection of [Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024),
 which shares experts across concurrent requests in a batch. That does nothing for a single user at batch 1, the
 interactive case. Applying the same idea inside one request's speculative-decoding verify window brings the saving to
-single-user serving, and we measure it on six MoE families from 30B to 320B-class.
+single-user serving, and we measure it on six MoE models from three families (Qwen, GLM, gpt-oss), 30B to 320B-class.
 
 **The measurement.** Quality cost = full-vocabulary KL divergence to the unmodified model (all experts) on the same
 text. For each model we use fewer experts per token two ways, plain (drop everything below the top-K) and union-aware,
