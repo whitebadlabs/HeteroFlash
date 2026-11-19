@@ -1,0 +1,59 @@
+
+=== qwen3calib  top_k=8  chunks=14  tokens=28672  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+6 | 0.0401 | 0.0224 | 0.559 | 0.559 (n=14) | 0.558 | [0.52,0.60] | 0.9423/0.9576 | 14.40/14.43/18.47 | 14/14 | 0.418 | 6.84
+   dom: writing_chat:0.029->0.016(0.55)  knowledge_qa:0.025->0.015(0.59)  math:0.085->0.052(0.61)  code:0.046->0.020(0.45)  multilingual:0.031->0.018(0.60)  instruction_following:0.039->0.021(0.55)  long_context:0.026->0.014(0.53)
+5 | 0.0719 | 0.0436 | 0.606 | 0.606 (n=14) | 0.568 | [0.56,0.66] | 0.9208/0.9386 | 12.25/12.31/18.41 | 14/14 | 0.370 | 6.11
+   dom: writing_chat:0.063->0.033(0.52)  knowledge_qa:0.053->0.032(0.60)  math:0.126->0.092(0.73)  code:0.067->0.039(0.59)  multilingual:0.065->0.036(0.55)  instruction_following:0.076->0.045(0.58)  long_context:0.054->0.030(0.55)
+4 | 0.1249 | 0.0772 | 0.618 | 0.618 (n=14) | 0.607 | [0.58,0.65] | 0.8945/0.9183 | 10.04/10.11/18.35 | 14/14 | 0.317 | 5.27
+   dom: writing_chat:0.125->0.072(0.58)  knowledge_qa:0.087->0.056(0.64)  math:0.187->0.128(0.68)  code:0.104->0.068(0.65)  multilingual:0.122->0.067(0.55)  instruction_following:0.148->0.086(0.58)  long_context:0.102->0.064(0.63)
+
+=== gptoss  top_k=4  chunks=27  tokens=55296  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+3 | 0.3675 | 0.2584 | 0.703 | 0.704 (n=14) | 0.709 | [0.67,0.74] | 0.6560/0.7078 | 8.53/8.53/11.05 | 25/27 | 0.323 | 3.32
+   dom: writing_chat:0.263->0.157(0.60)  knowledge_qa:0.521->0.365(0.70)  math:0.445->0.324(0.73)  code:0.631->0.440(0.70)  multilingual:0.292->0.194(0.66)  instruction_following:0.220->0.150(0.68)  long_context:0.182->0.163(0.89)
+2 | 1.0616 | 0.7392 | 0.696 | 0.707 (n=14) | 0.696 | [0.65,0.74] | 0.4750/0.5410 | 5.84/5.85/10.93 | 27/27 | 0.257 | 2.51
+   dom: writing_chat:0.629->0.430(0.68)  knowledge_qa:1.369->0.984(0.72)  math:1.371->0.975(0.71)  code:1.844->1.307(0.71)  multilingual:0.854->0.554(0.65)  instruction_following:0.564->0.433(0.77)  long_context:0.748->0.446(0.60)
+
+=== gptoss_harmony  top_k=4  chunks=27  tokens=55296  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+3 | 0.9262 | 0.4180 | 0.451 | 0.445 (n=14) | 0.476 | [0.40,0.51] | 0.5989/0.6918 | 8.54/8.52/11.07 | 25/27 | 0.325 | 3.32
+   dom: writing_chat:0.770->0.376(0.49)  knowledge_qa:0.923->0.494(0.53)  math:1.767->0.617(0.35)  code:1.300->0.625(0.48)  multilingual:1.112->0.326(0.29)  instruction_following:0.476->0.303(0.64)  long_context:0.182->0.163(0.89)
+2 | 2.1063 | 1.1156 | 0.530 | 0.473 (n=14) | 0.597 | [0.46,0.62] | 0.4256/0.5397 | 5.88/5.86/10.99 | 25/27 | 0.256 | 2.51
+   dom: writing_chat:1.435->0.769(0.54)  knowledge_qa:1.729->1.190(0.69)  math:4.161->1.780(0.43)  code:2.606->1.612(0.62)  multilingual:3.231->1.172(0.36)  instruction_following:1.115->0.854(0.77)  long_context:0.748->0.446(0.60)
+
+=== qwen36  top_k=8  chunks=27  tokens=55296  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+6 | 0.0446 | 0.0334 | 0.749 | 0.767 (n=14) | 0.724 | [0.71,0.80] | 0.9392/0.9468 | 15.81/15.83/20.70 | 26/27 | 0.334 | 6.67
+   dom: writing_chat:0.039->0.030(0.78)  knowledge_qa:0.066->0.048(0.72)  math:0.083->0.066(0.79)  code:0.028->0.020(0.71)  multilingual:0.044->0.033(0.76)  instruction_following:0.030->0.021(0.70)  long_context:0.021->0.015(0.72)
+5 | 0.0717 | 0.0501 | 0.699 | 0.697 (n=14) | 0.691 | [0.68,0.72] | 0.9199/0.9343 | 13.32/13.35/20.66 | 27/27 | 0.300 | 5.90
+   dom: writing_chat:0.062->0.046(0.74)  knowledge_qa:0.102->0.071(0.70)  math:0.126->0.091(0.72)  code:0.045->0.031(0.69)  multilingual:0.077->0.051(0.66)  instruction_following:0.053->0.036(0.68)  long_context:0.037->0.025(0.67)
+4 | 0.1151 | 0.0784 | 0.681 | 0.686 (n=14) | 0.667 | [0.66,0.71] | 0.8966/0.9168 | 10.81/10.85/20.61 | 27/27 | 0.262 | 5.05
+   dom: writing_chat:0.106->0.072(0.68)  knowledge_qa:0.162->0.110(0.68)  math:0.176->0.133(0.75)  code:0.077->0.047(0.61)  multilingual:0.135->0.085(0.63)  instruction_following:0.090->0.060(0.67)  long_context:0.065->0.043(0.67)
+
+=== qwen36_tp2  top_k=8  chunks=27  tokens=55296  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+6 | 0.0436 | 0.0325 | 0.744 | 0.757 (n=14) | 0.725 | [0.71,0.78] | 0.9391/0.9468 | 15.81/15.83/20.70 | 26/27 | 0.334 | 6.67
+   dom: writing_chat:0.039->0.027(0.70)  knowledge_qa:0.062->0.046(0.74)  math:0.080->0.065(0.82)  code:0.028->0.019(0.68)  multilingual:0.045->0.033(0.74)  instruction_following:0.030->0.021(0.70)  long_context:0.022->0.016(0.73)
+5 | 0.0713 | 0.0491 | 0.688 | 0.701 (n=14) | 0.678 | [0.67,0.71] | 0.9212/0.9339 | 13.32/13.34/20.66 | 27/27 | 0.300 | 5.90
+   dom: writing_chat:0.061->0.043(0.70)  knowledge_qa:0.098->0.071(0.72)  math:0.128->0.090(0.70)  code:0.045->0.029(0.65)  multilingual:0.079->0.051(0.64)  instruction_following:0.052->0.035(0.67)  long_context:0.038->0.025(0.67)
+4 | 0.1126 | 0.0775 | 0.688 | 0.692 (n=14) | 0.658 | [0.66,0.72] | 0.8986/0.9177 | 10.82/10.85/20.61 | 27/27 | 0.262 | 5.05
+   dom: writing_chat:0.098->0.069(0.70)  knowledge_qa:0.150->0.109(0.73)  math:0.177->0.131(0.74)  code:0.077->0.048(0.62)  multilingual:0.139->0.086(0.62)  instruction_following:0.088->0.058(0.66)  long_context:0.066->0.043(0.65)
+
+=== glm45air  top_k=8  chunks=28  tokens=57344  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+6 | 0.1125 | 0.0957 | 0.851 | 0.890 (n=14) | 0.801 | [0.79,0.90] | 0.9372/0.9442 | 16.43/16.41/21.56 | 26/28 | 0.300 | 6.60
+   dom: writing_chat:0.350->0.305(0.87)  knowledge_qa:0.089->0.075(0.84)  math:0.008->0.006(0.72)  code:0.095->0.089(0.94)  multilingual:0.044->0.039(0.90)  instruction_following:0.185->0.143(0.77)  long_context:0.017->0.012(0.73)
+5 | 0.1482 | 0.1255 | 0.847 | 0.872 (n=14) | 0.766 | [0.80,0.88] | 0.9214/0.9329 | 13.80/13.77/21.55 | 28/28 | 0.268 | 5.80
+   dom: writing_chat:0.447->0.404(0.91)  knowledge_qa:0.107->0.082(0.77)  math:0.015->0.011(0.72)  code:0.144->0.118(0.82)  multilingual:0.071->0.054(0.77)  instruction_following:0.227->0.190(0.84)  long_context:0.028->0.019(0.70)
+4 | 0.1918 | 0.1614 | 0.842 | 0.891 (n=14) | 0.764 | [0.75,0.90] | 0.8990/0.9162 | 11.14/11.12/21.55 | 25/28 | 0.234 | 4.94
+   dom: writing_chat:0.532->0.497(0.93)  knowledge_qa:0.133->0.108(0.81)  math:0.025->0.017(0.67)  code:0.171->0.142(0.83)  multilingual:0.103->0.079(0.77)  instruction_following:0.328->0.253(0.77)  long_context:0.051->0.034(0.66)
+
+=== q38  top_k=10  chunks=27  tokens=55296  checks: rerun=0.0 hookref_max=0.0
+K | plainKL | unionKL | ratio | ratio14 | medChunkRatio | boot95 | top1 plain/union | reads/win plain/union/full | wins | tail rec | kept/tok union
+8 | 0.1060 | 0.0874 | 0.825 | 0.800 (n=14) | 0.893 | [0.73,0.93] | 0.9027/0.9106 | 21.28/21.32/26.26 | 24/27 | 0.336 | 8.67
+   dom: writing_chat:0.120->0.081(0.68)  knowledge_qa:0.165->0.126(0.76)  math:0.070->0.068(0.98)  code:0.111->0.093(0.83)  multilingual:0.135->0.118(0.87)  instruction_following:0.088->0.079(0.90)  long_context:0.060->0.055(0.91)
+6 | 0.1777 | 0.1580 | 0.889 | 0.815 (n=14) | 0.791 | [0.78,1.04] | 0.8748/0.8839 | 16.17/16.22/26.13 | 24/27 | 0.286 | 7.14
+   dom: writing_chat:0.202->0.177(0.88)  knowledge_qa:0.253->0.307(1.22)  math:0.115->0.093(0.81)  code:0.174->0.136(0.78)  multilingual:0.242->0.185(0.76)  instruction_following:0.171->0.135(0.79)  long_context:0.102->0.079(0.77)
+5 | 0.2444 | 0.1857 | 0.760 | 0.781 (n=14) | 0.758 | [0.72,0.81] | 0.8562/0.8742 | 13.61/13.66/26.05 | 26/27 | 0.256 | 6.28
+   dom: writing_chat:0.266->0.228(0.86)  knowledge_qa:0.383->0.293(0.77)  math:0.146->0.116(0.79)  code:0.210->0.165(0.78)  multilingual:0.331->0.229(0.69)  instruction_following:0.253->0.172(0.68)  long_context:0.144->0.108(0.75)

@@ -52,16 +52,22 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
 |---|---|---|---|---|
 | Qwen3-30B-A3B | 128, top-8 | 0.64 / 0.63 / 0.61 | 36% / 37% / 39% | 162-165 of 168 chunks |
 | Qwen3.6-35B-A3B | 256, top-8 | 0.72 / 0.69 / 0.68 | 28% / 31% / 32% | 155-166 of 168 |
+| gpt-oss-120b | 128, top-4 | 0.68 (top-3) / 0.74 (top-2) | 32% / 26% | 151 / 147 of 168 |
 | GLM-4.5-Air (106B) | 128, top-8 | 0.78 / 0.71 / 0.70 | 22% / 29% / 30% | 149-162 of 168 |
-| gpt-oss-120b | 128, top-4 | 0.68 (top-3) / 0.74 (top-2) | 32% / 26% | 151 of 168 (top-3) |
+| Qwen3.8-Flash-Next (180B) | 512, top-10 | 0.87 / 0.80 / 0.78 (top-8 / 6 / 5) | 13% / 20% / 22% | 136-160 of 168 |
 
-- Union adds at most 0.04 expert reads per 4-token window, so speed is unchanged.
-- The benefit holds from 30B to 120B-class models and from 128 to 256 experts: roughly 25-40% less quality loss.
+- Union adds at most 0.05 expert reads per 4-token window, so speed is unchanged.
+- Union helps on every model, but the size varies: 30-40% less quality loss on Qwen3-30B, Qwen3.6-35B and gpt-oss-120b,
+  13-30% on GLM-4.5-Air and Qwen3.8-Flash-Next. The gain tracks how many dropped picks the window recovers
+  (42% of them on Qwen3-30B, 23-34% on the others); models with more experts share fewer experts between neighbouring
+  tokens. Size, expert count, family and quantization change together across these models, so no single cause is isolated.
 - gpt-oss-120b is measured at 128 tokens only: its long-context path gave unusable reference outputs in this vLLM
   build on these GPUs.
 - In the HeteroFlash runtime itself (GLM-5.3-Flash, 288 experts; different setup and eval chunks, so not directly
   comparable), union routing removed 24% / 24% / 31% of the loss at top-6 / 5 / 4.
-- In progress: Qwen3.8-Flash-Next (180B, 512 experts), Inkling-2-Small (~594B), DeepSeek-V4.1-Flash.
+- Every reference run through the hook reproduces the unmodified model exactly (KL 0); deterministic MoE kernels are
+  used where the default kernels varied between identical runs. Details and files: `results/2026-11-19-union-large/`.
+- In progress: Inkling-2-Small (~594B), DeepSeek-V4.1-Flash.
 
 ## How it works: the techniques
 
