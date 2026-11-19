@@ -16,9 +16,9 @@
 <text x="32.0" y="240" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
 <text x="48.0" y="240" font-size="12" fill="#222">Low-latency link</text>
 <text x="32.0" y="264" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="48.0" y="264" font-size="12" fill="#222">Correlation-aware placement</text>
-<text x="32.0" y="288" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="48.0" y="288" font-size="12" fill="#222">Per-batch hot-expert copies</text>
+<text x="48.0" y="264" font-size="12" fill="#222">Grouping co-selected experts</text>
+<text x="32.0" y="288" font-size="14" font-weight="bold" fill="#9a6700">~</text>
+<text x="48.0" y="288" font-size="12" fill="#222">Per-batch copies (past batches)</text>
 <text x="32.0" y="312" font-size="14" font-weight="bold" fill="#9a6700">~</text>
 <text x="48.0" y="312" font-size="12" fill="#222">Per-request hot set</text>
 <line x1="460.0" y1="90" x2="349.55" y2="112" stroke="#1f6feb" stroke-width="1.5"/>

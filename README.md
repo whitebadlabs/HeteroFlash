@@ -76,8 +76,8 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 | Split by memory ([Fiddler](https://arxiv.org/abs/2402.07033), Kamahori et al., 2024; [KTransformers](https://github.com/kvcache-ai/ktransformers); two-machine design: this project) | The Spark GPU computes the frequently used experts; every other expert is computed by the workstation's CPU right next to its own RAM, so only small activations cross the network, never weights | ✅ worked | 15-18 → 22-23 tok/s, lossless (KL 0.027) |
 | Low-latency link (standard practice) | Turns off power-saving and interrupt batching on the 10G link, and stops splitting attention across machines, so each round trip takes under 1 ms | ✅ worked | → 24.7 tok/s, lossless |
 | Balance rule (this project) | Decides per step how many experts the GPU takes vs the CPU, so neither machine sits idle waiting for the other | ✅ worked | 26.4 → 27.3 tok/s, same quality |
-| Correlation-aware expert placement ([Patterns behind Chaos](https://arxiv.org/abs/2510.05497), ISCA 2026) | On multi-GPU servers, puts experts that are often picked together on the same GPU to cut traffic | ❌ failed (simulated) | 9-21% fewer cross-GPU sends, but GPU load becomes unbalanced |
-| Per-batch copies of hot experts ([MegaFlux](https://arxiv.org/abs/2610.00671), 2026) | Duplicates busy experts on several GPUs to restore balance | ❌ failed (simulated) | balance restored only if the planner already sees the current batch |
+| Grouping co-selected experts on one GPU (this project; the inverse of Insight 5 in [Patterns behind Chaos](https://arxiv.org/abs/2510.05497), ISCA 2026, which advises spreading them) | On multi-GPU servers, puts experts that are often picked together on the same GPU to cut traffic | ❌ failed (simulated), as that paper's Insight 5 predicts | 9-21% fewer cross-GPU sends on 5 models, but GPU load becomes less even |
+| Per-batch copies of hot experts ([MegaFlux](https://arxiv.org/abs/2610.00671), 2026) | Duplicates busy experts on several GPUs to restore balance | ⚠️ works only with current-batch routing (simulated) | with the current batch's routing it restores balance, as MegaFlux does; planners that only see past batches missed the balance limit in every cell |
 | Per-request hot set ([Patterns behind Chaos](https://arxiv.org/abs/2510.05497)) | Uses the prompt's routing to choose which experts the GPU holds for that request | ⚠️ marginal here | GPU coverage 54.6% → 67-69%, modeled speed +0-2% (the GPU already holds more needed experts than it has time to compute) |
 | **2. How many bits each weight needs** | | | |
 | 4-bit attention ([NVFP4](https://github.com/NVIDIA/TensorRT-Model-Optimizer), NVIDIA; converter: this project) | Stores the attention weights in 4 bits instead of 8, so each step reads fewer bytes | ✅ worked | 27.3 → 29.6 tok/s, KL +0.014 |
@@ -86,12 +86,12 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 | **3. Which expert work is worth doing** | | | |
 | Rank rule, top-7 of 8 ([K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Each token picks 8 experts; the weakest one contributes least, so it is skipped | ✅ worked | 24.7 → 26.4 tok/s, KL 0.027 → 0.038 |
 | Window-level expert reuse ([Lynx](https://arxiv.org/abs/2411.08982), Gupta et al., 2024) + mean-output stand-in ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)), top-5 | Speculative decoding checks 4 tokens at once; a skipped pick is kept anyway if its expert is already being read for another token in the window (free). Picks that are still skipped are replaced by that expert's average output instead of nothing | ✅ worked | 31.3 → **36.2 tok/s at KL 0.065** (reuse alone: 33.2 tok/s at 0.083) |
-| Window-level expert reuse on 6 models ([Lynx](https://arxiv.org/abs/2411.08982), applied to single-user speculative windows) | The same reuse rule, tested on Qwen, GLM and gpt-oss models | ✅ worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2: 91.1% → 93.9% |
+| Window-level expert reuse on 6 models ([Lynx](https://arxiv.org/abs/2411.08982), applied to single-user speculative windows) | The same reuse rule, tested on Qwen, GLM and gpt-oss models | ✅ worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2 (Qwen3.6-35B): 91.1% → 93.9%. Plain top-3 matches reuse at top-2, so the gain is fewer expert reads, not accuracy per expert computed |
 | Mean-output stand-in on Qwen3-30B ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | The average-output replacement on a different model | ❌ did not transfer | neutral to worse |
 | Co-selection-guided substitution (this project) | Replaces a skipped expert with its usual partner expert | ❌ failed | worse than reuse alone and than random controls |
 | **4. When each piece of work has to finish** | | | |
-| Whole-partial deferral ([derpseek](https://github.com/chronarion/derpseek)) | Lets the GPU continue without waiting for the CPU's result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
-| Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Delays only the weakest experts by one layer instead of skipping them | ⚠️ quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (the CPU side has no spare bandwidth) |
+| Whole-partial deferral (this project; a coarser form of [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`, which defers one missed expert a sublayer) | Lets the GPU continue without waiting for the CPU's whole result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
+| Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity); close to [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`) | Delays only the weakest experts by one layer instead of skipping them | ⚠️ quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (the CPU side has no spare bandwidth) |
 | Larger speculative drafts ([speculative decoding](https://arxiv.org/abs/2211.17192), Leviathan et al., 2023) | Guesses more tokens ahead per step | ❌ no gain | acceptance saturates at ~2.9 tokens per step |
 
 **Net:** 6.5 tok/s (first deployment) → 36.2 tok/s at KL 0.065. The usual 2-bit single-Spark build runs 27-28 tok/s at
@@ -143,8 +143,9 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
   dropping, buys speed at a fraction of the usual quality cost.
 - **Quality is a dial, not a cliff.** The frontier runs from near-reference quality (KL 0.038 at 26 tok/s) to
   36 tok/s at KL 0.065, and every point is measured, not assumed.
-- **Not lossless, and not yet at the original GPU server's speed (151 tok/s).** Task-level benchmarks (tool calling,
-  math) and time-to-first-token on long prompts are the next measurements.
+- **Not lossless, and not yet at the original GPU server's speed (151 tok/s).** Tool calling on GLM-5.3-Flash matched the
+  all-experts baseline (90/100 vs 89/100), and math (GSM8K) was checked for the routing technique on Qwen3.6-35B.
+  Math and knowledge scores on GLM itself, and time-to-first-token on long prompts, are the next measurements.
 
 ---
 
@@ -180,7 +181,8 @@ cached 45K + 32-token TTFT of at most 0.2 s. **None of these is met today** (sec
 ### 2.1 Placement
 
 Weights come from the official BF16 release of GLM-5.3-Flash (revision `f9fed3bbc822`). The non-expert ("fixed path")
-weights run in FP8 on the Spark. Every routed expert exists as Q4_K + importance-matrix GGUF bytes in workstation RAM,
+weights run in FP8 on the Spark. (This section describes the base configuration; the headline points in section 4.6
+replace FP8 with NVFP4 for attention, shared experts and dense layers.) Every routed expert exists as Q4_K + importance-matrix GGUF bytes in workstation RAM,
 and the Spark keeps a resident hot set of the *same* Q4_K bytes.
 
 A decode cycle is one verify pass over 4 positions plus 3 MTP draft passes. Its work is split three ways
@@ -194,7 +196,7 @@ A decode cycle is one verify pass over 4 positions plus 3 MTP draft passes. Its 
 - **Vocabulary projection (lm_head): split by row.** Rows 0-84,991 on the GPU, the rest on the workstation; exact bf16
   logits come back (no top-k approximation).
 - **Linear-attention (KDA) q/k/v projections: split by head.** Optional; it does not pay (finding F7) and is off in the
-  recommended configuration.
+  headline configuration.
 
 ### 2.2 The mailbox exchange
 
@@ -233,9 +235,11 @@ Code: `bench/dualrt/` (hook `hook/sitecustomize.py`, CUDA extension `hook/hf_drt
   (`results/2026-11-08-balanced-eval/control_exl3_3.5bpw.json`, key `_overall`). A point is *inside* the bar only if
   all three metrics are at least as good as the control's.
 - **Anchors.** Every speed boot re-runs reference points from the first boot. If an anchor misses by more than
-  0.3 tok/s, the boot's other points are not trusted. That rule rejected boot f2 (finding F8). Boot f3, which holds
-  the recommended point, also missed it on one anchor by 0.40 tok/s, entirely in its cold first round; its other
-  anchor matched within 0.1. f3's results are therefore reported as same-boot comparisons (section 4.4).
+  0.3 tok/s, the boot's other points are not trusted. That rule rejected boot f2 (finding F8). Boot f3 missed it on one anchor by 0.40 tok/s, entirely in its
+  cold first round, so its results are reported as same-boot comparisons (section 4.4). The headline boot d6
+  (section 4.6) did not re-run the f1 anchors. Its nearest cross-boot check, plain top-5 on the same checkpoint,
+  read 35.46 tok/s on d5 and 35.87 on d6 (0.41 apart, just outside the 0.3 rule), so treat d6's absolute speeds as
+  ±0.5 tok/s; its three rounds agree within 0.4 tok/s.
 
 ## 4. Measured results
 
@@ -290,7 +294,7 @@ The rows use different workloads, so compare within a group of rows, not across 
 | frontier boot f1: split, KDA split on | 15-request pool | 20.75 (21.8 on warm rounds 2-3) | `results/2026-11-17-frontier/f1_frontier_speed.json` (`base`) |
 | f1: KDA split off (lossless) | 15-request pool | 23.21 | same file (`kdaoff`) |
 | f1: KDA split off + workstation NIC interrupt coalescing off (lossless) | 15-request pool | 24.68 | same file (`coal_kdaoff_c0`, 6 rounds, ABBA) |
-| **f3: top-7 experts + KDA split off (recommended)** | 15-request pool | **25.62** (25.7 on warm rounds 2-3, derived) | `results/2026-11-17-frontier/f3_frontier_speed.json` (`k7_kdaoff`) |
+| **f3: top-7 experts + KDA split off (earlier operating point)** | 15-request pool | **25.62** (25.7 on warm rounds 2-3, derived) | `results/2026-11-17-frontier/f3_frontier_speed.json` (`k7_kdaoff`) |
 
 The split against config B in the same session: cycle time 148.5 -> 120.6 ms (essay) and 150.9 -> 119.9 ms (chat),
 1.21-1.26x (`results/2026-11-17-dualrt/README.md`, section 3).
@@ -512,10 +516,11 @@ expert selection, applied here to speculative verify windows; the cross-model me
   - Their quality is good (F9). But the workstation's expert server already streams ~190 GB/s per request, so the
     extra late work lands on the critical path.
   - Speed: 22-24 tok/s (MoE blocked 45-57 ms per window) against 33 tok/s for plain drops.
-- **Correlation-aware expert placement does not survive realistic load balancing.**
-  - A side study on routing traces from GLM-5.3-Flash and Qwen3.6-35B-A3B (branch `expert-correlation`) replayed them
-    on 8-32 simulated GPUs. Experts do have partners, co-selected 2.8-4.1x above chance and stable across task types.
-  - Grouping partners on one GPU cuts simulated cross-GPU sends 12-20% against vLLM's DefaultEplbPolicy.
+- **Grouping co-selected experts does not survive realistic load balancing.**
+  - A side study on routing traces (branch `expert-correlation`) replayed them on 8-32 simulated GPUs. Experts do have partners, co-selected 2.2-4.3x above chance on all five models studied
+    (GLM-5.3-Flash, Qwen3.6-35B, Qwen3-30B, gpt-oss-120b, DeepSeek-V2-Lite), stable across task types.
+  - Grouping partners on one GPU cuts simulated cross-GPU sends 9-21% at 8 GPUs against vLLM's DefaultEplbPolicy.
+    This is the inverse of Insight 5 in "Patterns behind Chaos", which advises spreading co-selected experts.
   - But it unbalances load. Redundant-expert copies fix that only when the planner sees the current batch.
     Causal planners (last batch, moving average, decode-step streams) miss the balance limit in every cell.
 - **A duplicate-replica waste in vLLM's DefaultEplbPolicy.** With redundant experts it places 2 copies of one expert
@@ -531,12 +536,14 @@ expert selection, applied here to speculative verify windows; the cross-model me
 - **TTFT is not measured on the split runtime.** Prefill still sends every expert to the workstation, as in config B.
   Config B measured 994 s for a cold 45K prompt and 1.17 s for cached 45K + 32 (`docs/RESEARCH_PLAN_2026-11-16.md`,
   first table), against targets of 10.8 s and 0.2 s.
-- **The recommended point is not confirmed on a clean boot.** On boot f3 the lossless anchor missed f1 by 0.40 tok/s
-  pooled (all of it in the cold first round); the other anchor matched within 0.1. A confirmation boot with a warm-up
-  point has not been run. Treat absolute f3 numbers as ±0.5 tok/s and its comparisons as same-boot only.
+- **The headline speeds are not anchor-confirmed.** Boot d6 (section 4.6) did not re-run the f1 anchors; plain
+  top-5 read 35.46 tok/s on d5 and 35.87 on d6, just outside the 0.3 tok/s rule. Treat absolute speeds as ±0.5 tok/s
+  and comparisons as same-boot.
 - **Top-7 + coalescing off** (~27 tok/s) is modeled, not measured. (Coalescing off is now the default; the points in sections 4.5-4.6 include it.)
-- **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. Two bars are used: the two-GPU control's own cost (KLD 0.042) and a looser go/no-go of KLD < 0.1. There is no tool-calling domain in the eval; code is the closest proxy. There are no
-  downstream task scores for top-7 yet; the agent-suite scores in `results/2026-11-09-audit/` are for config B.
+- **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. Two bars are used: the two-GPU control's own cost (KLD 0.042) and a looser go/no-go of KLD < 0.1. There is no tool-calling domain in the eval; code is the closest proxy. Task scores
+  so far: tool-eval-bench on GLM-5.3-Flash (90/100 at top-5 + union + stand-in vs 89/100 for all 8 experts,
+  `results/2026-11-19-llmbench/`) and GSM8K/MMLU-Pro for union routing on Qwen3.6-35B; no math or knowledge benchmark
+  on GLM yet. The agent-suite scores in `results/2026-11-09-audit/` are for config B.
 - **Speed is batch 1, greedy,** on one hardware pair and one link type (TCP over 10GBASE-T).
 - **Unexplained:** the KV-size difference between boots (F8), and a race between the hook's 30-second stats-dump
   thread and CUDA-graph capture that failed one boot (described in `results/2026-11-17-frontier/README.md`).
