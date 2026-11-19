@@ -33,6 +33,11 @@ def moe_layers_from_config(cfg, num_layers):
     return [l for l in range(num_layers) if l not in mlp_only and l >= first_dense and (l + 1) % step == 0]
 
 
+def num_experts(cfg):
+    tc = cfg.get("text_config", cfg)
+    return int(tc.get("num_experts") or tc.get("n_routed_experts") or tc.get("num_local_experts"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
@@ -46,6 +51,7 @@ def main():
     ap.add_argument("--batch", type=int, default=64, help="requests per generate() call")
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--enforce-eager", action="store_true")
+    ap.add_argument("--tp", type=int, default=1)
     a = ap.parse_args()
 
     import vllm
@@ -68,9 +74,10 @@ def main():
             ids = tok(r["text"])["input_ids"]
         prompts.append([int(x) for x in ids[: a.max_prompt_tokens]])
 
+    extra = {"limit_mm_per_prompt": {"image": 0, "video": 0}} if "vision_config" in cfg else {}
     llm = LLM(model=a.model, enable_return_routed_experts=True, enable_prefix_caching=True,
               gpu_memory_utilization=a.gpu_mem, max_model_len=a.max_model_len, enforce_eager=a.enforce_eager,
-              limit_mm_per_prompt={"image": 0, "video": 0})
+              tensor_parallel_size=a.tp, **extra)
     sp = SamplingParams(max_tokens=a.max_tokens, temperature=a.temperature, seed=0)
 
     arrays, meta = {}, []
@@ -105,7 +112,7 @@ def main():
     np.savez(a.out + ".npz", **arrays)
     json.dump({"requests": meta, "model": os.path.basename(a.model.rstrip("/")), "vllm": vllm.__version__,
                "num_hidden_layers_in_capture": num_layers, "moe_layers": moe,
-               "num_experts": int(cfg.get("text_config", cfg).get("num_experts") or cfg.get("text_config", cfg).get("n_routed_experts")),
+               "num_experts": num_experts(cfg),
                "top_k": int(next(iter(arrays.values())).shape[2]),
                "sampling": {"temperature": a.temperature, "max_tokens": a.max_tokens, "seed": 0},
                "prefix_caching": True,

@@ -182,48 +182,15 @@ destination GPU; the token's own GPU is not a send). **Load imbalance**: busiest
   per token (no DP-rank structure, no node hierarchy).
 - The correlated placement is a simple greedy search, not an optimum.
 
-## Follow-up 2026-11-18 afternoon: redundant-expert (copy) budget (scripts/copies.py, results/copies/)
-Gate fixed before results: correlated + R copies keeps >= 15% fewer sends than DefaultEplbPolicy + the same R copies,
-with p95 per-2048-token-batch imbalance <= 1.15 or <= Default + 0.05, on holdout. Fit on calib mix; R per GPU
-{1, 2, 25% of E/G}; routing rule (ours): copy on home GPU, else on a GPU already sent to, else least-loaded copy.
-Parity: with R = 0 the copies code reproduces out/glm.json exactly.
-- **Static copies (from calib load): no-go everywhere.** Sends stay 14-26% lower, but p95 batch imbalance stays about
-  2x Default's (e.g. GLM 8 GPUs R9: 2.84 vs 1.37; Qwen 8 GPUs R8: 1.76 vs 1.20).
-- **Per-batch copies (planner sees the batch, an optimistic bound): go in some cells.** GLM 8 GPUs R9 -20% sends,
-  p95 1.28 vs 1.37; GLM 16 R5 -19%, 1.28 vs 1.52; Qwen 8 R8 -26%, 1.17 vs 1.20; Qwen 16 R4 -24%, 1.20 vs 1.35;
-  Qwen 32 R2 -19%, 1.31 vs 1.60. GLM at 32 GPUs misses on sends (-14 to -15%).
-- Most "go" cells pass on the Default + 0.05 clause: Default itself has p95 batch imbalance of 1.2-2.6.
-- Least-loaded-copy routing (extra check, results/copies/summary_balance.md): balance improves for all, but the
-  correlated send cut falls to ~9-11% at the 25% budget (GLM: no go; Qwen still passes some cells).
-- Anti-paired placement (pairs spread apart, as in "Patterns behind Chaos"): +4-10% sends vs Default, better balance.
-- Caveats: GLM pooled p95 is mostly long_context batches (14 of 20); "mix" batches are task-ordered, not interleaved.
-Reading: correlation-aware placement pays only together with a dynamic, per-batch replica planner (MegaFlux-style);
-the static version should be dropped. Next: a causal planner that uses the previous batch's counts, not the current one's.
-
-## Follow-up 2: causal copy planner (scripts/causal.py, results/causal/) - NO-GO
-A copy planner that sees only past batches (lag-1 or EMA 0.5) keeps the send cut but loses the balance. p95 batch
-imbalance is about the same as correlated placement with no copies (Qwen 8 GPUs R8: 1.63 vs 1.08 for the see-the-batch
-bound; GLM 16 GPUs R5: 2.41 vs 1.29). It fails the gate in all cells, on interleaved mixed-request streams (3 shuffles)
-and on per-task streams. Stricter reference: give Default the same see-the-batch planner. Then even the bound passes only on
-Qwen (8 GPUs R8, 16 R4, 32 R2: 17-22% fewer sends); on GLM it cuts 10-16% and fails p95. Every per-batch planner
-replaces 80-97% of its copy slots each batch (weights would move every step). R=0 parity with out/glm.json is exact.
-Open (inferred): 2048-token batches here are mostly prefill from 1-3 requests; in decode-heavy continuous batching,
-consecutive steps share most requests, so lag-1 could predict far better. Next: a decode-step stream with overlapping requests.
-
-## Side finding: DefaultEplbPolicy puts duplicate replicas on one GPU (scripts/dupfix.py, results/dupfix/)
-vLLM main default.py (identical to vendored 6092bb9 as of 2026-11-18) packs physical experts with balanced_packing,
-which does not stop two replicas of one logical expert landing on the same GPU (known upstream in DeepSeek EPLB #22;
-fixed there in #27/#28). Measured on calib mix loads: 4-6% of redundant slots are wasted duplicates (Qwen 8 GPUs:
-14/320 at R1, 139/2560 at R8; GLM 8 GPUs R9: 176/3024). A packing step that avoids same-GPU duplicates removes all of
-them. Effect on holdout replay (study routing rule) is small and mixed: GLM 8 GPUs R9 p95 batch imbalance 1.39 -> 1.33,
-sends -0.7%; Qwen 8 GPUs R8 1.201 -> 1.200; at R1-R2 within noise either way (GLM 8 GPUs R2 1.48 -> 1.51).
-Reading: a real but low-impact cleanup, worth it mostly at large replica budgets.
-
-## Follow-up 3: decode-step continuous batching (scripts/decode.py, results/decode/) - NO-GO for causal planners
-B = 64 / 256 concurrent decode slots (request overlap step to step 0.995), shuffled mixed-task holdout queue, every 4th
-layer. Decode load is far more stable than the old prefill-heavy batches (cosine of consecutive 2048-token windows
-0.98 vs 0.79), but a single B=64 step predicts the next barely better than the calib prior (0.84 vs 0.83).
-All causal planners (lag-1, EMA 0.5/0.9, lag-1 replanned every 16 steps) fail the gate in every cell against the
-same-planner Default; send cut holds (Qwen 22-26%, GLM 12-15%), p95 step imbalance misses (closest: Qwen B=256
-G8 R8, +0.014..+0.034 over the limit across 3 seeds). Only the see-this-step bound passes (Qwen G8 R8, G16 R4).
-Copy churn 75-96% of slots per replan. Untested next idea (inferred): long-window planner (EMA ~0.1).
+## Follow-up 4 (2026-11-19): three more MoE models (routing traces on the Max-Q GPUs, same prompts and pipeline)
+Measured on holdout prompts (chat / code / math, ~100 holdout requests each); details in results/more/numbers.md.
+| model | experts, top-k | partner lift same / cross task | N->N+1 recall within / across task (popularity baseline) | per-task placement vs per-task Default, 8 / 16 / 32 GPUs (imbalance at 8) |
+|---|---|---|---|---|
+| GLM-5.3-Flash | 288, top-8 | 2.8 / 2.6 | 0.33 / 0.14 (0.15) | -12 / -14 / -15% (1.12 -> 1.16) |
+| Qwen3.6-35B-A3B | 256, top-8 | 4.1 / 4.2 | 0.40 / 0.16 (0.17) | -16 / -20 / -20% (1.05 -> 1.09) |
+| Qwen3-30B-A3B | 128, top-8 | 3.3 / 4.3 | 0.50 / 0.24 (0.25) | -11 / -16 / -18% (1.06 -> 1.08) |
+| gpt-oss-120b | 128, top-4 | 3.0 / 3.1 | 0.47 / 0.26 (0.18) | -9 / -13 / -16% (1.06 -> 1.07) |
+| DeepSeek-V2-Lite | 64 (+2 shared), top-6 | 2.4 / 2.2 | 0.49 / 0.35 (0.17) | -21 / -17 / -10% (1.05 -> 1.06) |
+Reading: co-selection partners (2.2-4.3x above chance) and layer-to-layer predictability hold on all five models; cross-task
+prediction stays above the popularity baseline only for gpt-oss and DeepSeek-V2-Lite. Per-task correlated placement cuts
+simulated sends 9-21% at 8 GPUs with balance kept; the causal-planner balance problem (follow-ups 2-3) was only tested on GLM/Qwen3.6.
