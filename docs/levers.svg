@@ -11,55 +11,59 @@
 <text x="32.0" y="182" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
 <text x="48.0" y="182" font-size="12" fill="#222">Split by memory (GPU: hot</text>
 <text x="48.0" y="199" font-size="12" fill="#222">experts; CPU: the rest)</text>
-<text x="32.0" y="216" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="48.0" y="216" font-size="12" fill="#222">Balance rule (GPU/CPU share)</text>
-<text x="32.0" y="240" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="48.0" y="240" font-size="12" fill="#222">Low-latency link</text>
-<text x="32.0" y="264" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="48.0" y="264" font-size="12" fill="#222">Grouping co-selected experts</text>
-<text x="32.0" y="288" font-size="14" font-weight="bold" fill="#9a6700">~</text>
-<text x="48.0" y="288" font-size="12" fill="#222">Per-batch copies (past batches)</text>
-<text x="32.0" y="312" font-size="14" font-weight="bold" fill="#9a6700">~</text>
-<text x="48.0" y="312" font-size="12" fill="#222">Per-request hot set</text>
+<text x="32.0" y="225" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="48.0" y="225" font-size="12" fill="#222">Balance rule (GPU/CPU share)</text>
+<text x="32.0" y="251" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="48.0" y="251" font-size="12" fill="#222">Low-latency link</text>
+<text x="32.0" y="277" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="48.0" y="277" font-size="12" fill="#222">Grouping co-selected experts</text>
+<text x="32.0" y="303" font-size="14" font-weight="bold" fill="#9a6700">~</text>
+<text x="48.0" y="303" font-size="12" fill="#222">Per-batch copies (past batches)</text>
+<text x="32.0" y="329" font-size="14" font-weight="bold" fill="#9a6700">~</text>
+<text x="48.0" y="329" font-size="12" fill="#222">Per-request hot set</text>
 <line x1="460.0" y1="90" x2="349.55" y2="112" stroke="#1f6feb" stroke-width="1.5"/>
 <rect x="240.8" y="112" width="211.5" height="270" rx="8" fill="#fafafa" stroke="#bbb"/>
 <text x="252.8" y="136" font-size="14" font-weight="bold" fill="#111">2. HOW MANY BITS</text>
 <text x="252.8" y="154" font-size="12" fill="#555" font-style="italic">Spend precision where it&#39;s cheap</text>
 <text x="252.8" y="182" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="268.8" y="182" font-size="12" fill="#222">4-bit attention</text>
-<text x="252.8" y="206" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="268.8" y="206" font-size="12" fill="#222">4-bit shared experts + dense</text>
-<text x="252.8" y="230" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="268.8" y="230" font-size="12" fill="#222">2-bit experts (the usual</text>
-<text x="268.8" y="247" font-size="12" fill="#222">approach: KL 0.239)</text>
+<text x="268.8" y="182" font-size="12" fill="#222">Experts: 4-bit Q4_K (~4.5 bits)</text>
+<text x="252.8" y="208" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="268.8" y="208" font-size="12" fill="#222">4-bit attention (NVFP4)</text>
+<text x="252.8" y="234" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="268.8" y="234" font-size="12" fill="#222">4-bit shared experts + dense</text>
+<text x="252.8" y="260" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="268.8" y="260" font-size="12" fill="#222">8-bit output head (MXFP8)</text>
+<text x="252.8" y="286" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="268.8" y="286" font-size="12" fill="#222">2-bit experts (the usual</text>
+<text x="268.8" y="303" font-size="12" fill="#222">approach: KL 0.239)</text>
 <line x1="460.0" y1="90" x2="570.35" y2="112" stroke="#1f6feb" stroke-width="1.5"/>
 <rect x="461.6" y="112" width="211.5" height="270" rx="8" fill="#fafafa" stroke="#bbb"/>
 <text x="473.6" y="136" font-size="14" font-weight="bold" fill="#111">3. WHICH WORK</text>
 <text x="473.6" y="154" font-size="12" fill="#555" font-style="italic">Not every expert matters equally</text>
 <text x="473.6" y="182" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
 <text x="489.6" y="182" font-size="12" fill="#222">Rank rule: skip weakest pick</text>
-<text x="473.6" y="206" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="489.6" y="206" font-size="12" fill="#222">Window-level expert reuse</text>
-<text x="473.6" y="230" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="489.6" y="230" font-size="12" fill="#222">Mean-output stand-in (GLM)</text>
-<text x="473.6" y="254" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="489.6" y="254" font-size="12" fill="#222">Stand-in on Qwen3</text>
-<text x="473.6" y="278" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="489.6" y="278" font-size="12" fill="#222">Co-selection substitution</text>
+<text x="473.6" y="208" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="489.6" y="208" font-size="12" fill="#222">Window-level expert reuse</text>
+<text x="473.6" y="234" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="489.6" y="234" font-size="12" fill="#222">Mean-output stand-in (GLM)</text>
+<text x="473.6" y="260" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="489.6" y="260" font-size="12" fill="#222">Stand-in on Qwen3</text>
+<text x="473.6" y="286" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="489.6" y="286" font-size="12" fill="#222">Co-selection substitution</text>
 <line x1="460.0" y1="90" x2="791.1500000000001" y2="112" stroke="#1f6feb" stroke-width="1.5"/>
 <rect x="682.4000000000001" y="112" width="211.5" height="270" rx="8" fill="#fafafa" stroke="#bbb"/>
 <text x="694.4000000000001" y="136" font-size="14" font-weight="bold" fill="#111">4. WHEN</text>
 <text x="694.4000000000001" y="154" font-size="12" fill="#555" font-style="italic">Overlap or shift work in time</text>
 <text x="694.4000000000001" y="182" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
 <text x="710.4000000000001" y="182" font-size="12" fill="#222">GPU and CPU work in parallel</text>
-<text x="694.4000000000001" y="206" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
-<text x="710.4000000000001" y="206" font-size="12" fill="#222">Speculative decoding (MTP-3)</text>
-<text x="694.4000000000001" y="230" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="710.4000000000001" y="230" font-size="12" fill="#222">Whole-partial deferral</text>
-<text x="694.4000000000001" y="254" font-size="14" font-weight="bold" fill="#9a6700">~</text>
-<text x="710.4000000000001" y="254" font-size="12" fill="#222">Weak picks one layer late</text>
-<text x="694.4000000000001" y="278" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
-<text x="710.4000000000001" y="278" font-size="12" fill="#222">Larger speculative drafts</text>
+<text x="694.4000000000001" y="208" font-size="14" font-weight="bold" fill="#1e7b3a">✓</text>
+<text x="710.4000000000001" y="208" font-size="12" fill="#222">Speculative decoding (MTP-3)</text>
+<text x="694.4000000000001" y="234" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="710.4000000000001" y="234" font-size="12" fill="#222">Whole-partial deferral</text>
+<text x="694.4000000000001" y="260" font-size="14" font-weight="bold" fill="#9a6700">~</text>
+<text x="710.4000000000001" y="260" font-size="12" fill="#222">Weak picks one layer late</text>
+<text x="694.4000000000001" y="286" font-size="14" font-weight="bold" fill="#d1242f">✗</text>
+<text x="710.4000000000001" y="286" font-size="12" fill="#222">Larger speculative drafts</text>
 <rect x="20" y="398" width="880" height="50" rx="8" fill="#dff3e4" stroke="#1e7b3a"/>
 <text x="460.0" y="419" font-size="13" fill="#145a2a" text-anchor="middle" font-weight="bold">Yardstick for every change: decode speed AND quality (KL vs a Q8 copy of the official BF16 weights, per domain)</text>
 <text x="460.0" y="437" font-size="12" fill="#145a2a" text-anchor="middle">✓ kept   ✗ rejected   ~ works but not worth it here.  Kept changes stack into the speed-quality frontier below.</text>
