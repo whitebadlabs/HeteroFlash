@@ -31,13 +31,32 @@ math, code, multilingual, instruction following, long context). Tool calling (to
 
 ## Union-aware routing on other models
 
-Measured quality cost of using fewer experts per token, plain vs union-aware, at the same number of expert reads
-(teacher-forced, 4-token windows, KL to the unmodified model; ratio = union / plain):
+**The method.** Speculative decoding verifies several tokens at once (here a window of 4). Each token's router picks
+its experts; with a reduced budget only its top-K picks are computed. Union-aware routing adds one rule: a weaker
+pick beyond the top-K is still kept if its expert is already being read for another token in the same window. That
+expert's weights are loaded anyway, so keeping the pick costs no extra memory reads.
 
-| model | experts, top-k | top-6 | top-5 | top-4 |
+**The measurement.** Quality cost = full-vocabulary KL divergence to the unmodified model (all experts) on the same
+text. For each model we use fewer experts per token two ways, plain (drop everything below the top-K) and union-aware,
+at the same number of expert reads. Teacher-forced, 128-token chunks of a 7-domain eval set (168 chunks per model),
+vLLM on 2 RTX PRO 6000 Max-Q GPUs.
+
+"Less damage" = 1 - (union KL / plain KL): the share of the quality loss from dropping experts that union routing removes.
+
+| model | experts, top-k | union / plain (top-6 / 5 / 4) | less damage with union | union better on |
 |---|---|---|---|---|
-| Qwen3-30B-A3B | 128, top-8 | 0.040 -> 0.023 (0.57) | 0.071 -> 0.043 (0.61) | 0.126 -> 0.077 (0.61) |
-| GLM-5.3-Flash (7-chunk subset, in the runtime) | 288, top-8 | 0.042 -> 0.032 (0.76) | 0.079 -> 0.060 (0.76) | 0.144 -> 0.099 (0.69) |
+| Qwen3-30B-A3B | 128, top-8 | 0.64 / 0.63 / 0.61 | 36% / 37% / 39% | 162-165 of 168 chunks |
+| Qwen3.6-35B-A3B | 256, top-8 | 0.72 / 0.69 / 0.68 | 28% / 31% / 32% | 155-166 of 168 |
+| GLM-4.5-Air (106B) | 128, top-8 | 0.78 / 0.71 / 0.70 | 22% / 29% / 30% | 149-162 of 168 |
+| gpt-oss-120b | 128, top-4 | 0.68 (top-3) / 0.74 (top-2) | 32% / 26% | 151 of 168 (top-3) |
+
+- Union adds at most 0.04 expert reads per 4-token window, so speed is unchanged.
+- The benefit holds from 30B to 120B-class models and from 128 to 256 experts: roughly 25-40% less quality loss.
+- gpt-oss-120b is measured at 128 tokens only: its long-context path gave unusable reference outputs in this vLLM
+  build on these GPUs.
+- In the HeteroFlash runtime itself (GLM-5.3-Flash, 288 experts; different setup and eval chunks, so not directly
+  comparable), union routing removed 24% / 24% / 31% of the loss at top-6 / 5 / 4.
+- In progress: Qwen3.8-Flash-Next (180B, 512 experts), Inkling-2-Small (~594B), DeepSeek-V4.1-Flash.
 
 ## How it works: the techniques
 
