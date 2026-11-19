@@ -209,3 +209,12 @@ Qwen (8 GPUs R8, 16 R4, 32 R2: 17-22% fewer sends); on GLM it cuts 10-16% and fa
 replaces 80-97% of its copy slots each batch (weights would move every step). R=0 parity with out/glm.json is exact.
 Open (inferred): 2048-token batches here are mostly prefill from 1-3 requests; in decode-heavy continuous batching,
 consecutive steps share most requests, so lag-1 could predict far better. Next: a decode-step stream with overlapping requests.
+
+## Side finding: DefaultEplbPolicy puts duplicate replicas on one GPU (scripts/dupfix.py, results/dupfix/)
+vLLM main default.py (identical to vendored 6092bb9 as of 2026-11-18) packs physical experts with balanced_packing,
+which does not stop two replicas of one logical expert landing on the same GPU (known upstream in DeepSeek EPLB #22;
+fixed there in #27/#28). Measured on calib mix loads: 4-6% of redundant slots are wasted duplicates (Qwen 8 GPUs:
+14/320 at R1, 139/2560 at R8; GLM 8 GPUs R9: 176/3024). A packing step that avoids same-GPU duplicates removes all of
+them. Effect on holdout replay (study routing rule) is small and mixed: GLM 8 GPUs R9 p95 batch imbalance 1.39 -> 1.33,
+sends -0.7%; Qwen 8 GPUs R8 1.201 -> 1.200; at R1-R2 within noise either way (GLM 8 GPUs R2 1.48 -> 1.51).
+Reading: a real but low-impact cleanup, worth it mostly at large replica budgets.
