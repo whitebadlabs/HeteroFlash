@@ -466,6 +466,7 @@ Unit tests for the analysis code: `python3 -m unittest discover -s tests -v`.
 
 ## License and data
 
-Code license: to be chosen before release. No model weights are redistributed here; the official GLM-5.3-Flash model
+Code: Apache-2.0, see [LICENSE](LICENSE). Copyright 2026 Carmen Lok. Results, routing traces and other data in this
+repository: CC-BY-4.0 (reuse freely, with attribution). No model weights are redistributed here; the official GLM-5.3-Flash model
 card lists the weights as MIT. Evaluation and calibration text comes from public datasets and public encyclopedia text
 under their own licenses (`results/2026-11-08-balanced-eval/q_eval_balanced_v1.manifest.json`).
