@@ -37,7 +37,9 @@ math, code, multilingual, instruction following, long context). Tool calling (to
 **The method.** Speculative decoding verifies several tokens at once (here a window of 4). Each token's router picks
 its experts; with a reduced budget only its top-K picks are computed. Union-aware routing adds one rule: a weaker
 pick beyond the top-K is still kept if its expert is already being read for another token in the same window. That
-expert's weights are loaded anyway, so keeping the pick costs no extra memory reads.
+expert's weights are loaded anyway, so keeping the pick costs no extra memory reads. This is the batch-aware expert selection of
+[Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024), applied within one request's speculative-decoding verify window instead of across concurrent
+requests; what is new here is the measurement across model families, not the idea.
 
 **The measurement.** Quality cost = full-vocabulary KL divergence to the unmodified model (all experts) on the same
 text. For each model we use fewer experts per token two ways, plain (drop everything below the top-K) and union-aware,
@@ -72,7 +74,8 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
    important: their rank in the router decides how much they contribute. The strongest picks are always computed.
    The weakest are not simply dropped: each is replaced by its routing weight times that expert's average output,
    which halves the quality cost of skipping it.
-4. **Reuse what is already being read (union-aware routing).** Speculative decoding checks several tokens at once. If
+4. **Reuse what is already being read (union-aware routing, a speculative-decoding form of Lynx's batch-aware
+   expert selection).** Speculative decoding checks several tokens at once. If
    a weak pick's expert is already being read for another token in the same window, keeping it costs nothing, so it
    is kept.
 5. **Coordinate the two machines.** CPU and GPU work overlap. The link is tuned for latency: interrupt coalescing off,
@@ -403,7 +406,8 @@ because they nearly produced wrong conclusions here.*
 - Even perfectly hidden experts would cap this hardware at ~45-47 tok/s at 2.9 committed tokens per cycle.
 - 4-bit attention removed ~12-13 ms per cycle (d4 vs d3 at A 0.5), the largest single gain since the split, at +0.014 KLD.
 
-**F12. Union-aware routing: tail picks whose expert is already read cost nothing.** *Likely new as a decoding-time
+**F12. Union-aware routing: tail picks whose expert is already read cost nothing.** *Prior work: [Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024)'s batch-aware
+expert selection, applied here to speculative verify windows; the cross-model measurement is ours.*
 rule; related to published work on routing locality.*
 - In a 4-token verify window each token's top-k core picks define the experts read. A weaker pick is kept only if its
   expert is already in that set, so the experts read are exactly those of plain top-k.
