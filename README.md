@@ -140,10 +140,12 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
 - **Not lossless, and not yet at the original GPU server's speed (151 tok/s).** Task-level benchmarks (tool calling,
   math) and time-to-first-token on long prompts are the next measurements.
 
-The rest of this document is the full technical write-up: architecture, methodology, every measurement with its
-source file, findings (including the ideas that did not work) and how to reproduce them.
-
 ---
+
+# Full Technical Write-Up
+
+Architecture, methodology, every measurement with its source file, findings (including the ideas that did not work)
+and how to reproduce them.
 
 ## 1. The problem
 
