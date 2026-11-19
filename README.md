@@ -320,7 +320,7 @@ Timed but not quality-scored (past the bar by construction, since each drops mor
 outside): top-5 27.1, top-6 + tau 0.08 27.6, top-4 with 3-bit experts on 15 CPU layers 28.0, top-4 + coalescing off
 30.4 tok/s (all f1).
 
-**Historical operating point (2026-11-17): top-7 with the KDA split off, 25.7 tok/s on warm rounds** (superseded: see sections 4.5 and 4.6) (25.62 pooled, including the
+**Earlier operating point: top-7 with the KDA split off, 25.7 tok/s on warm rounds** (superseded: see sections 4.5 and 4.6) (25.62 pooled, including the
 cold first round).
 
 - Boot f3 missed the 0.3 tok/s anchor rule on one anchor (section 3), so read these as same-boot comparisons.
@@ -330,7 +330,7 @@ cold first round).
   standard error of about 0.12 point we read it as *at* the bar, not inside it.
 - Top-7 combined with coalescing off is **modeled** at about 27 tok/s. It has not been measured.
 
-### 4.5 2026-11-18/19: NVFP4 attention, deferral, union-aware routing
+### 4.5 NVFP4 attention, deferral, union-aware routing
 
 All points: spec mode MTP-3, batch 1, KV cache pinned, warm-up point plus 3 interleaved rounds per boot. Quality uses the
 same balanced eval, either the full 41 chunks or a 7-chunk subset (one chunk per domain), as marked. Files are under
@@ -354,7 +354,7 @@ same balanced eval, either the full 41 chunks or a 7-chunk subset (one chunk per
 
 Source files: `d3_speed.jsonl`, `d4_speed.jsonl`, `q_dq2_*`, `q_dq7_*_vs_q8_bal.json`.
 
-### 4.6 2026-11-19: the full stack behind the headline numbers
+### 4.6 The full stack behind the headline numbers
 
 Checkpoint `mixed_full_iq2xxs_nvfp4attn_sd`: W4A16 NVFP4 for attention, shared experts and the dense MLP layers
 (round-to-nearest from the official BF16 weights with our converter, `src/build_mixed_checkpoint.py --fixed
@@ -518,7 +518,7 @@ expert selection, applied here to speculative verify windows; the cross-model me
 
 ## 6. Limitations and what is not measured
 
-- **Far from the targets.** 34.3-36.2 tok/s (2026-11-19, section 4.6; 25.7 on 11-17) against a goal of 80 and a control at 151. With 4-bit experts and FP8 fixed
+- **Far from the targets.** 34.3-36.2 tok/s (section 4.6) against a goal of 80 and a control at 151. With 4-bit experts and FP8 fixed
   weights, 80 tok/s exceeds the combined read bandwidth of both machines by about 1.6-1.7x *regardless of placement*
   (derived, `results/2026-11-09-audit/README.md`). Getting there needs fewer bytes per committed token, not only
   better scheduling.
@@ -528,8 +528,8 @@ expert selection, applied here to speculative verify windows; the cross-model me
 - **The recommended point is not confirmed on a clean boot.** On boot f3 the lossless anchor missed f1 by 0.40 tok/s
   pooled (all of it in the cold first round); the other anchor matched within 0.1. A confirmation boot with a warm-up
   point has not been run. Treat absolute f3 numbers as ±0.5 tok/s and its comparisons as same-boot only.
-- **Top-7 + coalescing off** (~27 tok/s) is modeled, not measured. (Coalescing off is now the default; the 11-18 points include it.)
-- **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. Two bars are used: the two-GPU control's own cost (KLD 0.042) and, from 11-18, a looser go/no-go of KLD < 0.1. There is no tool-calling domain in the eval; code is the closest proxy. There are no
+- **Top-7 + coalescing off** (~27 tok/s) is modeled, not measured. (Coalescing off is now the default; the points in sections 4.5-4.6 include it.)
+- **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. Two bars are used: the two-GPU control's own cost (KLD 0.042) and a looser go/no-go of KLD < 0.1. There is no tool-calling domain in the eval; code is the closest proxy. There are no
   downstream task scores for top-7 yet; the agent-suite scores in `results/2026-11-09-audit/` are for config B.
 - **Speed is batch 1, greedy,** on one hardware pair and one link type (TCP over 10GBASE-T).
 - **Unexplained:** the KV-size difference between boots (F8), and a race between the hook's 30-second stats-dump
