@@ -160,3 +160,9 @@ Exact next steps:
   STOP RULE APPLIED: only one 10-layer group (dQ3) is under 0.1 on the subset, and at x1.1-1.4 subset->full it lands at
   ~0.09-0.12, i.e. on the bar with nothing left for anything else. => Deferral is a NO-GO for HeteroFlash; per-layer A is not built.
   k5: subset 0.079 x1.4 ~ 0.11 full and instruction_following 0.150 => likely fails 0.1; full eval only if d3 shows k5 well ahead of k6.
+
+- 16:47 PT d3 DONE (spec, same boot, 3 rounds pooled; d3_speed.jsonl): k7 26.37 (110.4 ms/cycle), k7_a05 27.33, k6 27.56,
+  k6_a05 27.85, k5 29.12 (98.2 ms), k5_a05 30.08 (96.4 ms). A 0.5 = +0.3..+1.0 tok/s (blocked 5.8 -> 9.4-10.2 ms/window).
+  Anatomy (derived): each routed pick removed saves ~5-6 ms/cycle (k7 -> k5: -12 ms), so routed experts cost ~45-50 ms of the
+  ~110 ms cycle and the fixed path + drafter + overheads ~60 ms. Even perfectly hidden experts cap at ~45-47 tok/s at
+  2.9 tokens/cycle; 80 tok/s needs the fixed/draft ~60 ms cut AND more tokens per cycle.

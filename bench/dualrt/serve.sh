@@ -14,7 +14,7 @@ PORT=${PORT:-8095}
 t() { date -u +%H:%M:%SZ; }
 if docker ps --format '{{.Names}}' | grep -v '^hf-drt$' | grep -q .; then echo "refusing: other containers are running"; docker ps --format '{{.Names}}'; exit 3; fi
 docker rm -f hf-drt >/dev/null 2>&1
-DARGS=(-e PYTHONPATH=$( [ "${HF_SPLIT:-0}" = 1 ] && echo /drt/hook || echo /rhook ) -v $H/ops/route3/remote_hook:/rhook:ro -v $H/bench/dualrt:/drt:ro
+DARGS=(-e PYTHONPATH=$( [ "${HF_SPLIT:-0}" = 1 ] && echo /drt/${HF_HOOK_DIR:-hook} || echo /rhook ) -v $H/ops/route3/remote_hook:/rhook:ro -v $H/bench/dualrt:/drt:ro
        -e HF_REMOTE_EXPERTS=/rplan.json -v $H/results/2026-11-08-route3/remote_plan_all.json:/rplan.json:ro
        -e HF_REMOTE_ADDR=$WS_IP:47201 -e HF_REMOTE_MODE=mailbox -e TORCH_EXTENSIONS_DIR=/ext -v /srv/vllm-research/work/cache/hf_ext:/ext
        -e HF_REMOTE_EXPERT_MAP=0 -e HF_REMOTE_MAX_T=0 -e HF_REMOTE_FLAGS=${HF_REMOTE_FLAGS:-3}
