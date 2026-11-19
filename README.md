@@ -15,15 +15,21 @@ Every one of those choices is measured against the original model's quality.
 **Result.** GLM-5.3-Flash (a 320B-class MoE) runs on **one DGX Spark plus a workstation's CPU and RAM** (its GPUs are not
 used) at:
 
-| operating point | decode speed | quality vs the original weights (Q8 copy) |
-|---|---|---|
-| balanced | **34.3 tok/s** | KL divergence 0.057, top-1 agreement 92.8%, every domain within 0.1 |
-| fastest | **36.2 tok/s** | KL divergence 0.065, top-1 agreement 92.1% |
-| starting point | 6.5 tok/s | |
+| setup | hardware | decode speed | quality vs the original weights (Q8 copy) |
+|---|---|---|---|
+| **HeteroFlash, balanced** | 1 Spark + workstation CPU/RAM | **34.3 tok/s** | **KL 0.057**, top-1 agreement 92.8%, every domain within 0.1 |
+| **HeteroFlash, fastest** | 1 Spark + workstation CPU/RAM | **36.2 tok/s** | **KL 0.065**, top-1 agreement 92.1% |
+| standard 2-bit quantization (IQ2_XXS experts) to fit everything on the Spark | 1 Spark | 27-28 tok/s | KL 0.239, top-1 agreement 84.9% |
+| all experts on the workstation CPU, nothing clever (starting point of this runtime) | 1 Spark + workstation CPU/RAM | 15-18 tok/s | KL 0.027 |
+| two-GPU server reference (3.5-bit EXL3, tensor parallel 2) | 2 workstation GPUs | 151 tok/s | KL 0.042 |
+
+The design point: on the same single Spark, the usual way to fit the model (crush the experts to 2 bits) is slower *and*
+drifts 3.7x further from the original model than HeteroFlash. Keeping experts at 4 bits in a second machine's RAM and
+being selective about expert work gives both more speed and more quality.
 
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
-math, code, multilingual, instruction following, long context). For reference, a two-GPU server deployment of the same
-model at 3.5 bits sits at KL 0.042.
+math, code, multilingual, instruction following, long context). Tool calling (tool-eval-bench, leaderboard settings):
+90/100 for HeteroFlash's fastest point vs 89/100 for the all-8-experts baseline.
 
 ## How it works: the techniques
 
