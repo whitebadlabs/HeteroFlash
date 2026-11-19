@@ -106,6 +106,29 @@ source file, findings (including the ideas that did not work) and how to reprodu
 
 ---
 
+## Credits: where every idea comes from
+| idea used | source | what I did with it |
+|---|---|---|
+| Computing experts on the CPU where their weights live, instead of moving weights to the GPU | Fiddler (arXiv 2402.07033); KTransformers; HybriMoE | Built it across two machines: a DGX Spark GPU plus a separate workstation CPU over a 10G link, both memories read in parallel (the HeteroFlash architecture) |
+| Keeping frequently used ("hot") experts on the GPU, the rest elsewhere | MoE offloading work: Mixtral offloading (arXiv 2312.17238), MoE-Infinity, HOBBIT (arXiv 2411.01433) | Calibrated a hot set per layer for the Spark GPU; per-step GPU/CPU rebalancing inside a CUDA graph |
+| 4-bit NVFP4 weights and Spark kernels | NVIDIA ModelOpt formats; Local Inference Lab's vLLM fork and b12x kernels | Wrote a converter from the official BF16 weights (attention, shared experts, dense layers) and measured its cost (+0.014 KL) |
+| Q4_K expert format and importance matrix | llama.cpp / ggml | Same expert bytes on both machines so the split is exact |
+| Speculative decoding | arXiv 2211.17192; arXiv 2302.01318; GLM-5.3-Flash's own MTP head | Used as-is (MTP-3) |
+| Frequency-ranked draft vocabulary | FR-Spec (arXiv 2502.14856) | Used for the draft head |
+| Rank-based expert budget; weight x mean-output stand-in for dropped picks; adding weak picks late; per-layer sensitivity | Public Kimi K3.1 sensitivity study (github.com/chronarion/derpk31pro/tree/main/docs/sensitivity) and the public derpseek repo (github.com/chronarion/derpseek) | Confirmed the rank rule and the stand-in on GLM-5.3-Flash (stand-in halves the cost there); found the stand-in does not transfer to Qwen3-30B; found late picks lose speed on a bandwidth-bound link |
+| Reusing experts already loaded by other tokens (batch-aware expert selection) | Lynx (arXiv 2411.08982) | Applied it inside one request's speculative-decoding window (single-user, batch 1, where cross-request batches do not exist); measured on 6 models and on task accuracy |
+| Expert co-selection, layer-to-layer prediction, task-dependent hot sets, prefill predicts decode | "Patterns behind Chaos" (ISCA 2026, arXiv 2510.05497); ExFlow (arXiv 2401.08383) | Reproduced on 5 models; tested two uses (correlation-aware placement, per-request hot set), both negative or marginal here |
+| Per-batch replication of hot experts | MegaFlux (arXiv 2610.00671) | Simulated with realistic (causal) planners; only works with knowledge of the current batch |
+| vLLM's expert load balancer | vLLM DefaultEplbPolicy, adapted from DeepSeek's EPLB (duplicate-replica fix: DeepSeek EPLB issues #22, #27, #28) | Used as the baseline; measured the duplicate-replica waste |
+| Low-latency networking (Energy-Efficient Ethernet off, interrupt coalescing off) | Standard practice | Measured its effect on this system |
+| KL divergence to a reference as the quality metric | Common quantization-evaluation practice (e.g. llama.cpp's KLD tooling) | Built a 7-domain, 42K-token eval with per-domain reporting and a same-boot paired protocol |
+| Benchmarks | llm-inference-bench (Local Inference Lab); tool-eval-bench | Ran them on best vs baseline |
+
+What this project adds: the two-machine HeteroFlash architecture and its runtime (exact GPU/CPU split, in-graph mailbox exchange,
+per-step rebalancing), the system integration of all the above, the measurement framework, the cross-model studies,
+and the negative results. Not mine: each technique in the table, which this project adopted, confirmed or refuted.
+
+
 ## 1. The problem
 
 GLM-5.3-Flash is a Mixture-of-Experts model: in each of its 42 MoE layers a router picks 8 of 288 routed experts per
