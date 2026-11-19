@@ -1,1 +1,27 @@
 01:55:55Z started dq6 (agree)
+02:07:12Z healthy; mem used 111 GiB
+02:08:23Z resident pool live; cuda free 12.1 / 130.7 GB
+02:08:28Z pass k7: drop [7 0 0 0] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:15:24Z k7 logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.026884781196713448, "kld_p99": 0.3254150152206421, "dnll_mean": 0.0070977238938212395, "dnll_se": 0.003199829416839959, "same_top": 0.9519619941711426}
+02:15:50Z pass k6u: drop [6 0 0 1] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:22:29Z k6u logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.032427821308374405, "kld_p99": 0.39069104194641113, "dnll_mean": 0.0049315402284264565, "dnll_se": 0.003528671487942769, "same_top": 0.9453986883163452}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.015137579292058945, "kld_se": 0.0005526647171582335, "kld_p99": 0.1720370203256607, "same_top": 0.9595028758049011}
+02:23:09Z pass k5u: drop [5 0 0 1] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:29:16Z k5u logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.05957374721765518, "kld_p99": 0.7146198749542236, "dnll_mean": 0.01959041878581047, "dnll_se": 0.004892524234695315, "same_top": 0.9213796854019165}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.03965918719768524, "kld_se": 0.0013552205789939048, "kld_p99": 0.44258856773376465, "same_top": 0.9356235265731812}
+02:29:54Z pass k4u: drop [4 0 0 1] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:36:23Z k4u logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.09875114262104034, "kld_p99": 0.9607516527175903, "dnll_mean": 0.04500869661569595, "dnll_se": 0.006107100340823463, "same_top": 0.8959642648696899}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.0777619481086731, "kld_se": 0.00205694178097265, "kld_p99": 0.7951542139053345, "same_top": 0.9062979817390442}
+02:37:00Z pass k4: drop [4 0 0 0] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:43:27Z k4 logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.14403891563415527, "kld_p99": 1.2814725637435913, "dnll_mean": 0.08070962131023407, "dnll_se": 0.007327542337884689, "same_top": 0.8744588494300842}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.12133399397134781, "kld_se": 0.002827492377259577, "kld_p99": 1.1291184425354004, "same_top": 0.8868873119354248}
+02:44:04Z pass k3u: drop [3 0 0 1] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+02:50:22Z k3u logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.17484211921691895, "kld_p99": 1.6160054206848145, "dnll_mean": 0.10713130235671997, "dnll_se": 0.007954891906985737, "same_top": 0.863426923751831}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.15545736253261566, "kld_se": 0.003524885917479293, "kld_p99": 1.4196697473526, "same_top": 0.8697109222412109}
+02:50:56Z DONE dq6

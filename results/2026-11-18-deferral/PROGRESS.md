@@ -175,3 +175,15 @@ Exact next steps:
   only the top 4-5 picks on time. Speed is the open question (the late slot doubled server requests in d2). d4 (NVFP4
   attention) also measures k5_late / k4_late at A 0.5 and A 1.0; dq7 full quality adds k5_late, k4_late. Per-layer deferral
   map (dq8, Carmen OK 17:3x PT) queued after.
+
+- 22:50 PT (lane) dq6 DONE (subset, union-aware drop, hook_union, FP8): k6u 0.032 (paired 0.0151; k6 dq3 0.042), k5u 0.060
+  (0.0397; k5 0.079), k4u 0.099 (0.0778) vs same-boot k4 0.144 (0.1213), k3u 0.175. Union keeps tail picks whose expert is
+  already read: free quality at the same expert reads.
+- d4 DONE (NVFP4-attention checkpoint mixed_full_iq2xxs_nvfp4attn, KDA_HC=0, hook_union, DEFER+LATE compiled; spec, 3 rounds):
+  k7_a05 29.56 (94.4 ms), k6_a05 32.17, k5_a05 33.36 (83.8 ms), k5u_a05 33.18; late points slow: k5_late_a05 23.57,
+  k4_late_a05 22.22, k4_late_a10 23.71 (MoE blocked 44-57 ms/window: the single-lane workstation server is the bottleneck).
+  FP8 d3 same A: 27.33 / 27.85 / 30.08 -> NVFP4 attention = +8-15%.
+- dq7 DONE (full 41 chunks, NVFP4 attention): k7 +0.0183 / 0.052 / 93.0% (instr 0.084, code 0.044 / 96.7%);
+  k5_late +0.0247 / 0.062 / 92.3% (knowledge_qa 0.081); k4_late +0.0362 / 0.079 / 91.2% (knowledge_qa 0.107).
+  => Fastest MEASURED point under KLD 0.1: NVFP4 k7 A0.5, 29.6 tok/s, KLD 0.052. Candidate: NVFP4 k6u A0.5 ~32 tok/s
+  (full quality queued as dq9 after the dq8 map). Late picks need a second workstation server lane to pay off.
