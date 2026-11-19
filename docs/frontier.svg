@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" width="920" height="560" font-family="Helvetica,Arial,sans-serif">
+<rect width="920" height="560" fill="#ffffff"/>
+<text x="80" y="30" font-size="19" font-weight="bold" fill="#111">GLM-5.3-Flash on 1 DGX Spark + workstation CPU: speed vs quality</text>
+<text x="80" y="50" font-size="13" fill="#555">Decode tok/s (batch 1) vs KL to a Q8 copy of the official BF16 weights. Lower-right is better.</text>
+<rect x="380.0" y="318.46153846153845" width="500.0" height="161.53846153846155" fill="#dff3e4"/>
+<text x="868.0000000000001" y="454.0" font-size="13" fill="#1e7b3a" text-anchor="end" font-weight="bold">Target region: faster than the 2-bit build</text>
+<text x="868.0000000000001" y="470.0" font-size="13" fill="#1e7b3a" text-anchor="end" font-weight="bold">and inside the KL 0.1 quality bar</text>
+<line x1="80.0" y1="480.0" x2="80.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="80.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">20</text>
+<line x1="240.0" y1="480.0" x2="240.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="240.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">24</text>
+<line x1="400.0" y1="480.0" x2="400.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="400.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">28</text>
+<line x1="560.0" y1="480.0" x2="560.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="560.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">32</text>
+<line x1="720.0" y1="480.0" x2="720.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="720.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">36</text>
+<line x1="880.0" y1="480.0" x2="880.0" y2="60.0" stroke="#e6e6e6"/>
+<text x="880.0" y="500.0" font-size="12" fill="#444" text-anchor="middle">40</text>
+<line x1="80.0" y1="480.0" x2="880.0" y2="480.0" stroke="#e6e6e6"/>
+<text x="72.0" y="484.0" font-size="12" fill="#444" text-anchor="end">0</text>
+<line x1="80.0" y1="399.2307692307692" x2="880.0" y2="399.2307692307692" stroke="#e6e6e6"/>
+<text x="72.0" y="403.2307692307692" font-size="12" fill="#444" text-anchor="end">0.05</text>
+<line x1="80.0" y1="318.46153846153845" x2="880.0" y2="318.46153846153845" stroke="#e6e6e6"/>
+<text x="72.0" y="322.46153846153845" font-size="12" fill="#444" text-anchor="end">0.1</text>
+<line x1="80.0" y1="237.6923076923077" x2="880.0" y2="237.6923076923077" stroke="#e6e6e6"/>
+<text x="72.0" y="241.6923076923077" font-size="12" fill="#444" text-anchor="end">0.15</text>
+<line x1="80.0" y1="156.9230769230769" x2="880.0" y2="156.9230769230769" stroke="#e6e6e6"/>
+<text x="72.0" y="160.9230769230769" font-size="12" fill="#444" text-anchor="end">0.2</text>
+<line x1="80.0" y1="76.15384615384619" x2="880.0" y2="76.15384615384619" stroke="#e6e6e6"/>
+<text x="72.0" y="80.15384615384619" font-size="12" fill="#444" text-anchor="end">0.25</text>
+<line x1="80.0" y1="318.46153846153845" x2="880.0" y2="318.46153846153845" stroke="#1e7b3a" stroke-dasharray="6 4"/>
+<text x="87.99999999999997" y="312.46153846153845" font-size="12" fill="#1e7b3a">quality bar KL 0.1</text>
+<line x1="80.0" y1="480.0" x2="880.0" y2="480.0" stroke="#333"/><line x1="80.0" y1="480.0" x2="80.0" y2="60.0" stroke="#333"/>
+<text x="480.0" y="530" font-size="14" fill="#222" text-anchor="middle">decode speed (tok/s, higher is better)</text>
+<text transform="translate(24 270.0) rotate(-90)" font-size="14" fill="#222" text-anchor="middle">KL divergence (lower is better)</text>
+<polyline fill="none" stroke="#1f6feb" stroke-width="3" points="268.0,436.4 372.0,418.6 464.0,396.0 652.0,387.9 728.0,375.0 804.0,342.7"/>
+<text x="600.0" y="423.46153846153845" font-size="13" fill="#1f6feb" font-weight="bold">HeteroFlash speed-quality frontier</text>
+<text x="600.0" y="439.46153846153845" font-size="12" fill="#1f6feb">top-6/5/4 = window reuse + mean-output stand-in</text>
+<circle cx="268.0" cy="436.4" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="277.0" y="424.4" font-size="12" fill="#1f3f7a" text-anchor="start">exact split + link tuning (24.7, 0.027)</text>
+<circle cx="336.0" cy="418.6" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<circle cx="372.0" cy="418.6" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="381.0" y="438.6" font-size="12" fill="#1f3f7a" text-anchor="start">+ balance rule (27.3, 0.038)</text>
+<circle cx="464.0" cy="396.0" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="473.0" y="416.0" font-size="12" fill="#1f3f7a" text-anchor="start">+ 4-bit attention (29.6, 0.052)</text>
+<circle cx="652.0" cy="387.9" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="643.0" y="375.9" font-size="12" fill="#1f3f7a" text-anchor="end">top-6 (34.3, 0.057)</text>
+<circle cx="728.0" cy="375.0" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="737.0" y="363.0" font-size="12" fill="#1f3f7a" text-anchor="start">top-5 (36.2, 0.065)</text>
+<circle cx="804.0" cy="342.7" r="6" fill="#1f6feb" stroke="#fff" stroke-width="1.5"/>
+<text x="795.0" y="330.7" font-size="12" fill="#1f3f7a" text-anchor="end">top-4 (38.1, 0.085)</text>
+<circle cx="608.0000000000001" cy="345.9230769230769" r="6" fill="#8fb3ee"/>
+<text x="599.0000000000001" y="335.9230769230769" font-size="12" fill="#335" text-anchor="end">top-5 + reuse, no stand-in (33.2, 0.083)</text>
+<path d="M373.0,86.92307692307696 L387.0,100.92307692307696 M373.0,100.92307692307696 L387.0,86.92307692307696" stroke="#d1242f" stroke-width="3"/>
+<text x="392.0" y="98.92307692307696" font-size="13" fill="#d1242f" font-weight="bold">usual approach: 2-bit experts on the Spark (27.5, 0.239)</text>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d1242f"/></marker></defs>
+<line x1="386.0" y1="105.92307692307696" x2="720.0" y2="360.46153846153845" stroke="#d1242f" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+<text x="571.9999999999999" y="205.38461538461536" font-size="13" fill="#d1242f">3.7x closer to the original, 31% faster</text>
+<circle cx="200.0" cy="352.3846153846154" r="6" fill="none" stroke="#888" stroke-width="2"/>
+<text x="209.0" y="372.3846153846154" font-size="12" fill="#777">weak picks one layer late (23, 0.079)</text>
+<path d="M574.0,70.0 L586.0,70.0 L580.0,60.0 z" fill="#888"/>
+<text x="590.0" y="74.0" font-size="12" fill="#777">whole-partial deferral: 32.5 tok/s, KL 0.44 (off chart)</text>
+<text x="87.99999999999997" y="156.9230769230769" font-size="12" fill="#555">Not shown: first deployment 6.5 tok/s;</text>
+<text x="87.99999999999997" y="172.9230769230769" font-size="12" fill="#555">two-GPU server reference 151 tok/s at KL 0.042.</text>
+</svg>

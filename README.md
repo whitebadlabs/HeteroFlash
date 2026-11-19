@@ -16,7 +16,7 @@ Every one of those choices is measured against the original model's quality.
 to the original model (KL 0.057-0.065 vs a Q8 copy of the official BF16 weights). The usual way to fit it on the same Spark, crushing the experts to 2 bits, is
 both slower and 3.7x further from the original.
 
-Decode speed and quality against the original weights (KL divergence to a Q8 copy; lower is better):
+Decode speed and quality against the original model (KL divergence to a Q8 copy of the official BF16 weights; lower is better):
 
 | model | hardware | HeteroFlash (balanced) | HeteroFlash (fastest) | best existing quantization that fits the same hardware |
 |---|---|---|---|---|
@@ -33,29 +33,32 @@ HeteroFlash's fastest point matched the all-8-experts baseline (90/100 vs 89/100
 
 ## What worked and what didn't
 
-All measured unless marked modeled. Speeds are GLM-5.3-Flash on 1 DGX Spark + workstation CPU/RAM, batch 1; quality is
-KL to a Q8 copy of the original weights (lower is better; 0.1 is the go/no-go bar).
+All measured unless marked modeled. Speeds are GLM-5.3-Flash on 1 DGX Spark + workstation CPU/RAM, batch 1. Quality is
+KL divergence to a Q8 copy of the official BF16 weights (lower is better; 0.1 is the go/no-go bar).
 
-| method | source | result | impact |
+| method | what it does | result | impact |
 |---|---|---|---|
-| Split by memory: GPU computes hot experts, workstation CPU computes the rest in its own RAM | Fiddler / KTransformers idea, two-machine design here | worked | 15-18 -> 22-23 tok/s, lossless (KL 0.027) |
-| Low-latency link (EEE off, interrupt coalescing off) and no attention split over the link | standard practice | worked | 22-23 -> 24.7 tok/s, lossless |
-| Top-7 of 8 experts (drop the weakest pick) | rank rule (K3.1 study) | worked | 24.7 -> 26.4 tok/s, KL 0.027 -> 0.038 |
-| Balance rule: GPU takes half of each window's experts | this project | worked | 26.4 -> 27.3 tok/s, no quality change |
-| 4-bit NVFP4 attention (own converter from BF16) | NVIDIA formats | worked | 27.3 -> 29.6 tok/s, KL +0.014 |
-| 4-bit NVFP4 shared experts + dense layers | NVIDIA formats | worked | 29.6 -> 31.3 tok/s (top-7), quality about unchanged |
-| Top-5 + window-level expert reuse + mean-output stand-in | Lynx (reuse), K3.1 study (stand-in) | worked | 31.3 -> 36.2 tok/s at KL 0.065 (reuse alone got top-5 inside the bar at 0.083) |
-| Window-level expert reuse on 6 models | Lynx, applied to speculative windows | worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2: 91.1% -> 93.9% |
-| Mean-output stand-in on Qwen3-30B | K3.1 study | did not transfer | neutral to worse |
-| Deferring the whole CPU partial one layer | derpseek idea | failed on quality | 32-33 tok/s but KL 0.44 |
-| Adding only weak picks one layer late | K3.1 study | quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (CPU side has no spare bandwidth) |
-| Larger speculative drafts | standard | no gain | acceptance saturates at ~2.9 tokens per cycle |
-| Correlation-aware expert placement across GPUs | "Patterns behind Chaos" patterns | failed | sends -9-21% (simulated), but load balance breaks |
-| Per-batch copies of hot experts with realistic planners | MegaFlux | failed | balance restored only if the planner sees the current batch |
-| Co-selection-guided expert substitution | this project | failed | worse than reuse alone and than random controls |
-| Per-request hot set (prefill predicts decode) | "Patterns behind Chaos" | marginal here | GPU coverage 54.6% -> 67-69%, modeled speed +0-2% |
+| Split by memory ([Fiddler](https://arxiv.org/abs/2402.07033), Kamahori et al., 2024; [KTransformers](https://github.com/kvcache-ai/ktransformers); two-machine design: this project) | The Spark GPU computes the frequently used experts; every other expert is computed by the workstation's CPU right next to its own RAM, so only small activations cross the network, never weights | ✅ worked | 15-18 → 22-23 tok/s, lossless (KL 0.027) |
+| Low-latency link (standard practice) | Turns off power-saving and interrupt batching on the 10G link, and stops splitting attention across machines, so each round trip takes under 1 ms | ✅ worked | → 24.7 tok/s, lossless |
+| Rank rule, top-7 of 8 ([K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Each token picks 8 experts; the weakest one contributes least, so it is skipped | ✅ worked | → 26.4 tok/s, KL 0.027 → 0.038 |
+| Balance rule (this project) | Decides per step how many experts the GPU takes vs the CPU, so neither machine sits idle waiting for the other | ✅ worked | → 27.3 tok/s, same quality |
+| 4-bit attention ([NVFP4](https://github.com/NVIDIA/TensorRT-Model-Optimizer), NVIDIA; converter: this project) | Stores the attention weights in 4 bits instead of 8, so each step reads fewer bytes | ✅ worked | → 29.6 tok/s, KL +0.014 |
+| 4-bit shared experts and dense layers (NVFP4) | Same for the parts every token always uses | ✅ worked | → 31.3 tok/s, quality about unchanged |
+| Window-level expert reuse ([Lynx](https://arxiv.org/abs/2411.08982), Gupta et al., 2024) + mean-output stand-in ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)), top-5 | Speculative decoding checks 4 tokens at once; a skipped pick is kept anyway if its expert is already being read for another token in the window (free). Picks that are still skipped are replaced by that expert's average output instead of nothing | ✅ worked | → **36.2 tok/s at KL 0.065** (reuse alone: 33.2 tok/s at 0.083) |
+| Window-level expert reuse on 6 models ([Lynx](https://arxiv.org/abs/2411.08982), applied to single-user speculative windows) | The same reuse rule, tested on Qwen, GLM and gpt-oss models | ✅ worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2: 91.1% → 93.9% |
+| Mean-output stand-in on Qwen3-30B ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | The average-output replacement on a different model | ❌ did not transfer | neutral to worse |
+| Whole-partial deferral ([derpseek](https://github.com/chronarion/derpseek)) | Lets the GPU continue without waiting for the CPU's result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
+| Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Delays only the weakest experts by one layer instead of skipping them | ⚠️ quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (the CPU side has no spare bandwidth) |
+| Larger speculative drafts ([speculative decoding](https://arxiv.org/abs/2211.17192), Leviathan et al., 2023) | Guesses more tokens ahead per step | ❌ no gain | acceptance saturates at ~2.9 tokens per step |
+| Correlation-aware expert placement ([Patterns behind Chaos](https://arxiv.org/abs/2510.05497), ISCA 2026) | On multi-GPU servers, puts experts that are often picked together on the same GPU to cut traffic | ❌ failed (simulated) | 9-21% fewer cross-GPU sends, but GPU load becomes unbalanced |
+| Per-batch copies of hot experts ([MegaFlux](https://arxiv.org/abs/2610.00671), 2026) | Duplicates busy experts on several GPUs to restore balance | ❌ failed (simulated) | balance restored only if the planner already sees the current batch |
+| Co-selection-guided substitution (this project) | Replaces a skipped expert with its usual partner expert | ❌ failed | worse than reuse alone and than random controls |
+| Per-request hot set ([Patterns behind Chaos](https://arxiv.org/abs/2510.05497)) | Uses the prompt's routing to choose which experts the GPU holds for that request | ⚠️ marginal here | GPU coverage 54.6% → 67-69%, modeled speed +0-2% |
 
-Net: 6.5 tok/s (first deployment) -> 36.2 tok/s at KL 0.065; the standard 2-bit single-Spark build runs 27-28 tok/s at KL 0.239.
+**Net:** 6.5 tok/s (first deployment) → 36.2 tok/s at KL 0.065. The usual 2-bit single-Spark build runs 27-28 tok/s at
+KL 0.239.
+
+![Speed vs quality: HeteroFlash frontier against the 2-bit build](docs/frontier.svg)
 
 ## Union-aware routing on other models
 
