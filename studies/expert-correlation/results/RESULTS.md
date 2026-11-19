@@ -192,5 +192,9 @@ Measured on holdout prompts (chat / code / math, ~100 holdout requests each); de
 | gpt-oss-120b | 128, top-4 | 3.0 / 3.1 | 0.47 / 0.26 (0.18) | -9 / -13 / -16% (1.06 -> 1.07) |
 | DeepSeek-V2-Lite | 64 (+2 shared), top-6 | 2.4 / 2.2 | 0.49 / 0.35 (0.17) | -21 / -17 / -10% (1.05 -> 1.06) |
 Reading: co-selection partners (2.2-4.3x above chance) and layer-to-layer predictability hold on all five models; cross-task
-prediction stays above the popularity baseline only for gpt-oss and DeepSeek-V2-Lite. Per-task correlated placement cuts
+prediction stays above the popularity baseline only for gpt-oss and DeepSeek-V2-Lite.
+Correction (2026-11-19): a single table fitted on the pooled task mix predicts nearly as well as per-task tables
+(mixed fit recall@k: GLM 0.29 vs 0.33 same-task, Qwen3.6 0.40 vs 0.40, Qwen3-30B 0.52 vs 0.50, gpt-oss 0.46 vs 0.47,
+DeepSeek-V2-Lite 0.48 vs 0.49). What fails is a table fitted on ONE task type and used on another, so calibration must cover
+the served task mix; per-request statistics are not required by this data. Not tested: an actual prefetcher, unseen task types. Per-task correlated placement cuts
 simulated sends 9-21% at 8 GPUs with balance kept; the causal-planner balance problem (follow-ups 2-3) was only tested on GLM/Qwen3.6.
