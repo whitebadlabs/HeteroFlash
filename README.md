@@ -1,6 +1,6 @@
 # HeteroFlash
 
-**Serving a 320B-class mixture-of-experts model interactively on one DGX Spark plus an ordinary workstation**
+**Serving MoE models interactively on constrained hardware**
 
 ## Why this matters
 
