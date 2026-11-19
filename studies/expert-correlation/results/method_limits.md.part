@@ -1,0 +1,52 @@
+## Method
+
+Terms. **Load**: tokens an expert received in a layer. **Co-selection**: two experts picked by the same token in
+the same layer. **Cross-layer correlation**: a token that picked expert A in layer N picks expert B in layer N+1.
+**Cross-GPU send**: one transfer of a token's data to a GPU that holds one of its picked experts (one per token and
+destination GPU; the token's own GPU is not a send). **Load imbalance**: busiest GPU's load / mean GPU load.
+
+1. **Routing traces** (the top-8 expert ids per token per MoE layer, logical ids, before any EPLB mapping).
+   - GLM-5.3-Flash (288 routed experts, top-8, 42 MoE layers = model layers 3..44): the HeteroFlash M1 router-logit
+     capture, reduced with the model's own selection rule (sigmoid + correction bias, top-8). 7 task types, 364
+     requests, 203K prefill + 72K decode tokens (`scripts/reduce_m1.py`).
+   - Qwen3.6-35B-A3B-FP8 (256 experts, top-8, 40 MoE layers): vLLM's routed-experts capture
+     (`--enable-return-routed-experts`), one Max-Q GPU, greedy, 256 output tokens, 1200 requests: chat (WildChat-1M),
+     code (github-code-clean: Java/Python/JavaScript), math (gsm8k test) (`hook/`).
+2. **Train / test split by prompt.** Every request is either calib or holdout. Everything fitted (partners,
+   transition model, placements, and the load fed to DefaultEplbPolicy) uses calib tokens; every reported number is
+   measured on holdout tokens. "mix" = all task types pooled (per-task token cap so no task dominates).
+3. **Co-selection strength.** For each expert, its 7 most co-selected partners on calib; on holdout,
+   lift = P(partner picked | expert picked) / P(partner picked). Lift 1 = no relation.
+4. **Layer N -> N+1 predictability.** A naive-Bayes model fitted on calib counts (score of expert j at N+1 =
+   sum over the token's 8 experts i at N of log P(j | i)) predicts each holdout token's 8 experts at N+1;
+   recall@8 = share of the true 8 that were predicted. Baselines: the 8 most-used experts of layer N+1, and random
+   (8/E).
+5. **Task dependence.** Steps 3 and 4 fitted on task A and measured on task B, for every pair.
+6. **Placement simulation (CPU).** For 8, 16, 32 simulated GPUs (equal experts per GPU, no redundant experts):
+   - **DefaultEplbPolicy**: vLLM's own code (`vllm/distributed/eplb/policy/default.py`, main 6092bb9, vendored
+     unchanged, sha256 checked), called as vLLM calls it for these models (num_groups = 1 -> hierarchical with
+     groups = nodes = 1), on the calib load.
+   - **Correlated**: start from the Default placement, then greedy pairwise swaps that most increase co-selection
+     inside each GPU, never letting any GPU's calib load exceed the Default placement's busiest GPU (cap 1.0x) or
+     1.1x of it.
+   - **Random** equal-size placement as a floor.
+   - Replay of holdout tokens: each token gets a random home GPU (its attention rank). Count sends per token per
+     layer and load imbalance over the whole holdout set and per 2048-token batch.
+   - **Oracle**: both placements fitted on the holdout tokens themselves (upper bound for what a perfectly current
+     statistic could give).
+
+## Limits
+
+- Simulated on measured traces. No real all-to-all was run; the sends count is a proxy for dispatch traffic, and
+  whether it matters depends on the all-to-all share of MoE layer time (Carmen's open question to the group).
+- Small holdouts for GLM: 12-15 holdout requests per task type (2 for long-context), 2.5K-30K tokens per task. No
+  confidence intervals. Qwen holdouts are ~100 requests / 20K tokens per task.
+- GLM traces come from a single-request server (batch 1); Qwen from batched offline generation. Routing per token
+  does not depend on batching, but the per-batch imbalance does depend on the request mix.
+- Qwen code and chat prompts use the ungated stand-ins (github-code-clean, WildChat-1M), not starcoderdata and
+  lmsys-chat-1m.
+- No redundant (replicated) experts. Deployments often add them; replicas would lower imbalance for both
+  placements and would also change sends.
+- Placements are per layer and static; no cross-layer (N -> N+1) placement was simulated. Only one random home GPU
+  per token (no DP-rank structure, no node hierarchy).
+- The correlated placement is a simple greedy search, not an optimum.

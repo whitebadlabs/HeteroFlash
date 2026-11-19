@@ -1,0 +1,242 @@
+{
+ "sibling_prefill_token_share": 0.7081709159408397,
+ "sibling_mixstream_2048": [
+  {
+   "n": 26,
+   "cos_lag1": 0.8026411054598523,
+   "far": 8,
+   "cos_far": 0.5614324638721374,
+   "cos_calib": 0.7156220259776445,
+   "cos_ema0.5": 0.8183557249289526,
+   "cos_ema0.1": 0.7957243157536071,
+   "cos_iid_same_dist": 0.9923035832055724
+  },
+  {
+   "n": 26,
+   "cos_lag1": 0.7950458592899022,
+   "far": 8,
+   "cos_far": 0.6218705913502451,
+   "cos_calib": 0.7076661972139172,
+   "cos_ema0.5": 0.8224609662663424,
+   "cos_ema0.1": 0.8023718564675786,
+   "cos_iid_same_dist": 0.9924282606616864
+  },
+  {
+   "n": 26,
+   "cos_lag1": 0.7606353679554966,
+   "far": 8,
+   "cos_far": 0.5067279641414617,
+   "cos_calib": 0.7060347025244718,
+   "cos_ema0.5": 0.7716037736153125,
+   "cos_ema0.1": 0.7486801775271463,
+   "cos_iid_same_dist": 0.9924645646645585
+  }
+ ],
+ "sibling_mixstream_64": [
+  {
+   "n": 837,
+   "cos_lag1": 0.7194423041618528,
+   "far": 100,
+   "cos_far": 0.32033005469186,
+   "cos_calib": 0.4857255807777545,
+   "cos_ema0.5": 0.7358551373892882,
+   "cos_ema0.1": 0.6769031781779961,
+   "cos_iid_same_dist": 0.8995495146060851
+  },
+  {
+   "n": 837,
+   "cos_lag1": 0.7190949972260354,
+   "far": 100,
+   "cos_far": 0.33894565245600816,
+   "cos_calib": 0.485374951304534,
+   "cos_ema0.5": 0.7371091055163276,
+   "cos_ema0.1": 0.6806229105628377,
+   "cos_iid_same_dist": 0.8968790096890416
+  },
+  {
+   "n": 837,
+   "cos_lag1": 0.7220596863017975,
+   "far": 100,
+   "cos_far": 0.3117738122060994,
+   "cos_calib": 0.4860978536692906,
+   "cos_ema0.5": 0.7378035178477527,
+   "cos_ema0.1": 0.6806473328613211,
+   "cos_iid_same_dist": 0.8961461871565111
+  }
+ ],
+ "decode_B64": [
+  {
+   "n": 500,
+   "cos_lag1": 0.8004529706291829,
+   "far": 100,
+   "cos_far": 0.7436774365011416,
+   "cos_calib": 0.8015281673495043,
+   "cos_ema0.5": 0.8506429070094303,
+   "cos_ema0.1": 0.8694455251236658,
+   "cos_iid_same_dist": 0.7802559838531476,
+   "stream": {
+    "B": 64,
+    "steps": 500,
+    "seed": 0,
+    "decode_requests": 83,
+    "decode_tokens_available": 15984,
+    "tokens_used": 32000,
+    "instances": 239,
+    "repeat_token_share": 0.71121875,
+    "steps_with_concurrent_duplicate_request": 0.914,
+    "passes_started": 3,
+    "task_share": {
+     "code": 0.11253125,
+     "instruction_following": 0.1904375,
+     "knowledge_qa": 0.1548125,
+     "long_context": 0.024,
+     "math": 0.11584375,
+     "multilingual": 0.1996875,
+     "writing_chat": 0.2026875
+    },
+    "task_types_per_step_mean": 7.0,
+    "step_request_overlap": 0.9945202905811623
+   }
+  },
+  {
+   "n": 500,
+   "cos_lag1": 0.7971144474471338,
+   "far": 100,
+   "cos_far": 0.7417743791346172,
+   "cos_calib": 0.802544233969418,
+   "cos_ema0.5": 0.8480874230131003,
+   "cos_ema0.1": 0.8675304129940197,
+   "cos_iid_same_dist": 0.7792871274675708,
+   "stream": {
+    "B": 64,
+    "steps": 500,
+    "seed": 1,
+    "decode_requests": 83,
+    "decode_tokens_available": 15984,
+    "tokens_used": 32000,
+    "instances": 239,
+    "repeat_token_share": 0.723125,
+    "steps_with_concurrent_duplicate_request": 0.926,
+    "passes_started": 3,
+    "task_share": {
+     "code": 0.14334375,
+     "instruction_following": 0.2033125,
+     "knowledge_qa": 0.1219375,
+     "long_context": 0.02671875,
+     "math": 0.108375,
+     "multilingual": 0.1875,
+     "writing_chat": 0.2088125
+    },
+    "task_types_per_step_mean": 7.0,
+    "step_request_overlap": 0.9945202905811623
+   }
+  },
+  {
+   "n": 500,
+   "cos_lag1": 0.7972188880943567,
+   "far": 100,
+   "cos_far": 0.7433068936416294,
+   "cos_calib": 0.803243553423973,
+   "cos_ema0.5": 0.8480998028549585,
+   "cos_ema0.1": 0.8675250596383057,
+   "cos_iid_same_dist": 0.7765766024783178,
+   "stream": {
+    "B": 64,
+    "steps": 500,
+    "seed": 2,
+    "decode_requests": 83,
+    "decode_tokens_available": 15984,
+    "tokens_used": 32000,
+    "instances": 239,
+    "repeat_token_share": 0.68703125,
+    "steps_with_concurrent_duplicate_request": 0.888,
+    "passes_started": 3,
+    "task_share": {
+     "code": 0.1234375,
+     "instruction_following": 0.19496875,
+     "knowledge_qa": 0.144125,
+     "long_context": 0.02840625,
+     "math": 0.1103125,
+     "multilingual": 0.192875,
+     "writing_chat": 0.205875
+    },
+    "task_types_per_step_mean": 6.81,
+    "step_request_overlap": 0.9945202905811623
+   }
+  }
+ ],
+ "decode_B64_pooled2048": [
+  {
+   "n": 15,
+   "cos_lag1": 0.9763995845366846,
+   "far": 5,
+   "cos_far": 0.9532369811597361,
+   "cos_calib": 0.912162108051361,
+   "cos_ema0.5": 0.9785414639356225,
+   "cos_ema0.1": 0.9603559766313202,
+   "cos_iid_same_dist": 0.98863716829249
+  },
+  {
+   "n": 15,
+   "cos_lag1": 0.9754474738568915,
+   "far": 5,
+   "cos_far": 0.9586948689579871,
+   "cos_calib": 0.9149822427505244,
+   "cos_ema0.5": 0.978789888888445,
+   "cos_ema0.1": 0.9623072665856456,
+   "cos_iid_same_dist": 0.9884835947746253
+  },
+  {
+   "n": 15,
+   "cos_lag1": 0.9753586595950031,
+   "far": 5,
+   "cos_far": 0.9587349905088525,
+   "cos_calib": 0.9160967664994152,
+   "cos_ema0.5": 0.9788710239963988,
+   "cos_ema0.1": 0.9625459852859346,
+   "cos_iid_same_dist": 0.9884242224359339
+  }
+ ],
+ "mean_over_seeds": {
+  "sibling_mixstream_2048": {
+   "n": 26.0,
+   "cos_lag1": 0.7861074442350837,
+   "far": 8.0,
+   "cos_far": 0.5633436731212814,
+   "cos_calib": 0.7097743085720111,
+   "cos_ema0.5": 0.8041401549368691,
+   "cos_ema0.1": 0.782258783249444,
+   "cos_iid_same_dist": 0.9923988028439391
+  },
+  "sibling_mixstream_64": {
+   "n": 837.0,
+   "cos_lag1": 0.7201989958965619,
+   "far": 100.0,
+   "cos_far": 0.32368317311798916,
+   "cos_calib": 0.4857327952505264,
+   "cos_ema0.5": 0.7369225869177894,
+   "cos_ema0.1": 0.6793911405340517,
+   "cos_iid_same_dist": 0.8975249038172125
+  },
+  "decode_B64": {
+   "n": 500.0,
+   "cos_lag1": 0.7982621020568912,
+   "far": 100.0,
+   "cos_far": 0.7429195697591293,
+   "cos_calib": 0.8024386515809651,
+   "cos_ema0.5": 0.8489433776258296,
+   "cos_ema0.1": 0.8681669992519971,
+   "cos_iid_same_dist": 0.7787065712663455
+  },
+  "decode_B64_pooled2048": {
+   "n": 15.0,
+   "cos_lag1": 0.9757352393295263,
+   "far": 5.0,
+   "cos_far": 0.9568889468755252,
+   "cos_calib": 0.9144137057671001,
+   "cos_ema0.5": 0.978734125606822,
+   "cos_ema0.1": 0.9617364095009667,
+   "cos_iid_same_dist": 0.9885149951676832
+  }
+ }
+}
