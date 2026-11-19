@@ -14,13 +14,11 @@ Every one of those choices is measured against the original model's quality.
 
 The design point: 
 
-**Result: on the same constrained hardware, the usual way to fit the model (crush the experts to 2 bits) is
-slower *and* drifts 3.7x further from the original model than HeteroFlash.
+**Result:** on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at **34-36 tok/s** and stays close
+to the original model (KL 0.057-0.065). The usual way to fit it on the same Spark, crushing the experts to 2 bits, is
+both slower and 3.7x further from the original.
 
-on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at 34-36 tok/s while staying close to
-the original model (KL 0.057-0.065). That is faster than, and 3.7x closer to the original than, the standard 2-bit
-quantization that fits the same Spark.** Decode speed and quality against the original weights (KL divergence to a Q8
-copy; lower is better):
+Decode speed and quality against the original weights (KL divergence to a Q8 copy; lower is better):
 
 | model | hardware | HeteroFlash (balanced) | HeteroFlash (fastest) | best existing quantization that fits the same hardware |
 |---|---|---|---|---|
