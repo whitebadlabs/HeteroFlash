@@ -36,9 +36,10 @@ HeteroFlash's fastest point matched the all-8-experts baseline (90/100 vs 89/100
 **The method.** Speculative decoding verifies several tokens at once (here a window of 4). Each token's router picks
 its experts; with a reduced budget only its top-K picks are computed. Union-aware routing adds one rule: a weaker
 pick beyond the top-K is still kept if its expert is already being read for another token in the same window. That
-expert's weights are loaded anyway, so keeping the pick costs no extra memory reads. This is the batch-aware expert selection of
-[Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024), applied within one request's speculative-decoding verify window instead of across concurrent
-requests; what is new here is the measurement across model families, not the idea.
+expert's weights are loaded anyway, so keeping the pick costs no extra memory reads. It builds on the batch-aware expert selection of [Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024),
+which shares experts across concurrent requests in a batch. That does nothing for a single user at batch 1, the
+interactive case. Applying the same idea inside one request's speculative-decoding verify window brings the saving to
+single-user serving, and we measure it on six MoE families from 30B to 320B-class.
 
 **The measurement.** Quality cost = full-vocabulary KL divergence to the unmodified model (all experts) on the same
 text. For each model we use fewer experts per token two ways, plain (drop everything below the top-K) and union-aware,
