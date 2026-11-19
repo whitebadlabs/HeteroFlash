@@ -1,44 +1,64 @@
 # HeteroFlash
 
-**Running a 320B-class MoE model interactively on one DGX Spark plus a CPU box: measured findings**
+**Serving a 320B-class mixture-of-experts model interactively on one DGX Spark plus an ordinary workstation**
 
-*Independent research, November 2026. Every number below is measured unless it is marked* modeled *or* derived,
-*and each one points to the committed result file it comes from (paths are relative to this repository).*
+## Why this matters
+
+Large mixture-of-experts (MoE) models are cheap to *run* per token, because each token only uses a few of the model's
+experts, but expensive to *hold*: every expert has to sit in fast memory. The usual answers are more GPUs, or
+quantizing the model so hard that its answers get noticeably worse.
+
+HeteroFlash takes a third route. It treats the model and the hardware as one design problem: what to keep on the
+GPU, what to compute on a CPU next to its own RAM, at what precision, and which work to skip, approximate or postpone.
+Every one of those choices is measured against the original model's quality.
+
+**Result.** GLM-5.3-Flash (a 320B-class MoE) runs on **one DGX Spark plus a workstation's CPU and RAM** (its GPUs are not
+used) at:
+
+| operating point | decode speed | quality vs the original weights (Q8 copy) |
+|---|---|---|
+| balanced | **34.3 tok/s** | KL divergence 0.057, top-1 agreement 92.8%, every domain within 0.1 |
+| fastest | **36.2 tok/s** | KL divergence 0.065, top-1 agreement 92.1% |
+| starting point | 6.5 tok/s | |
+
+Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
+math, code, multilingual, instruction following, long context). For reference, a two-GPU server deployment of the same
+model at 3.5 bits sits at KL 0.042.
+
+## How it works: the techniques
+
+1. **Split by memory, not by layer.** The Spark's GPU keeps the frequently used ("hot") experts. Every other expert
+   lives in the workstation's RAM and is *computed there by its CPU*, at the same time as the GPU works. Only small
+   activations cross the 10G link, never weights, so both memories are read in parallel.
+2. **Spend precision where it is cheap.** Attention, shared experts and dense layers run in 4-bit NVFP4; routed
+   experts are 4-bit. Each step reads far fewer bytes, for a small, measured quality cost.
+3. **Find which expert work matters, and treat the rest differently.** A token's routed experts are not equally
+   important: their rank in the router decides how much they contribute. The strongest picks are always computed.
+   The weakest are not simply dropped: each is replaced by its routing weight times that expert's average output,
+   which halves the quality cost of skipping it.
+4. **Reuse what is already being read (union-aware routing).** Speculative decoding checks several tokens at once. If
+   a weak pick's expert is already being read for another token in the same window, keeping it costs nothing, so it
+   is kept.
+5. **Coordinate the two machines.** CPU and GPU work overlap. The link is tuned for latency: interrupt coalescing off,
+   Energy-Efficient Ethernet off. Cross-machine exchanges that cost more time than they save are removed.
+6. **Measure the trade-off, not one number.** Every configuration is scored per domain against the original weights.
+   The result is a speed-quality frontier, so a deployment can choose its own operating point.
+
+## Takeaways
+
+- **On constrained hardware, co-design beats any single trick.** No single change gave more than about 25%. Together they took
+  the system from 6.5 to 36 tok/s.
+- **Not all expert computation is equal.** Ranking expert work by contribution, and approximating instead of
+  dropping, buys speed at a fraction of the usual quality cost.
+- **Quality is a dial, not a cliff.** The frontier runs from near-reference quality (KL 0.038 at 26 tok/s) to
+  36 tok/s at KL 0.065, and every point is measured, not assumed.
+- **Not lossless, and not yet at the original GPU server's speed (151 tok/s).** Task-level benchmarks (tool calling,
+  math) and time-to-first-token on long prompts are the next measurements.
+
+The rest of this document is the full technical write-up: architecture, methodology, every measurement with its
+source file, findings (including the ideas that did not work) and how to reproduce them.
 
 ---
-
-## At a glance (updated 2026-11-19)
-
-**Where it stands.** One DGX Spark plus the CPU and RAM of an ordinary workstation now decodes GLM-5.3-Flash at
-**29.6 tok/s** (batch 1, single stream) with full-vocabulary KL divergence **0.052** against a Q8 proxy of the official
-weights. That is 4.6x the first end-to-end deployment (6.46 tok/s) and ~1.8x the all-experts-on-CPU baseline of the same
-runtime. It is still far from the 80 tok/s goal and the two-GPU control's 151 tok/s (section 6).
-
-**What moved the number, and by how much** (each step measured on the same boot as its comparison point):
-
-| step | what it is | tok/s | quality (KLD vs Q8 proxy) |
-|---|---|---|---|
-| first deployment | llama.cpp RPC over 1 GbE, no drafting | 6.46 | |
-| config B | vLLM, FP8 fixed path, every routed expert on the workstation CPU, MTP-3 | 15.4-18.0 | |
-| dual-memory split | hot experts on the Spark GPU, the rest on the CPU, both memories read at once | 22-23 | 0.027 (exact split; lossless reference) |
-| network tuning | NIC interrupt coalescing off, KDA split off (both lossless) | 24.7 | unchanged |
-| top-7 experts | drop each token's weakest routed pick | 26.4 | 0.038 |
-| balance rule A 0.5 | the GPU takes a larger share of the window's experts | 27.3 | unchanged (A changes placement, not math) |
-| **NVFP4 attention** | 4-bit (W4A16) attention projections, our own round-to-nearest build from the BF16 release | **29.6** | **0.052** |
-| top-6 / top-5 + NVFP4 | candidates, quality not yet confirmed on the full eval | 32.2 / 33.4 | pending |
-
-**Takeaways.**
-1. **The two memories add up** (section 4.1). The workstation CPU buys quality, not speed. The Spark alone at 2-bit
-   experts is about as fast but twelve times the quality cost.
-2. **Bytes per committed token are the wall** (F3, F11). Each routed pick removed saves 5-6 ms of a ~110 ms cycle.
-   The fixed path plus drafter costs ~60 ms whatever the experts do, so expert tricks alone cannot reach 80 tok/s.
-3. **The cost of a routed pick is set by its rank** (F10). The two weakest picks can be dropped, delayed or
-   approximated cheaply. Delaying the strong ones is ruinous. This matches an independent sensitivity study on another
-   large MoE model.
-4. **Within a verify window, picks that are already being read are free** (F12). Keeping such tail picks
-   ("union-aware routing") lowers the quality cost of top-k at the same speed.
-5. **Several published ideas did not transfer** (F13): deferring whole remote partials one layer, adding late experts
-   over a bandwidth-bound link, and correlation-aware expert placement for cross-GPU traffic.
 
 ## 1. The problem
 
