@@ -610,10 +610,10 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
         return _S["mean"]
 
     def _xcap(li, xb, ids, w):
-        import numpy as np
+        import numpy as np, torch
         with _XC["lock"]:
             d = _XC["buf"].setdefault(li, {"x": [], "ids": [], "w": []})
-            d["x"].append(xb.detach().to("cpu").view(-1).numpy().view(np.uint16).reshape(xb.shape).copy())
+            d["x"].append(xb.detach().contiguous().view(torch.int16).to("cpu").numpy().copy())
             d["ids"].append(ids.detach().to("cpu").numpy().astype(np.int16))
             d["w"].append(w.detach().to("cpu").numpy().astype(np.float32))
             _XC["n"] += int(xb.shape[0])
