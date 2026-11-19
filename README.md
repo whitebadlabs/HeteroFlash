@@ -13,7 +13,7 @@ GPU, what to compute on a CPU next to its own RAM, at what precision, and which 
 Every one of those choices is measured against the original model's quality.
 
 **Result:** on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at **34-36 tok/s** and stays close
-to the original model (KL 0.057-0.065). The usual way to fit it on the same Spark, crushing the experts to 2 bits, is
+to the original model (KL 0.057-0.065 vs a Q8 copy of the official BF16 weights). The usual way to fit it on the same Spark, crushing the experts to 2 bits, is
 both slower and 3.7x further from the original.
 
 Decode speed and quality against the original weights (KL divergence to a Q8 copy; lower is better):
