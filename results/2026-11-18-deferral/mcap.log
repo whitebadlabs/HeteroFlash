@@ -1,0 +1,10 @@
+07:11:51Z started mcap (agree)
+07:22:22Z NOT HEALTHY
+(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509]     d["x"].append(xb.detach().to("cpu").view(-1).numpy().view(np.uint16).reshape(xb.shape).copy())
+(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509] TypeError: Got unsupported ScalarType BFloat16
+(EngineCore pid=273) Traceback (most recent call last):
+(EngineCore pid=273) TypeError: Got unsupported ScalarType BFloat16
+(APIServer pid=1) Traceback (most recent call last):
+(APIServer pid=1)     raise RuntimeError(
+(APIServer pid=1) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}

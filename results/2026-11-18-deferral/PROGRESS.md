@@ -187,3 +187,10 @@ Exact next steps:
   k5_late +0.0247 / 0.062 / 92.3% (knowledge_qa 0.081); k4_late +0.0362 / 0.079 / 91.2% (knowledge_qa 0.107).
   => Fastest MEASURED point under KLD 0.1: NVFP4 k7 A0.5, 29.6 tok/s, KLD 0.052. Candidate: NVFP4 k6u A0.5 ~32 tok/s
   (full quality queued as dq9 after the dq8 map). Late picks need a second workstation server lane to pay off.
+
+- 01:32 PT dq9 DONE (full 41 chunks, NVFP4 attention, hook_union, agree MNBT=4; vs Q8 dNLL / KLD / top-1; worst domain):
+  k6u +0.0209 / 0.061 / 92.3% (instruction_following 0.107, code 0.046); k6 +0.0276 / 0.073 / 91.5% (instr 0.126);
+  k5u +0.0341 / 0.083 / 90.8% (instr 0.149). Union = -0.012 KLD at top-6 on the full eval (paired 0.0215 k6 vs k6u).
+  => Under KLD 0.1 overall: NVFP4 + k5u A0.5 33.2 tok/s (KLD 0.083) and NVFP4 + k6u ~32.2 tok/s (0.061; speed = k6_a05 d4,
+  union does not change reads). instruction_following is the only domain over 0.1 for every top-6/5 point.
+  Master chain replaced by run_master2_chain.sh at 01:32 PT (d5 NVFP4 shared+dense speed, dq11, mean chain, map rest, bench).
