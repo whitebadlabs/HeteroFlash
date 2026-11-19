@@ -80,10 +80,16 @@ def main():
     ap.add_argument("--shard-gb", type=float, default=4.0)
     ap.add_argument("--imatrix", default="")
     ap.add_argument("--threads", type=int, default=32)
-    ap.add_argument("--fixed", default="bf16", choices=["bf16", "fp8", "fp8_nvfp4attn"],
+    ap.add_argument("--fixed", default="bf16", choices=["bf16", "fp8", "fp8_nvfp4attn", "fp8_nvfp4attn_sd"],
                     help="fp8: non-expert weights as in the NVIDIA reference recipe (MXFP8 1x32 for KDA q/k/v/o, dense MLP, "
-                         "lm_head; FP8_PB_WO 128x128 for MLA projections and shared experts; small projections stay BF16)")
+                         "lm_head; FP8_PB_WO 128x128 for MLA projections and shared experts; small projections stay BF16). "
+                         "fp8_nvfp4attn: fp8 with all attention projections W4A16 NVFP4 (RTN). fp8_nvfp4attn_sd: "
+                         "fp8_nvfp4attn plus shared experts and dense MLP layers W4A16 NVFP4 (lm_head stays MXFP8)")
+    ap.add_argument("--reuse-experts", default="",
+                    help="existing checkpoint built with the same plan: copy its routed-expert tensors byte-for-byte "
+                         "instead of reading GGUFs / re-quantizing (its quantized_layers entry per layer must match the plan)")
     a = ap.parse_args()
+    NVFP4_MODES = ("fp8_nvfp4attn", "fp8_nvfp4attn_sd")
     plan = {int(k): v for k, v in json.load(open(a.plan)).items()}
     os.makedirs(a.out, exist_ok=True)
     idx = json.load(open(os.path.join(a.bf16, "model.safetensors.index.json")))["weight_map"]
@@ -116,11 +122,14 @@ def main():
     quantized_layers = {}
 
     def fixed_recipe(name):
-        if a.fixed not in ("fp8", "fp8_nvfp4attn") or not name.endswith(".weight"):
+        if a.fixed not in ("fp8",) + NVFP4_MODES or not name.endswith(".weight"):
             return None
-        if a.fixed == "fp8_nvfp4attn":
+        if a.fixed in NVFP4_MODES:
             m0 = LAYER_RE.search(name)
             if m0 and re.search(r"\.self_attn\.(q_proj|k_proj|v_proj|o_proj|q_a_proj|q_b_proj|kv_a_proj_with_mqa)\.weight$", name):
+                return "W4A16_NVFP4"
+        if a.fixed == "fp8_nvfp4attn_sd":                    # dense MLP layers 0-2 + shared experts (lm_head stays MXFP8)
+            if LAYER_RE.search(name) and re.search(r"\.mlp\.(shared_experts\.)?(gate|up|down)_proj\.weight$", name):
                 return "W4A16_NVFP4"
         mod = name[:-len(".weight")]
         if mod == "lm_head":
@@ -148,10 +157,13 @@ def main():
         m2 = re.match(r"(.*\.self_attn)\.(q_a_proj|kv_a_proj_with_mqa)$", mod)
         if m2:
             return m2.group(1) + ".qkv_a"
+        m3 = re.match(r"(.*\.mlp(?:\.shared_experts)?)\.(gate_proj|up_proj)$", mod)
+        if m3:                                               # vLLM MergedColumnParallelLinear gate_up_proj
+            return m3.group(1) + ".gate_up"
         return mod
 
     group_amax = {}
-    if a.fixed == "fp8_nvfp4attn":                           # pre-pass: per fused-group amax for the global scale
+    if a.fixed in NVFP4_MODES:                               # pre-pass: per fused-group amax for the global scale
         for name, fn in idx.items():
             if keep(name) and fixed_recipe(name) == "W4A16_NVFP4":
                 with safe_open(os.path.join(a.bf16, fn), "pt") as f:
@@ -213,12 +225,29 @@ def main():
                     add(name, f.get_tensor(name))
     # 2) planned experts from GGUF blocks
     proj = {"gate": "ffn_gate_exps", "up": "ffn_up_exps", "down": "ffn_down_exps"}
+    if a.reuse_experts:
+        r_idx = json.load(open(os.path.join(a.reuse_experts, "model.safetensors.index.json")))["weight_map"]
+        r_ql = json.load(open(os.path.join(a.reuse_experts, "config.json")))["quantization_config"]["quantized_layers"]
     for L in sorted(plan):
         if a.max_layers and L >= a.max_layers:
             continue
         codec = plan[L]["codec"].upper()
         blk, nbytes, gtype = CODECS[codec]
-        if plan[L].get("quantize"):
+        if a.reuse_experts:
+            pre = f"model.language_model.layers.{L}.mlp.experts"
+            assert r_ql[pre]["quant_algo"].upper() == codec, (L, r_ql[pre], codec)
+            names = sorted((k for k in r_idx if k.startswith(pre + ".")), key=lambda k: r_idx[k])
+            assert len(names) == 288 * 3, (L, len(names))
+            fh = {}
+            for name in names:
+                fn = r_idx[name]
+                if fn not in fh:
+                    fh[fn] = safe_open(os.path.join(a.reuse_experts, fn), "pt")
+                t = fh[fn].get_tensor(name)
+                assert t.dtype == torch.uint8 and t.shape[-1] == nbytes, (name, t.dtype, t.shape)
+                add(name, t)
+            del fh
+        elif plan[L].get("quantize"):
             quantize_layer(a, idx, L, codec, nbytes, add)
         else:
             g = readers.setdefault(plan[L]["gguf"], gguf_expert_reader(plan[L]["gguf"], a.gguf_py))
