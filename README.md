@@ -39,8 +39,14 @@ model in fast memory, that leaves four levers, and HeteroFlash pulls all four at
 1. **Where each expert runs.** The Spark GPU keeps the frequently used ("hot") experts. Every other expert stays in
    the workstation's RAM and is *computed there by its CPU*, at the same time as the GPU works. Only small activations
    cross the 10G link, never weights, so both memories are read in parallel.
-2. **How many bits each weight needs.** Attention, shared experts and dense layers run in 4-bit NVFP4; routed experts
-   are 4-bit. Each step reads far fewer bytes, for a small, measured quality cost.
+2. **How many bits each weight needs.** Each part of the model gets its own precision, set by how often it is read
+   and how much quality it carries:
+   - routed experts (most of the model's size): 4-bit Q4_K, about 4.5 bits per weight with its scales, quantized with
+     an importance matrix and identical on both machines;
+   - attention, shared experts and dense layers (read by every token): 4-bit NVFP4, down from FP8;
+   - output head: 8-bit MXFP8.
+
+   Going lower on the experts, to 2 bits, is the usual way to fit the model on one Spark; it costs 3.7x more quality.
 3. **Which expert work is worth doing.** A token's 8 routed experts are not equally important. The strongest picks are
    always computed; the weakest are skipped and replaced by the expert's average output. In speculative decoding, a
    skipped pick is kept anyway when its expert is already being read for another token in the same window, since
