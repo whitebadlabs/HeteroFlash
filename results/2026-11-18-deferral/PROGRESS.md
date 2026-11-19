@@ -194,3 +194,8 @@ Exact next steps:
   => Under KLD 0.1 overall: NVFP4 + k5u A0.5 33.2 tok/s (KLD 0.083) and NVFP4 + k6u ~32.2 tok/s (0.061; speed = k6_a05 d4,
   union does not change reads). instruction_following is the only domain over 0.1 for every top-6/5 point.
   Master chain replaced by run_master2_chain.sh at 01:32 PT (d5 NVFP4 shared+dense speed, dq11, mean chain, map rest, bench).
+
+- 07:36 PT dq12 DONE (full 41 chunks; NVFP4 attention + shared + dense checkpoint, hook_mean, mean table imx5, union):
+  k6us +0.0181 / 0.057 / 92.8% (worst instr 0.086: every domain < 0.1), 34.34 tok/s (d6);
+  k5us +0.0188 / 0.065 / 92.1% (instr 0.101), 36.16 tok/s; k4us +0.0320 / 0.085 / 90.7% (instr 0.134, knowledge_qa 0.111), 38.12 tok/s.
+  => New frontier inside KLD 0.1: 34.3 (all domains < 0.1), 36.2, 38.1 tok/s vs 26.4 (k7 FP8) on 11-18 morning.

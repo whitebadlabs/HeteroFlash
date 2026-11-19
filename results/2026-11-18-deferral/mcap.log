@@ -1,10 +1,7 @@
-07:11:51Z started mcap (agree)
-07:22:22Z NOT HEALTHY
-(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509]     d["x"].append(xb.detach().to("cpu").view(-1).numpy().view(np.uint16).reshape(xb.shape).copy())
-(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-(EngineCore pid=273) ERROR 11-19 07:21:50 [core.py:1509] TypeError: Got unsupported ScalarType BFloat16
-(EngineCore pid=273) Traceback (most recent call last):
-(EngineCore pid=273) TypeError: Got unsupported ScalarType BFloat16
-(APIServer pid=1) Traceback (most recent call last):
-(APIServer pid=1)     raise RuntimeError(
-(APIServer pid=1) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+10:48:51Z started mcap (agree)
+11:00:07Z healthy; mem used 111 GiB
+11:01:21Z resident pool live; cuda free 11.5 / 130.7 GB
+11:01:25Z pass cap: drop [8 0 0 0 0] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+11:07:00Z cap logits files: 5
+{"tokens": 5115, "chunks_scored": 5, "chunk_ids": null, "chunks_total": 41, "kld_mean": 15.927303314208984, "kld_p99": 27.890758514404297, "dnll_mean": 15.789613723754883, "dnll_se": 0.07990924932271354, "same_top": 0.00918866042047739}
+11:07:21Z DONE mcap

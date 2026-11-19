@@ -1,0 +1,11 @@
+10:19:17Z started dq11 (agree)
+10:29:49Z healthy; mem used 111 GiB
+10:31:04Z resident pool live; cuda free 10.9 / 130.7 GB
+10:31:09Z pass k7: drop [7 0 0 0] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+10:37:37Z k7 logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.04018114507198334, "kld_p99": 0.5075027942657471, "dnll_mean": 0.014861165545880795, "dnll_se": 0.004068342258257193, "same_top": 0.9402318000793457}
+10:38:09Z pass k6u: drop [6 0 0 1] alt [none] gates [1 0 0] defer [none 0] ab [0.7 -1] mnbt 4
+10:47:59Z k6u logits files: 7
+{"tokens": 7161, "chunks_scored": 7, "chunk_ids": [0, 6, 12, 18, 24, 30, 36], "chunks_total": 41, "kld_mean": 0.044691890478134155, "kld_p99": 0.5937783718109131, "dnll_mean": 0.013043375685811043, "dnll_se": 0.004252033111789764, "same_top": 0.9340873956680298}
+{"files": [7, 7], "tokens": 7161, "kld_mean": 0.016462644562125206, "kld_se": 0.0005689628940216668, "kld_p99": 0.20613254606723785, "same_top": 0.9603407382965088}
+10:48:43Z DONE dq11
