@@ -12,7 +12,12 @@ HeteroFlash takes a third route. It treats the model and the hardware as one des
 GPU, what to compute on a CPU next to its own RAM, at what precision, and which work to skip, approximate or postpone.
 Every one of those choices is measured against the original model's quality.
 
-**Result: on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at 34-36 tok/s while staying close to
+The design point: 
+
+**Result: on the same constrained hardware, the usual way to fit the model (crush the experts to 2 bits) is
+slower *and* drifts 3.7x further from the original model than HeteroFlash.
+
+on one DGX Spark plus a workstation's CPU and RAM, GLM-5.3-Flash runs at 34-36 tok/s while staying close to
 the original model (KL 0.057-0.065). That is faster than, and 3.7x closer to the original than, the standard 2-bit
 quantization that fits the same Spark.** Decode speed and quality against the original weights (KL divergence to a Q8
 copy; lower is better):
@@ -24,9 +29,6 @@ copy; lower is better):
 More models are being added (the expert-routing techniques are model-agnostic; see "Union-aware routing on other
 models" below). For scale, the same GLM model on a two-GPU workstation server (3.5-bit EXL3, tensor parallel 2) runs
 151 tok/s at KL 0.042, and this runtime with all experts on the CPU and none of the techniques runs 15-18 tok/s.
-
-The design point: on the same constrained hardware, the usual way to fit the model (crush the experts to 2 bits) is
-slower *and* drifts 3.7x further from the original model than HeteroFlash.
 
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
 math, code, multilingual, instruction following, long context). Tool calling (tool-eval-bench, leaderboard settings):
