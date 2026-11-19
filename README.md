@@ -30,7 +30,7 @@ models" below). For scale, the same GLM model on a two-GPU workstation server (3
 
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
 math, code, multilingual, instruction following, long context). Tool calling (tool-eval-bench, leaderboard settings):
-90/100 for HeteroFlash's fastest point vs 89/100 for the all-8-experts baseline.
+HeteroFlash's fastest point matched the all-8-experts baseline (90/100 vs 89/100, within run-to-run noise).
 
 ## Union-aware routing on other models
 
@@ -72,8 +72,10 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
    experts are 4-bit. Each step reads far fewer bytes, for a small, measured quality cost.
 3. **Find which expert work matters, and treat the rest differently.** A token's routed experts are not equally
    important: their rank in the router decides how much they contribute. The strongest picks are always computed.
-   The weakest are not simply dropped: each is replaced by its routing weight times that expert's average output,
-   which halves the quality cost of skipping it.
+   The weakest are not simply dropped: each is replaced by its routing weight times that expert's average output.
+   On GLM-5.3-Flash this roughly halves the quality cost of the dropped picks (section 4.6); on Qwen3-30B-A3B it does
+   not help, so it is model-specific. Both the rank rule and this stand-in follow an independent public sensitivity
+   study of Kimi K3.1 (full citation to be added with the author's consent).
 4. **Reuse what is already being read (union-aware routing, a speculative-decoding form of Lynx's batch-aware
    expert selection).** Speculative decoding checks several tokens at once. If
    a weak pick's expert is already being read for another token in the same window, keeping it costs nothing, so it
@@ -272,7 +274,7 @@ Timed but not quality-scored (past the bar by construction, since each drops mor
 outside): top-5 27.1, top-6 + tau 0.08 27.6, top-4 with 3-bit experts on 15 CPU layers 28.0, top-4 + coalescing off
 30.4 tok/s (all f1).
 
-**Recommended operating point as of 2026-11-17: top-7 with the KDA split off, 25.7 tok/s on warm rounds** (superseded on 11-18 by NVFP4 attention + top-7 + A 0.5, 29.6 tok/s, KLD 0.052; section 4.5) (25.62 pooled, including the
+**Historical operating point (2026-11-17): top-7 with the KDA split off, 25.7 tok/s on warm rounds** (superseded: see sections 4.5 and 4.6) (25.62 pooled, including the
 cold first round).
 
 - Boot f3 missed the 0.3 tok/s anchor rule on one anchor (section 3), so read these as same-boot comparisons.
@@ -305,6 +307,45 @@ same balanced eval, either the full 41 chunks or a 7-chunk subset (one chunk per
 | NVFP4 attention, top-4 + weak picks one layer late | +0.0362 (0.0024) | 0.079 | 91.2% | knowledge QA 0.107 |
 
 Source files: `d3_speed.jsonl`, `d4_speed.jsonl`, `q_dq2_*`, `q_dq7_*_vs_q8_bal.json`.
+
+### 4.6 2026-11-19: the full stack behind the headline numbers
+
+Checkpoint `mixed_full_iq2xxs_nvfp4attn_sd`: W4A16 NVFP4 for attention, shared experts and the dense MLP layers
+(round-to-nearest from the official BF16 weights with our converter, `src/build_mixed_checkpoint.py --fixed
+fp8_nvfp4attn_sd`), lm_head MXFP8, routed experts Q4_K on both machines. Runtime: union-aware routing plus the
+mean-output stand-in for dropped picks (`bench/dualrt/hook_mean/`, expert mean table built from calibration text, not
+the eval set). Balance rule A 0.5.
+
+**Speed** (boot d6, spec mode MTP-3, KV cache pinned, warm-up + 3 interleaved rounds; `results/2026-11-18-deferral/d6_speed.jsonl`):
+
+| point | tok/s | ms per cycle | committed tokens per cycle |
+|---|---|---|---|
+| top-6 + union + stand-in | 34.34 | 85.5 | 2.94 |
+| top-5 + union + stand-in | 36.16 | 80.0 | 2.89 |
+| top-4 + union + stand-in | 38.12 | 75.5 | 2.88 |
+
+Same checkpoint without union or stand-in (boot d5, `d5_speed.jsonl`): top-7 31.32, top-6 32.73, top-5 35.46 tok/s.
+
+**Quality, full eval (41 chunks)** (`results/2026-11-18-deferral/q_dq12_*_vs_q8_bal.json`):
+
+| point | dNLL (SE) | KL | top-1 | worst domain |
+|---|---|---|---|---|
+| top-6 + union + stand-in | +0.0181 (0.0020) | **0.057** | 92.8% | instruction following 0.086 |
+| top-5 + union + stand-in | +0.0188 (0.0021) | **0.065** | 92.1% | instruction following 0.101 |
+| top-4 + union + stand-in | +0.0320 (0.0024) | 0.085 | 90.7% | instruction following 0.134 |
+
+**What the stand-in and union each buy** (7-chunk subset, NVFP4-attention checkpoint, same boot; `q_dq10_*`):
+top-5 plain KL 0.085, + stand-in 0.056, + union + stand-in 0.045; top-4 + stand-in 0.081, + union + stand-in 0.063.
+On this model the stand-in roughly halves the cost of the dropped picks. It does not transfer to Qwen3-30B-A3B,
+where it is neutral to slightly worse (`results/2026-11-19-union-qwen/`).
+
+**The 2-bit comparison point** (all routed experts IQ2_XXS on the Spark GPU, same eval and scorer;
+`results/2026-11-17-frontier/gpuonly/r17_drop_base_vs_q8_bal.json`): KL 0.239, top-1 84.9%, dNLL +0.183, at about
+27-28 tok/s (`results/2026-11-16-dualmem/README.md`, section 5). 0.239 / 0.065 = 3.7.
+
+**Tool calling** (tool-eval-bench, leaderboard settings, `results/2026-11-19-llmbench/`): 90/100 for top-5 + union +
+stand-in vs 89/100 for the all-8-experts FP8 baseline. The difference is within run-to-run noise, so read it as
+"matched the baseline". Decode on the same benchmark: 28.1 vs 20.8 tok/s.
 
 ## 5. Findings
 
@@ -388,8 +429,8 @@ because they nearly produced wrong conclusions here.*
   in the next rounds (`f3_frontier_speed.json`, `kdaoff`; f1 showed the same, 18.93 vs ~21.8). Run a throwaway warm-up
   point, or interleave and report rounds separately.
 
-**F10. Rank decides what a routed pick may cost: delaying weak picks is cheap, delaying strong ones is not.**
-*Consistent with an independent study on another large MoE model; measured here on GLM-5.3-Flash.*
+**F9. Rank decides what a routed pick may cost: delaying weak picks is cheap, delaying strong ones is not.**
+*Follows an independent public sensitivity study of Kimi K3.1 (full citation to be added with the author's consent); measured here on GLM-5.3-Flash.*
 - Deferring the workstation's whole partial sum one layer (so the GPU never waits) buys speed: 32-33 tok/s at
   A 0.28-0.35 against 26.4. But it costs KLD 0.31-0.45 on the subset (full eval 0.444, top-1 77%), because the partial
   carries strong picks too.
@@ -400,24 +441,23 @@ because they nearly produced wrong conclusions here.*
 - Deferring 10-layer blocks costs 0.085-0.159 per block, with the middle-late block (layers 23-32) the most tolerant.
   So per-layer budgets matter. A per-layer map is being measured.
 
-**F11. The cycle anatomy: routed experts are about half of it.** *Derived from same-boot speed points.*
+**F10. The cycle anatomy: routed experts are about half of it.** *Derived from same-boot speed points.*
 - Each routed pick removed saves 5-6 ms per cycle: top-7 110.4 ms, top-6 104.8 ms, top-5 98.2 ms (d3).
 - So routed experts cost ~45-50 ms of the ~110 ms cycle. The fixed path, the drafter and overheads cost ~60 ms.
 - Even perfectly hidden experts would cap this hardware at ~45-47 tok/s at 2.9 committed tokens per cycle.
 - 4-bit attention removed ~12-13 ms per cycle (d4 vs d3 at A 0.5), the largest single gain since the split, at +0.014 KLD.
 
-**F12. Union-aware routing: tail picks whose expert is already read cost nothing.** *Prior work: [Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024)'s batch-aware
+**F11. Union-aware routing: tail picks whose expert is already read cost nothing.** *Prior work: [Lynx](https://arxiv.org/abs/2411.08982) (Gupta et al., 2024)'s batch-aware
 expert selection, applied here to speculative verify windows; the cross-model measurement is ours.*
-rule; related to published work on routing locality.*
 - In a 4-token verify window each token's top-k core picks define the experts read. A weaker pick is kept only if its
   expert is already in that set, so the experts read are exactly those of plain top-k.
 - Subset KLD (core picks / with union): top-6 0.042 / 0.032; top-5 0.079 / 0.060; top-4 0.144 / 0.099.
 - Speed is unchanged: top-5 33.36 vs top-5 + union 33.18 tok/s (same boot).
 - Only ~21-29% of weak picks fall inside the union (GLM decode traces), which bounds the gain.
 
-**F13. Negative results worth stating.** *Measured.*
+**F12. Negative results worth stating.** *Measured.*
 - **Late weak experts over a bandwidth-bound link do not pay.**
-  - Their quality is good (F10). But the workstation's expert server already streams ~190 GB/s per request, so the
+  - Their quality is good (F9). But the workstation's expert server already streams ~190 GB/s per request, so the
     extra late work lands on the critical path.
   - Speed: 22-24 tok/s (MoE blocked 45-57 ms per window) against 33 tok/s for plain drops.
 - **Correlation-aware expert placement does not survive realistic load balancing.**
@@ -432,7 +472,7 @@ rule; related to published work on routing locality.*
 
 ## 6. Limitations and what is not measured
 
-- **Far from the targets.** 29.6 tok/s (2026-11-19; 25.7 on 11-17) against a goal of 80 and a control at 151. With 4-bit experts and FP8 fixed
+- **Far from the targets.** 34.3-36.2 tok/s (2026-11-19, section 4.6; 25.7 on 11-17) against a goal of 80 and a control at 151. With 4-bit experts and FP8 fixed
   weights, 80 tok/s exceeds the combined read bandwidth of both machines by about 1.6-1.7x *regardless of placement*
   (derived, `results/2026-11-09-audit/README.md`). Getting there needs fewer bytes per committed token, not only
   better scheduling.
