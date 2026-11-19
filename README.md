@@ -59,6 +59,8 @@ For each lever we tried every idea we could find, from papers, public repos and 
 if it made decoding faster without crossing the quality bar. Here is the full list, grouped by lever, including what we
 rejected.
 
+![Speed vs quality: HeteroFlash frontier against the 2-bit build](docs/frontier.svg)
+
 All measured unless marked simulated or modeled. Speeds are GLM-5.3-Flash on 1 DGX Spark + workstation CPU/RAM, batch 1.
 Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is better; 0.1 is the go/no-go bar).
 
@@ -88,8 +90,6 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 
 **Net:** 6.5 tok/s (first deployment) → 36.2 tok/s at KL 0.065. The usual 2-bit single-Spark build runs 27-28 tok/s at
 KL 0.239.
-
-![Speed vs quality: HeteroFlash frontier against the 2-bit build](docs/frontier.svg)
 
 ## Union-aware routing on other models
 
