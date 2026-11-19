@@ -1,0 +1,4 @@
+{"point": "k5_a05", "tok_s": 35.46, "ms_per_cycle": 79.9, "committed_per_cycle": 2.833, "moe_blocked_ms_per_window": 9.73, "round_trip_ms": 0.866, "server_ms": 0.722, "per_round_tok_s": [["1", 35.37], ["2", 35.58], ["3", 35.44]]}
+{"point": "k6_a05", "tok_s": 32.73, "ms_per_cycle": 85.1, "committed_per_cycle": 2.786, "moe_blocked_ms_per_window": 8.99, "round_trip_ms": 0.976, "server_ms": 0.832, "per_round_tok_s": [["1", 32.45], ["2", 32.54], ["3", 33.21]]}
+{"point": "k6u_a05", "tok_s": 33.58, "ms_per_cycle": 85.7, "committed_per_cycle": 2.878, "moe_blocked_ms_per_window": 9.617, "round_trip_ms": 0.992, "server_ms": 0.85, "per_round_tok_s": [["1", 33.65], ["2", 33.56], ["3", 33.54]]}
+{"point": "k7_a05", "tok_s": 31.32, "ms_per_cycle": 90.9, "committed_per_cycle": 2.847, "moe_blocked_ms_per_window": 9.047, "round_trip_ms": 1.099, "server_ms": 0.954, "per_round_tok_s": [["1", 31.39], ["2", 31.29], ["3", 31.27]]}
