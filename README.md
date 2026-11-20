@@ -87,7 +87,7 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 | Rank rule, top-7 of 8 ([K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Each token picks 8 experts; the weakest one contributes least, so it is skipped | ✅ worked | 24.7 → 26.4 tok/s, KL 0.027 → 0.038 |
 | Window-level expert reuse ([Lynx](https://arxiv.org/abs/2411.08982), Gupta et al., 2024) + mean-output stand-in ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)), top-5 | Speculative decoding checks 4 tokens at once; a skipped pick is kept anyway if its expert is already being read for another token in the window (free). Picks that are still skipped are replaced by that expert's average output instead of nothing | ✅ worked | 31.3 → **36.2 tok/s at KL 0.065** (reuse alone: 33.2 tok/s at 0.083) |
 | Window-level expert reuse on 6 models ([Lynx](https://arxiv.org/abs/2411.08982), applied to single-user speculative windows) | The same reuse rule, tested on Qwen, GLM and gpt-oss models | ✅ worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2 (Qwen3.6-35B): 91.1% → 93.9%. Plain top-3 matches reuse at top-2, so the gain is fewer expert reads, not accuracy per expert computed |
-| Mean-output stand-in on Qwen3-30B ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | The average-output replacement on a different model | ❌ did not transfer | neutral to worse |
+| Mean-output stand-in on Qwen3-30B ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | The average-output replacement on a different model | ❌ did not transfer | neutral to worse; [why](#why-the-mean-output-stand-in-does-not-transfer-to-qwen) |
 | Co-selection-guided substitution (this project) | Replaces a skipped expert with its usual partner expert | ❌ failed | worse than reuse alone and than random controls |
 | **4. When each piece of work has to finish** | | | |
 | Whole-partial deferral (this project; a coarser form of [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`, which defers one missed expert a sublayer) | Lets the GPU continue without waiting for the CPU's whole result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
@@ -134,6 +134,30 @@ vLLM on 2 RTX PRO 6000 Max-Q GPUs.
 - Every reference run through the hook reproduces the unmodified model exactly (KL 0); deterministic MoE kernels are
   used where the default kernels varied between identical runs. Details and files: `results/2026-11-19-union-large/`.
 - In progress: Inkling-2-Small (~594B), DeepSeek-V4.1-Flash.
+
+## Why the mean-output stand-in does not transfer to Qwen
+
+On GLM-5.3-Flash, replacing a skipped pick with its routing weight times the expert's average output roughly halves
+the cost of skipping it. On Qwen3-30B-A3B it makes things slightly worse, and on Qwen3.6-35B-A3B it does nothing. We
+tested why, and whether richer fills do better (`results/2026-11-19-token-fill/`).
+
+![Change in KL vs plain dropping for each fill](docs/fill_compare.svg)
+
+- **On Qwen, a skipped expert's output is mostly input-dependent, not a steady offset.** Outside the last layer, any
+  fixed vector can remove at most about 7-8% of the skip error (in-sample ceiling). A mean has little to work with.
+- **The plain mean is also skewed.** It is averaged over all picks, and in early layers a few very large outputs (the
+  first token of each sequence, top-ranked picks) dominate it. In layer 2 of Qwen3-30B this makes the error 131% worse
+  than dropping. A mean fitted only on the weak picks that actually get skipped fixes this: KL 3.5% better than drop on
+  Qwen3-30B and 2.2% on Qwen3.6-35B.
+- **A token-ID table does not help.** Keyed on the current token (the "token row" idea), it covers only 50-54% of the
+  skipped weight with enough samples, overfits where it does, and loses to the mean: +27% KL vs drop on Qwen3-30B.
+  Even when we fit the table only on skipped picks, it only ties the weak-pick mean.
+- **Only the expert's own input explains part of the spread.** A rank-32 linear correction from it removes 7-11% of the
+  skip error outside the last layer and is the best fill on Qwen3.6-35B (KL 7.3% better than drop). On Qwen3-30B it
+  hurts overall, because of one layer (layer 1).
+
+Caveats: Qwen models only (our GLM traces have no token IDs or router weights); about 104K calibration tokens; GPU
+accumulation order makes the fits vary slightly, so KL differences of 1-2% are ties.
 
 ## Takeaways
 
