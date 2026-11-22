@@ -23,7 +23,8 @@ Decode speed and quality against the original model (KL divergence to a Q8 copy 
 | GLM-5.3-Flash (320B-class MoE) | 1 DGX Spark + a workstation's CPU and RAM (no workstation GPU) | **34.3 tok/s, KL 0.057** (top-1 92.8%, every domain within 0.1) | **36.2 tok/s, KL 0.065** (top-1 92.1%) | 2-bit experts (IQ2_XXS), all on the Spark: 27-28 tok/s, KL 0.239 (top-1 84.9%) |
 
 Also measured on the same system: top-4 at **38.1 tok/s, KL 0.085** (top-1 90.7%; instruction following 0.134, so
-outside 0.1 in that one domain). The expert-routing technique is also measured on five more MoE models (Qwen3-30B,
+outside 0.1 in that one domain; tool calling 89/100, the same as the all-experts baseline). With **4 users at once**,
+top-4 serves **50.5 tok/s in total** (about 12.6 per user); see [Several users at once](#several-users-at-once). The expert-routing technique is also measured on five more MoE models (Qwen3-30B,
 Qwen3.6-35B, gpt-oss-120b, GLM-4.5-Air, Qwen3.8-Flash-Next); see [Union-aware routing on other models](#union-aware-routing-on-other-models) below. For scale, the same GLM model on a two-GPU workstation server (3.5-bit EXL3, tensor parallel 2) runs
 151 tok/s at KL 0.042, and this runtime with all experts on the CPU and none of the techniques runs 15-18 tok/s.
 
@@ -79,16 +80,20 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 | Grouping co-selected experts on one GPU (this project; the inverse of Insight 5 in [Patterns behind Chaos](https://arxiv.org/abs/2510.05497), ISCA 2026, which advises spreading them) | On multi-GPU servers, puts experts that are often picked together on the same GPU to cut traffic | ❌ failed (simulated), as that paper's Insight 5 predicts | 9-21% fewer cross-GPU sends on 5 models, but GPU load becomes less even |
 | Per-batch copies of hot experts ([MegaFlux](https://arxiv.org/abs/2610.00671), 2026) | Duplicates busy experts on several GPUs to restore balance | ⚠️ works only with current-batch routing (simulated) | with the current batch's routing it restores balance, as MegaFlux does; planners that only see past batches missed the balance limit in every cell |
 | Per-request hot set ([Patterns behind Chaos](https://arxiv.org/abs/2510.05497)) | Uses the prompt's routing to choose which experts the GPU holds for that request | ⚠️ marginal here | GPU coverage 54.6% → 67-69%, modeled speed +0-2% (the GPU already holds more needed experts than it has time to compute) |
+| Split retuned for several users (this project) | With more than one stream, sends a larger share of experts to the workstation, which handles big batches better than the Spark's expert kernel | ✅ worked | 4 users, top-4: 28.2 → 50.5 tok/s total; 2 users: 39.6 → 47.6 |
 | **2. How many bits each weight needs** | | | |
 | 4-bit attention ([NVFP4](https://github.com/NVIDIA/TensorRT-Model-Optimizer), NVIDIA; converter: this project) | Stores the attention weights in 4 bits instead of 8, so each step reads fewer bytes | ✅ worked | 27.3 → 29.6 tok/s, KL +0.014 |
 | 4-bit shared experts and dense layers (NVFP4) | Same for the parts every token always uses | ✅ worked | → 31.3 tok/s (top-7), quality about unchanged |
 | 2-bit routed experts, all on the Spark (IQ2_XXS, [llama.cpp](https://github.com/ggml-org/llama.cpp)) | The usual way to fit the model on one Spark: shrink every expert to 2 bits | ❌ quality cost too high | 27-28 tok/s at KL 0.239 |
+| EXL3 3.5-bit GPU experts, Q4_K kept on the workstation ("two weight sets"; [exllamav3](https://github.com/turboderp-org/exllamav3) kernels ported to the Spark) | Smaller, faster copies of the GPU-resident experts | ⚠️ works, too small a gain | GPU expert time −40%, but only +3.8% overall because each step waits on the workstation; KL +0.006 |
 | **3. Which expert work is worth doing** | | | |
 | Rank rule, top-7 of 8 ([K3.1 sensitivity study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | Each token picks 8 experts; the weakest one contributes least, so it is skipped | ✅ worked | 24.7 → 26.4 tok/s, KL 0.027 → 0.038 |
 | Window-level expert reuse ([Lynx](https://arxiv.org/abs/2411.08982), Gupta et al., 2024) + mean-output stand-in ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)), top-5 | Speculative decoding checks 4 tokens at once; a skipped pick is kept anyway if its expert is already being read for another token in the window (free). Picks that are still skipped are replaced by that expert's average output instead of nothing | ✅ worked | 31.3 → **36.2 tok/s at KL 0.065** (reuse alone: 33.2 tok/s at 0.083) |
 | Window-level expert reuse on 6 models ([Lynx](https://arxiv.org/abs/2411.08982), applied to single-user speculative windows) | The same reuse rule, tested on Qwen, GLM and gpt-oss models | ✅ worked | 13-39% less quality loss at the same expert reads; GSM8K at top-2 (Qwen3.6-35B): 91.1% → 93.9%. Plain top-3 matches reuse at top-2, so the gain is fewer expert reads, not accuracy per expert computed |
 | Mean-output stand-in on Qwen3-30B ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity)) | The average-output replacement on a different model | ❌ did not transfer | neutral to worse; [why](#why-the-mean-output-stand-in-does-not-transfer-to-qwen) |
 | Co-selection-guided substitution (this project) | Replaces a skipped expert with its usual partner expert | ❌ failed | worse than reuse alone and than random controls |
+| 2-bit fallback tier (this project) | Computes weak picks from 2-bit copies on the Spark GPU instead of the average output | ⚠️ quality yes, speed no | Full-eval KL 0.066 → 0.053 (every domain better), but 11-17% slower: the Spark GPU has no spare time once the workstation wait is gone |
+| Per-expert fallback budget (this project) | Chooses the fallback for each of the 12,096 (layer, expert) pairs instead of one rule per layer | ✅ finding (offline) | Experts within a layer differ 8-9x more than layers do; at the same memory a per-expert budget leaves 13-18% less error. Also found and fixed early-token outliers in the average-output table (no measurable KL change) |
 | **4. When each piece of work has to finish** | | | |
 | Whole-partial deferral (this project; a coarser form of [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`, which defers one missed expert a sublayer) | Lets the GPU continue without waiting for the CPU's whole result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
 | Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity); close to [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`) | Delays only the weakest experts by one layer instead of skipping them | ⚠️ quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (the CPU side has no spare bandwidth) |
@@ -96,6 +101,26 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 
 **Net:** 6.5 tok/s (first deployment) → 36.2 tok/s at KL 0.065. The usual 2-bit single-Spark build runs 27-28 tok/s at
 KL 0.239.
+
+## Several users at once
+
+The headline numbers are for one user. We also served 1, 2 and 4 conversations at the same time (top-4, 8 prompts of
+512 tokens per run, about 100 runs per setting; `results/2026-11-21-multistream/`).
+
+| users at once | total tok/s | per user | GPU share of each step's experts |
+|---|---|---|---|
+| 1 | 36.7 | 36.7 | 50% |
+| 2 | 47.6 | ~24 | 35% |
+| 4 | 50.5 | ~12.6 | 15% |
+
+- With the single-user split (GPU takes half), 4 users were slower in total than one (28.2 tok/s). The Spark's expert
+  kernel re-reads each expert's weights for every group of 4 tokens, so its cost grows with the number of users, while
+  the workstation handles big batches well. Moving more of the work to the workstation fixes most of it.
+- Different users share few experts: distinct experts per layer grow from about 12 (1 user) to 41 (4 users).
+- Quality does not depend on the split: it only moves the same Q4_K experts between the two machines. Tool calling ran
+  4 conversations in parallel and scored 89/100.
+- Limits: the split is set by hand per user count, and a step with more than 16 tokens (more than 4 users, or a new
+  prompt's prefill landing next to running decodes) falls back to a slower all-workstation path.
 
 ## Union-aware routing on other models
 
