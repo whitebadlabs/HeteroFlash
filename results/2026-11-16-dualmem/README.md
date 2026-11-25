@@ -1,6 +1,6 @@
 # Bet 1, dual-memory decode: can both memories be read at once, and what does it buy? (2026-11-16)
 
-Question (Carmen, 2026-11-16 21:09): "Can we read both spark and maxq ram at the same time? Can we test it?"
+Question (the project lead, 2026-11-16 21:09): "Can we read both spark and maxq ram at the same time? Can we test it?"
 
 **Answer: yes, measured.** The Spark GPU and the workstation CPU stream their own memories at the same time with no
 measurable interference. Inside a real 90-exchange decode-cycle prototype the two together read **~366 GB/s
@@ -165,7 +165,7 @@ rule, sigmoid-gated o_norm), following the vLLM glm5next code. MLA runs causal a
   per cycle), or verify bf16 exchange end to end on dNLL. Per-layer error is not the quality metric; the balanced-eval dNLL is.
 
 ## 7. Split draft passes, prototype [M] (`bench/dualmem/run_draft.sh`, `proto_draft3_default_nic.txt`)
-Three MTP draft passes at T = 1, NIC at defaults (EEE on; Carmen has not decided on EEE). Per pass and per side:
+Three MTP draft passes at T = 1, NIC at defaults (EEE on; the project lead has not decided on EEE). Per pass and per side:
 - phase A = MTP attention half plus eh_proj half, with q_a/kv_a replicated (105 MB);
 - phase B = lm_head vocab half plus shared-expert half plus one FP8 expert as a byte stand-in for the MTP experts (355 MB).
 

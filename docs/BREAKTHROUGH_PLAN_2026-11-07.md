@@ -6,7 +6,7 @@
 - **[L]** reported in the literature (deep research, 3-vote verified), not reproduced here;
 - **[P]** a modeled projection from bandwidth arithmetic, not measured.
 
-Targets (revised by Carmen, 2026-11-08):
+Targets (revised by the project lead, 2026-11-08):
 
 - **Decode goal: 80 tok/s**, with 125 tok/s as a stretch goal.
 - Cold 45K TTFT <= 10.8 s.
@@ -17,7 +17,7 @@ The last three are unchanged.
 
 Hardware is fixed: one DGX Spark, the workstation CPU/RAM, and the existing 10 GbE direct link. Max-Q GPUs may be used only for offline training and evaluation.
 
-**Approval scope (Carmen, 2026-11-07).**
+**Approval scope (the project lead, 2026-11-07).**
 
 - Approved: bounded pilots only (a QAT feasibility pilot and the pre-checks below).
 - Not approved: multi-day training on both Max-Q GPUs. That waits for a go/no-go after the pilots.
@@ -134,9 +134,9 @@ Superseded projection, kept for the record: 94-127 tok/s, computed at 241 GB/s w
    - **Open items:** int8 activations (about -105 us at T=8, [P]), GPU integration and overlap, and the root cause of the 300 us penalty (needs root tracing).
 6. **Memory.** Pre-check B: full Spark budget, covering weights, KV/state caches, drafter, CUDA context, runtime buffers and OS.
 
-## Next experiment: hot/cold expert placement with per-device formats (Carmen, 2026-11-08)
+## Next experiment: hot/cold expert placement with per-device formats (the project lead, 2026-11-08)
 
-This combines Carmen's two founding ideas: less-used experts in system RAM, and quant types matched to each processor.
+This combines the project lead's two founding ideas: less-used experts in system RAM, and quant types matched to each processor.
 
 - **Placement.** A per-expert map in runtime-v1. llama.cpp RPC is not suitable: it can only split whole layers.
   - Hot experts and the fixed weights live on the Spark, at the smallest format that passes quality.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 2026-11-19 Local Inference Lab llm-inference-bench (Carmen 23:00 PT) against the HeteroFlash spec server, single stream:
+# 2026-11-19 Local Inference Lab llm-inference-bench (the project lead 23:00 PT) against the HeteroFlash spec server, single stream:
 # decode matrix concurrency 1 x contexts 0/16K/32K + tool-eval, for (a) best config: NVFP4 attention, k7, A 0.5 and
 # (b) baseline: FP8, k8, A 0.7. After DQ10_DONE (mean chain). Bench runs in a throwaway container (pip deps there).
 H=/srv/vllm-research/work/HeteroFlash; cd $H; C=/srv/vllm-research/work/cache/r18; OUT=$H/results/2026-11-17-dualrt

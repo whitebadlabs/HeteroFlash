@@ -1,6 +1,6 @@
 # Frontier run: progress (resume notes)
 
-Carmen, task 35 (2026-11-17 07:06): "Try to decrease some accuracy to increase tok/s as much as possible."
+The project lead, task 35 (2026-11-17 07:06): "Try to decrease some accuracy to increase tok/s as much as possible."
 Control bar (dual Max-Q EXL3 control vs Q8 proxy, balanced eval): **dNLL +0.0148, KLD 0.042, top-1 94.0%**.
 A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (SE ~0.002) is "at the bar".
 
@@ -31,7 +31,7 @@ A point is inside the bar only if all three metrics pass; within 2 SE of dNLL (S
 - MaxQ verified clean: scaling_max_freq 5487604 on every core, GPUs 2 MiB, no vllm/expert_server processes, no hfrt/hfsc tmux.
   NIC coalescing at defaults. /etc/maxq-stay-awake left as found (it predates this run). "MAXQ RELEASED" sent to main 01:37 PT.
 - FlashInfer #9464 rerun on the Spark (task 2), 00:30-00:42 PT, head 09e2f56 vs 306b1d9: same picture as 11-13
-  (N=256 2.63x, bit-identical 168/168). The draft is updated on the NAS and awaits Carmen's approval.
+  (N=256 2.63x, bit-identical 168/168). The draft is updated on the NAS and awaits the project lead's approval.
 - Nothing of task 35 remains running. The Spark is idle; qfn is still down.
 
 ## f2 speed boot (22:19-23:22 PT): ANCHOR FAILED, points not trusted

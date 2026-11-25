@@ -16,7 +16,7 @@ Env:
   HF_REMOTE_ADDR ip:port   workstation expert_server_gguf          HF_REMOTE_FLAGS  wire flags (3 = busy-poll + heartbeat)
   HF_SPLIT_MODE 0|1|2      0 every route to the CPU (config B on this mailbox), 1 balanced, 2 every resident expert on GPU
   HF_SPLIT_A / HF_SPLIT_B  balance rule (cap = round(A*U + B))     HF_SPLIT_MAXT    largest window that is split (16)
-  HF_SPLIT_F32 0|1         bf16 (default, Carmen 2026-11-17: optimise tok/s) or fp32 partial-sum reply
+  HF_SPLIT_F32 0|1         bf16 (default, the project lead 2026-11-17: optimise tok/s) or fp32 partial-sum reply
   HF_SPLIT_HOT json        {layer: [experts, hottest first]}       HF_SPLIT_NRES    resident experts per layer
   HF_SPLIT_GGUF / HF_SPLIT_IDX  Q4_K GGUF + expert index (runtime/gguf_expert_index.py format)
   HF_SPLIT_COUNT path      count decode-window routes per layer (hot-set calibration), dumped every 2000 MoE calls
@@ -61,7 +61,7 @@ if os.environ.get("HF_SPLIT", "0") == "1" and not getattr(_bi, "_hf_drt_loaded",
     _A = float(os.environ.get("HF_SPLIT_A", "0.5"))
     _B = float(os.environ.get("HF_SPLIT_B", "-1.0"))
     _SPLIT_MAXT = int(os.environ.get("HF_SPLIT_MAXT", "16"))
-    _F32 = os.environ.get("HF_SPLIT_F32", "0") == "1"   # Carmen 11-17: bf16 partial exchange is the default (faster); fp32 is the option
+    _F32 = os.environ.get("HF_SPLIT_F32", "0") == "1"   # The project lead 11-17: bf16 partial exchange is the default (faster); fp32 is the option
     _FLAGS = int(os.environ.get("HF_REMOTE_FLAGS", "3")) | (4 if _F32 else 0)
     _NRES = int(os.environ.get("HF_SPLIT_NRES", "0"))
     _HOT = os.environ.get("HF_SPLIT_HOT", "")

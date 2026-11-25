@@ -1,6 +1,6 @@
 # Frontier: trading accuracy for tok/s (task 35, 2026-11-17)
 
-Carmen, 07:06: "Try to decrease some accuracy to increase tok/s as much as possible."
+The project lead, 07:06: "Try to decrease some accuracy to increase tok/s as much as possible."
 
 Setup: GLM-5.3-Flash dual-memory split runtime (Spark GPU + MaxQ CPU experts over the direct 10G link), spec mode MTP-3, NIC defaults, batch 1.
 Every lever below is a run-time switch on one boot, so speed points are interleaved on the same server.
@@ -59,7 +59,7 @@ Same-boot comparison on f3 rounds 2-3 (warm; measured): kdaoff 23.9, tau0.04 24.
 - Add the lossless lever, MaxQ i40e interrupt coalescing off.
   - Measured: +1.4 tok/s on kdaoff, +2.6 on top-4.
   - Not yet measured with k7. **Modeled** k7 + coalescing off: ~27 tok/s.
-  - Making it permanent is a NIC setting on the MaxQ, so it needs Carmen's OK.
+  - Making it permanent is a NIC setting on the MaxQ, so it needs the project lead's OK.
 - Everything faster than ~26 tok/s costs quality past the bar: top-6, tau0.08, top-5, top-4.
 - Within the bar, trading accuracy buys about +7-10%, nowhere near the 80 tok/s goal. The limit is the per-cycle floor (~100-115 ms at ~2.9 tokens committed per cycle): exchange latency plus CPU expert time.
 - Speed-boot note: pin the KV cache with `EXTRA_ARGS="--kv-cache-memory-bytes 8181829386"`. f2 came up 24% smaller at the same utilisation; the cause is not yet explained.

@@ -1,6 +1,6 @@
-# Proposal: bounded Max-Q GPU work to close the gap to 80 tok/s (2026-11-19, for Carmen's approval)
+# Proposal: bounded Max-Q GPU work to close the gap to 80 tok/s (2026-11-19, for the project lead's approval)
 
-Status: proposal only. No Max-Q GPU is used until Carmen approves this document.
+Status: proposal only. No Max-Q GPU is used until the project lead approves this document.
 
 ## Where we are (measured, 1 Spark + MaxQ CPU, batch 1, MTP-3)
 - 2026-11-18 morning: k7 FP8, 26.4 tok/s, full-eval KLD 0.038.

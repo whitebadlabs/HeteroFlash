@@ -109,7 +109,7 @@ Not found (asked for, absent): measured Spark ib_write_lat, FP8/NVFP4-activation
   - An 8-CCD part is the only hardware lever that raises the decode ceiling inside the charter (R7, +18% [modeled]).
   - **Do not buy on spec:** first measure STREAM on a 64-core Zen 5 Threadripper PRO (cloud or borrowed).
 
-### C2. Cheapest link that still meets cold 45K ≤ 10.8 s (added after Carmen's 14:05 answer: no purchase for now unless streaming absolutely needs it)
+### C2. Cheapest link that still meets cold 45K ≤ 10.8 s (added after the project lead's 14:05 answer: no purchase for now unless streaming absolutely needs it)
 
 **Workload.**
 - The Spark keeps ~200 hot experts per layer resident in control format. The memory budget is ~89 GiB for experts [D, not boot-validated].
@@ -130,7 +130,7 @@ Not found (asked for, absent): measured Spark ib_write_lat, FP8/NVFP4-activation
 | Option | Card price [V, listings, Nov 2026, undated] | Effective GB/s [A] | Cold-set stream time [modeled] | Meets ≤ 10.8 s? |
 |---|---|---|---|---|
 | Existing 10 GbE | $0 | 1.15 [M] | 45.5 s | **No** |
-| ConnectX-4 Lx 25GbE | ~$30-60 (Carmen's figure; not re-checked) | ~2.9 | ~18 s | **No** |
+| ConnectX-4 Lx 25GbE | ~$30-60 (the project lead's figure; not re-checked) | ~2.9 | ~18 s | **No** |
 | ConnectX-3 Pro 40GbE (QSFP+) | price not found | ~4.4 | ~11.9 s | **No**: the stream alone exceeds 10.8 s |
 | ConnectX-4 Lx 50GbE (MCX4131A-GCAT) | ~$94-129 used | ~5.6 | ~9.3 s | Only on paper. No slack against 11-13 s compute, and 50G-CR2 interop with CX-7 is unverified. |
 | **ConnectX-4 100GbE (MCX416A-CCAT dual / MCX415A single)** | **~$150-270** (new-old-stock ~$150, used ~$185-270) | ~11 (PCIe Gen3 x16 ≈ 12.5 max; Spark rail ~109 Gbit/s [V]) | **~4.8 s** | **Yes**: off the critical path, with ~2x slack |
@@ -150,7 +150,7 @@ Cable: 1 m passive QSFP28 100G DAC (MCP1600-C001-compatible), ~$23-35 [V, Optcor
 - **Without a card,** the best modeled cold TTFT at control quality is ~45 s (10 GbE stream-bound).
 - **Not yet:** buy only after the Spark-only staging experiment (Bet 3, step 1) shows a one-layer staged prefill ≥ 120 TFLOPS. Until then the link is not the bottleneck.
 
-**Workstation CPU bandwidth (Carmen: Q3 yes, ≤ ~$20 rental).**
+**Workstation CPU bandwidth (the project lead: Q3 yes, ≤ ~$20 rental).**
 - No hourly rental of a 64-core Threadripper PRO 9000WX was found.
 - The one bare-metal offer found (ip-projects.de, 9985WX) is €658/month with a setup fee for 1-month terms. Its example 64 GB RAM would not populate 8 channels anyway.
 - **Proposed instead, free:** once the workstation is free, measure read bandwidth pinned to 1, 2, 3 and 4 CCDs of the existing 9975WX.
@@ -235,7 +235,7 @@ Ranking = expected movement of a target × probability, per unit of cost. All th
   3. Only if the δ curve shows ≥ 25% union cut at ≤ +0.004 nats: a bounded router fine-tune.
 - **Success:** a Pareto point with U cut ≥ 25% at ≤ +0.004 nats.
 - **Budget:** step 1 is ~1 day Spark. Step 3 needs Max-Q GPU time beyond the approved QAT pilot, which is 5.31 of 8 GPU-h used and closed no-go.
-- **Approvals:** step 3 is **approved conditionally (Carmen, 2026-11-16)**.
+- **Approvals:** step 3 is **approved conditionally (the project lead, 2026-11-16)**.
   - Condition: step 1 must show ≥ 25% fewer distinct experts per window at ≤ +0.004 nats.
   - A protocol with a GPU-hour budget and a stop rule is pre-registered in docs/ before any training.
   - It starts only after the workstation sweep ends and the workstation is declared free.
@@ -457,7 +457,7 @@ Full write-up: `results/2026-11-16-dualmem/README.md`.
 **Execution model.**
 - The GPU stays the master. Per exchange point it packs the phase input into a pinned host-mapped mailbox from inside the CUDA graph; a Spark relay thread forwards it to the workstation; a spin-wait kernel later in the same graph adds or consumes the reply. Exchange points are therefore not CUDA-graph breaks: the plan's "91 graph segments" become 91 in-graph exchange points per verify pass (45 layers x 2 + lm_head), plus 3 per draft pass. The mailbox was already exact under graph replay (11-08 unit test).
 - Asymmetric request/reply (GPU sends the phase input, the workstation returns its part), not the prototype's symmetric swap. It costs one extra one-way link latency per phase, but the workstation never needs the mHC residual streams, norms, router or sampling state. A symmetric variant is a later optimisation.
-- Partial sums return in bf16 by default (Carmen 2026-11-17: the +6-11% per-layer rounding of bf16 exchange "is fine. Try to optimize for more tok/s"); fp32 is an option (new flag bit 2 in the HFX1 protocol), and both are measured on the eval set. Projection outputs that the GPU itself would round to bf16 (q/k/v rows) are returned in bf16, which is the same rounding as the GPU-only path.
+- Partial sums return in bf16 by default (the project lead 2026-11-17: the +6-11% per-layer rounding of bf16 exchange "is fine. Try to optimize for more tok/s"); fp32 is an option (new flag bit 2 in the HFX1 protocol), and both are measured on the eval set. Projection outputs that the GPU itself would round to bf16 (q/k/v rows) are returned in bf16, which is the same rounding as the GPU-only path.
 
 **What runs where, per layer.**
 

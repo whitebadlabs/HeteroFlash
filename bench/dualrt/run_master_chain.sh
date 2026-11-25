@@ -1,5 +1,5 @@
 #!/bin/bash
-# 2026-11-18 23:15 PT reorder (Carmen: "is there a way to speed things up"): highest-payoff test first.
+# 2026-11-18 23:15 PT reorder (the project lead: "is there a way to speed things up"): highest-payoff test first.
 # Replaces the dq8c -> dq9c -> meanc -> benchc chain. Order: mean-output test (meanc steps) -> dq9 (NVFP4 k6u/k6/k5u full)
 # -> per-layer map remainder (layers 5..43; d3, d4 done in dq8) -> Local Inference Lab bench. Each step waits for a free GPU.
 H=/srv/vllm-research/work/HeteroFlash; cd $H; C=/srv/vllm-research/work/cache/r18; FO=$H/results/2026-11-18-deferral

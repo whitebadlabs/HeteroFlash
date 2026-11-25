@@ -169,7 +169,7 @@ destination GPU; the token's own GPU is not a send). **Load imbalance**: busiest
 ## Limits
 
 - Simulated on measured traces. No real all-to-all was run; the sends count is a proxy for dispatch traffic, and
-  whether it matters depends on the all-to-all share of MoE layer time (Carmen's open question to the group).
+  whether it matters depends on the all-to-all share of MoE layer time (the project lead's open question to the group).
 - Small holdouts for GLM: 12-15 holdout requests per task type (2 for long-context), 2.5K-30K tokens per task. No
   confidence intervals. Qwen holdouts are ~100 requests / 20K tokens per task.
 - GLM traces come from a single-request server (batch 1); Qwen from batched offline generation. Routing per token

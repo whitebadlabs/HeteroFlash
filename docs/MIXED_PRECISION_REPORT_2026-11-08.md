@@ -203,7 +203,7 @@ That identifies where 3-bit PTQ is cheapest per GiB saved, and which groups must
   - Go requires trained IQ3 <= Q4_K PTQ error on held-out domains for both layers.
   - Plateau stop: less than 2% improvement over the last 20% of the budget.
   - E2E resolution limits are reported with the result.
-- **Still needed from Carmen:** the overall quality margin for criterion 3 (for example dNLL <= +0.02 vs the BF16 proxy), or a benchmark-based criterion.
+- **Still needed from the project lead:** the overall quality margin for criterion 3 (for example dNLL <= +0.02 vs the BF16 proxy), or a benchmark-based criterion.
 
 ## Caveats
 

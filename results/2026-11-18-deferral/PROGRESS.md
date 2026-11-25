@@ -1,6 +1,6 @@
 # Expert deferral study (expert-cache-project idea): progress (resume notes)
 
-Carmen, 2026-11-18 07:02 PT (task 36): fold "expert deferral + expert correlation" into HeteroFlash and find out
+The project lead, 2026-11-18 07:02 PT (task 36): fold "expert deferral + expert correlation" into HeteroFlash and find out
 whether it improves interactivity (decode tok/s). Operating point to beat: **k7 + KDA split off, 25.7 tok/s (f3, warm)**,
 quality +0.0099 / KLD 0.037 / top-1 93.9% vs the control bar **+0.0148 / 0.042 / 94.0%**.
 
@@ -86,7 +86,7 @@ Rules: no MaxQ GPU; Qwen qfn stays down; tmux only on `-L hfrt`; MaxQ NIC coales
   field LATE and WARMUP=1) warm-up + 3 interleaved rounds of k7 / k7_late8 / k6 / k6_late (A 0.7) -> d2_points.log ->
   stop d2 -> defer_agg.py rounds 1-3 -> d2_speed.jsonl -> dq2 (FULL=1 MNBT=4 KEEPCAP=k7: k7, k7_late8, [k6_late if
   > same-boot k7 + 0.5 tok/s], k7_defall_a035 last) -> dq2.log, then CHAIN_DONE.
-- 11:39 PT Carmen (Model Fundamentals room): go/no-go is now **KLD < 0.1** vs Q8 (replaces the 0.042 control bar). Still
+- 11:39 PT the project lead (Model Fundamentals room): go/no-go is now **KLD < 0.1** vs Q8 (replaces the 0.042 control bar). Still
   report dNLL, top-1 and per-domain (code especially), and where the old bar falls.
 - 11:48 PT researcher session took over. d2 rounds 1-2 (same boot, pooled later): k7 26.4, k7_late8 24.2, k6 27.8,
   k6_late 23.5 tok/s. The late slot doubles decode requests (42 -> 83/window) and blocked time (5.8 -> 16.7 ms/window).
@@ -142,7 +142,7 @@ Exact next steps:
    with per-layer A). Entries "name|K 0 0|DEFER|A -1|0".
 3. dq4 full 41-chunk quality for finalists (k5 if subset k5 x1.4 < 0.1; any deferral candidate; optionally k7 A0.5).
 4. README.md in the frontier format: fastest point with KLD < 0.1 (with the per-domain caveat: instruction_following
-   for k6), fastest inside 0.042, dNLL/top-1, per-domain, where 0.042 falls. Commit as Carmen Lok <lok@whitebad.com>, no
+   for k6), fastest inside 0.042, dNLL/top-1, per-domain, where 0.042 falls. Commit as the project account, no
    co-author; push with _admin/research/heteroflash/r17/push_forgejo.sh (Forgejo only). Final post on task 36, status done.
 
 - 14:20 PT (lane session) dq2 DONE, full 41 chunks, agree MNBT=4 (vs Q8: dNLL / KLD / top-1; worst domain; code; paired vs k7):
@@ -174,7 +174,7 @@ Exact next steps:
   (low gate weight); deferring the whole remote partial (incl. high-weight picks) is what broke quality (0.40). The GPU needs
   only the top 4-5 picks on time. Speed is the open question (the late slot doubled server requests in d2). d4 (NVFP4
   attention) also measures k5_late / k4_late at A 0.5 and A 1.0; dq7 full quality adds k5_late, k4_late. Per-layer deferral
-  map (dq8, Carmen OK 17:3x PT) queued after.
+  map (dq8, the project lead OK 17:3x PT) queued after.
 
 - 22:50 PT (lane) dq6 DONE (subset, union-aware drop, hook_union, FP8): k6u 0.032 (paired 0.0151; k6 dq3 0.042), k5u 0.060
   (0.0397; k5 0.079), k4u 0.099 (0.0778) vs same-boot k4 0.144 (0.1213), k3u 0.175. Union keeps tail picks whose expert is

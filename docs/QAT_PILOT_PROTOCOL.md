@@ -1,6 +1,6 @@
 # Bounded QAT feasibility pilot: protocol (pre-registered 2026-11-08, before any training step)
 
-**Approval scope (Carmen, 2026-11-07).** This is a bounded pilot on representative layers only. No multi-day training on both Max-Q GPUs until a go/no-go decision has been reported.
+**Approval scope (the project lead, 2026-11-07).** This is a bounded pilot on representative layers only. No multi-day training on both Max-Q GPUs until a go/no-go decision has been reported.
 
 ## Question
 
@@ -58,11 +58,11 @@ The BF16 teacher is the error-zero reference.
 
 1. On held-out domains, trained IQ3_XXS error is no worse than Q4_K PTQ error for **both** pilot layers. That means a gap recovery of at least 100%: trained 3-bit matches untrained 4-bit.
 2. Recovery does not plateau below 100% within the budget.
-3. Extrapolated linearly to the 36 Spark layers (linearity stated as an assumption), the expected full-model dNLL is at most the quality budget agreed with Carmen.
+3. Extrapolated linearly to the 36 Spark layers (linearity stated as an assumption), the expected full-model dNLL is at most the quality budget agreed with the project lead.
 
 **No-go** if gap recovery is below 50% at the budget, or plateaus below 100%.
 
-Anything in between is reported as inconclusive, with the measured recovery curve. Carmen decides.
+Anything in between is reported as inconclusive, with the measured recovery curve. The project lead decides.
 
 **Fallbacks to report if no-go:**
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hot/cold expert placement and per-device format model (Carmen's founding ideas), using real per-expert routing
+"""Hot/cold expert placement and per-device format model (the project lead's founding ideas), using real per-expert routing
 counts (M1 traces) and MEASURED device numbers. Outputs are MODELED [P]: decode tok/s, prefill CPU/link/GPU times,
 Spark memory fit.
 

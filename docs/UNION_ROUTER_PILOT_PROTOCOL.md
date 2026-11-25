@@ -2,7 +2,7 @@
 
 **Status:** pre-registered, not started.
 
-**Approval scope (Carmen, 2026-11-16).** A bounded router fine-tune on the Max-Q GPUs is approved only after three conditions:
+**Approval scope (the project lead, 2026-11-16).** A bounded router fine-tune on the Max-Q GPUs is approved only after three conditions:
 1. **Gate.** The training-free step (Bet 4 step 1: causal window-sticky routing, `ops/r16/sticky_hook`) must show **≥ 25% fewer distinct experts per 4-token window at ≤ +0.004 nats** against its own β = 0 baseline on the balanced eval.
 2. **Workstation free.** The workstation sweep has ended and the workstation has been declared free.
 3. **This protocol is committed.** Multi-day training is not covered.
@@ -64,7 +64,7 @@ On held-out domains, for each layer and in total:
 - dNLL exceeds config B + 0.008;
 - every run plateaus before reaching the go point.
 
-Anything in between is reported as inconclusive with the measured curves; Carmen decides.
+Anything in between is reported as inconclusive with the measured curves; the project lead decides.
 
 ## Reporting
 

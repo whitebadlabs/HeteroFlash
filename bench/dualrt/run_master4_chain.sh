@@ -1,5 +1,5 @@
 #!/bin/bash
-# 2026-11-19 08:00 PT: Carmen needs the Local Inference Lab bench now -> bench first, then the per-layer map remainder.
+# 2026-11-19 08:00 PT: The project lead needs the Local Inference Lab bench now -> bench first, then the per-layer map remainder.
 H=/srv/vllm-research/work/HeteroFlash; cd $H; C=/srv/vllm-research/work/cache/r18; FO=$H/results/2026-11-18-deferral
 SD=/srv/vllm-research/models/mixed/full_iq2xxs_nvfp4attn_sd; MT=/out/expert_mean_imx5.npy
 free() { while docker ps --format "{{.Names}}" | grep -q .; do sleep 20; done; }

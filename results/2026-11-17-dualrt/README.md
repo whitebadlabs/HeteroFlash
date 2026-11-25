@@ -18,7 +18,7 @@ Plan and design: `docs/RESEARCH_PLAN_2026-11-16.md` section E4. Code: `bench/dua
 - **KDA q/k/v projections (34 layers), by head:** the last 32 of 64 heads' q, k and v rows on the workstation, bf16
   rows back; conv, recurrence, gating and o_proj stay on the GPU with vLLM's own state (spec-decode rollback, prefix
   cache and prefill unchanged).
-- **Partial sums:** bf16 by default (Carmen 2026-11-17: "is fine. Try to optimize for more tok/s"); fp32 is an option.
+- **Partial sums:** bf16 by default (the project lead 2026-11-17: "is fine. Try to optimize for more tok/s"); fp32 is an option.
 - **Prefill windows (> 16 tokens):** every route to the workstation, as config B.
 
 ## 1. Same-session baseline: config B on the original hook [M] (`cfgB_base_r1_client.jsonl`, 3 reps)

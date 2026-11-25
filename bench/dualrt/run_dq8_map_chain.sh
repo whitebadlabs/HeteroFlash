@@ -1,5 +1,5 @@
 #!/bin/bash
-# 2026-11-18 per-layer deferral sensitivity map (Carmen's go-ahead 17:1x PT): after DQ7_DONE, one 7-chunk subset boot
+# 2026-11-18 per-layer deferral sensitivity map (the project lead's go-ahead 17:1x PT): after DQ7_DONE, one 7-chunk subset boot
 # (agree MNBT=4, FP8 checkpoint, default hook, KEEPCAP=k7): k7 reference, then k7 + deferral of ONE layer L at A 0.35
 # for L = 3..43 (41 passes, ~7.5 min each). Paired KLD vs k7 per layer = the price of deferring that layer. -> dq8.log
 H=/srv/vllm-research/work/HeteroFlash; cd $H; FO=$H/results/2026-11-18-deferral; C=/srv/vllm-research/work/cache/r18
