@@ -2,16 +2,28 @@
 
 **Serving MoE models interactively on constrained hardware**
 
-HeteroFlash runs a 320-billion-parameter AI model (GLM-5.3-Flash) on one DGX Spark plus an ordinary workstation at
-40 tokens/s: 6x faster than our first version, and 47% faster and 2.8x closer to the original model than the standard
-way of fitting it on a Spark (2-bit experts: 27.5 tok/s, KL 0.239 vs our 0.085). It works by computing each expert
-where its weights already live and skipping the experts that barely matter.
+## Why this matters
+
+Frontier open models are now huge mixture-of-experts (MoE) models. Each token only uses a few of the model's experts,
+so they are cheap to *run*, but every expert must sit in fast memory, so they are expensive to *hold*. The usual
+answers are more GPUs, or compressing the model so hard (e.g. to 2 bits) that its answers get noticeably worse.
+
+HeteroFlash takes a third route: it treats the model and modest hardware as one design problem (what to keep on the
+GPU, what to compute on a CPU next to its own memory, at what precision, and which work to skip) and measures every
+choice against the full model's quality.
+
+## What we achieved
+
+HeteroFlash runs **GLM-5.3-Flash, a 320-billion-parameter MoE model, at 40 tokens/s for one user on one DGX Spark plus
+an ordinary workstation's CPU**. The usual way to fit this model on a Spark, compressing its experts to 2 bits, runs at
+27.5 tokens/s. HeteroFlash is **47% faster and stays 2.8x closer to the full model** (KL divergence 0.085 vs 0.239;
+"full model" = the official released weights, measured against a near-lossless 8-bit copy).
 
 ![Speed vs quality: HeteroFlash frontier against the standard 2-bit build](docs/frontier.svg)
 
 Hover descriptions: open the chart directly ([frontier.svg](https://raw.githubusercontent.com/whitebadlabs/HeteroFlash/main/docs/frontier.svg)).
 
-| | decode speed, 1 user | KL to the original (lower is better) |
+| | decode speed, 1 user | KL to the full model (lower is better) |
 |---|---|---|
 | **HeteroFlash (top-4)** | **40.3 tok/s** | **0.085** |
 | HeteroFlash (top-5) | 36.2 tok/s | 0.065 |
@@ -22,9 +34,9 @@ top-k = experts kept per token out of 8; top-6/top-5 were measured before the GP
 
 ### Why the quality gap matters
 
-- KL measures how far the model's next-token probabilities drift from the original. The standard 2-bit build drifts
+- KL measures how far the model's next-token probabilities drift from the full model. The standard 2-bit build drifts
   2.8x more than HeteroFlash top-4 (KL 0.239 vs 0.085).
-- Its top choice disagrees with the original on 15.1% of tokens (top-1 agreement 84.9%), against 9.3% for HeteroFlash
+- Its top choice disagrees with the full model on 15.1% of tokens (top-1 agreement 84.9%), against 9.3% for HeteroFlash
   top-4 (90.7%) and 7.2% for top-6 (92.8%).
 - Tool calling at top-4 scored 89/100, the same as the model with all experts (89).
 - More speed usually costs quality on fixed hardware; here both improve at once. For scale, a two-GPU workstation
@@ -94,16 +106,6 @@ Further detail on the two operating points and the comparison:
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
 math, code, multilingual, instruction following, long context). Tool calling (tool-eval-bench, leaderboard settings):
 top-5 scored 90/100 and top-4 89/100, against 89/100 for the all-8-experts baseline (within run-to-run noise).
-
-## Why this matters
-
-Large mixture-of-experts (MoE) models are cheap to *run* per token, because each token only uses a few of the model's
-experts, but expensive to *hold*: every expert has to sit in fast memory. The usual answers are more GPUs, or
-quantizing the model so hard that its answers get noticeably worse.
-
-HeteroFlash takes a third route. It treats the model and the hardware as one design problem: what to keep on the
-GPU, what to compute on a CPU next to its own RAM, at what precision, and which work to skip, approximate or postpone.
-Every one of those choices is measured against the original model's quality.
 
 ## How it works: four levers
 
