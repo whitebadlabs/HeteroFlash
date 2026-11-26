@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate docs/speed_steps.svg: cumulative steps from the first deployment to 40.3 tok/s.
+"""Generate docs/speed_steps.svg: cumulative steps from the first deployment to 42.7 tok/s.
 
 Standard library only. Each row adds one change on top of all rows above it; values are the
-single-user decode speeds in README.md ("From 6.5 to 40.3 tok/s"). Rows were measured on
+single-user decode speeds in README.md ("From 6.5 to 42.7 tok/s"). Rows were measured on
 different days and slightly different workloads, so the increments are approximate.
 Run from anywhere:  python3 tools/figures/speed_steps.py
 """
@@ -25,6 +25,7 @@ STEPS = [
     ("+ top-5, window reuse, mean stand-in", 36.2),
     ("+ top-4", 38.1),
     ("+ GPU kernel work", 40.3),
+    ("+ late weak picks (top-3 on time + 2 late)", 42.7),
 ]
 FLAT = 0.5          # changes smaller than this are drawn neutral and labelled "about the same"
 
@@ -40,7 +41,7 @@ o = []
 a = o.append
 a(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
   f'font-family="Helvetica,Arial,sans-serif"><rect width="{W}" height="{H}" fill="#fff"/>')
-a('<text x="20" y="28" font-size="18" font-weight="bold" fill="#111">From 6.5 to 40.3 tok/s: '
+a('<text x="20" y="28" font-size="18" font-weight="bold" fill="#111">From 6.5 to 42.7 tok/s: '
   'each step adds one change to all the steps above it</text>')
 a('<text x="20" y="48" font-size="12" fill="#555">GLM-5.3-Flash, one user, decode tok/s. Steps were measured on '
   'different days and slightly different workloads, so increments are approximate.</text>')
@@ -70,7 +71,7 @@ for v in range(0, 45, 10):
       f'<text x="{px(v):.1f}" y="{y + 19}" font-size="11" fill="#444" text-anchor="middle">{v}</text>')
 a(f'<line x1="{px(0):.1f}" y1="{y}" x2="{px(XMAX):.1f}" y2="{y}" stroke="#333"/>')
 a(f'<text x="{(px(0) + px(XMAX)) / 2:.1f}" y="{y + 38}" font-size="12.5" fill="#222" text-anchor="middle">'
-  f'decode tok/s (one user). Final: 40.3 tok/s at KL 0.085 vs a Q8 copy of the original BF16 weights</text>')
+  f'decode tok/s (one user). Final: 42.7 tok/s at KL 0.0996 vs a Q8 copy of the original BF16 weights</text>')
 a("</svg>")
 svg = "\n".join(o) + "\n"
 ET.fromstring(svg)

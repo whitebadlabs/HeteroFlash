@@ -14,10 +14,11 @@ choice against the full model's quality.
 
 ## What we achieved
 
-HeteroFlash runs **GLM-5.3-Flash, a 320-billion-parameter MoE model, at 40 tokens/s for one user on one DGX Spark plus
-an ordinary workstation's CPU**. The usual way to fit this model on a Spark, compressing its experts to 2 bits, runs at
-27.5 tokens/s. HeteroFlash is **47% faster and stays 2.8x closer to the full model** (KL divergence 0.085 vs 0.239;
-"full model" = the official released weights, measured against a near-lossless 8-bit copy).
+HeteroFlash runs **GLM-5.3-Flash, a 320-billion-parameter MoE model, at 42.7 tokens/s for one user on one DGX Spark
+plus an ordinary workstation's CPU**. The usual way to fit this model on a Spark, compressing its experts to 2 bits, runs
+at 27.5 tokens/s. HeteroFlash is **55% faster and stays 2.4x closer to the full model** (KL divergence 0.0996 vs 0.239;
+"full model" = the official released weights, measured against a near-lossless 8-bit copy). A quality setting reaches
+KL 0.073 (3.3x closer) at about 38 tokens/s.
 
 ![Speed vs quality: HeteroFlash frontier against the standard 2-bit build](docs/frontier.svg)
 
@@ -25,20 +26,24 @@ Hover descriptions: open the chart directly ([frontier.svg](https://raw.githubus
 
 | | decode speed, 1 user | KL to the full model (lower is better) |
 |---|---|---|
-| **HeteroFlash (top-4)** | **40.3 tok/s** | **0.085** |
+| **HeteroFlash (top-3 + 2 late), fastest** | **42.7 tok/s** | **0.0996** |
+| HeteroFlash (top-4 + 2 late) | 38.4 tok/s | 0.073 |
+| HeteroFlash (top-4) | 40.3 tok/s | 0.085 |
 | HeteroFlash (top-5) | 36.2 tok/s | 0.065 |
 | HeteroFlash (top-6) | 34.3 tok/s | 0.057 |
 | Standard 2-bit build, all on the Spark | 27.5 tok/s | 0.239 |
 
-top-k = experts kept per token out of 8; top-6/top-5 were measured before the GPU kernel work, so they would be somewhat faster today.
+top-k = experts kept per token out of 8; + 2 late = the next two experts are computed by the workstation and added one
+layer later; top-6/top-5 were measured before the GPU kernel work, so they would be somewhat faster today.
 
 ### Why the quality gap matters
 
 - KL measures how far the model's next-token probabilities drift from the full model. The standard 2-bit build drifts
-  2.8x more than HeteroFlash top-4 (KL 0.239 vs 0.085).
-- Its top choice disagrees with the full model on 15.1% of tokens (top-1 agreement 84.9%), against 9.3% for HeteroFlash
-  top-4 (90.7%) and 7.2% for top-6 (92.8%).
-- Tool calling at top-4 scored 89/100, the same as the model with all experts (89).
+  2.4x more than the fastest HeteroFlash setting (KL 0.239 vs 0.0996) and 3.3x more than the quality setting (0.073).
+- Its top choice disagrees with the full model on 15.1% of tokens (top-1 agreement 84.9%), against 10.0% for the fastest
+  HeteroFlash setting (90.0%), 8.5% for the quality setting (91.5%) and 7.2% for top-6 (92.8%).
+- Tool calling at the fastest setting scored 90/100, against 89 for the model with all experts (and 88 for top-4 on the
+  same server boot).
 - More speed usually costs quality on fixed hardware; here both improve at once. For scale, a two-GPU workstation
   server running the model at 3.5 bits reaches KL 0.042; HeteroFlash top-6 (0.057) comes close without any GPU on the
   workstation.
@@ -48,14 +53,15 @@ top-k = experts kept per token out of 8; top-6/top-5 were measured before the GP
 - **Compute each expert where its weights live.** The Spark GPU keeps the frequently used ("hot") experts; every other
   expert is computed by the workstation's CPU next to its own RAM. Only small activations cross the 10G cable, never
   weights.
-- **Skip the experts that barely matter.** Each token normally uses 8 experts; top-4 keeps the 4 strongest and replaces
-  the rest with the expert's average output.
+- **Skip the experts that barely matter, or let them arrive late.** Each token normally uses 8 experts; the fastest
+  setting computes the 3 strongest on time, lets the workstation compute the next 2 and add them one layer later, and
+  replaces the rest with the expert's average output.
 - **Reuse experts already loaded for nearby tokens.** Speculative decoding checks 4 tokens at once; a skipped pick is
   kept for free when its expert is already being read for another token in that window.
 - **Fewer bits where it is safe, faster kernels where it counts.** 4-bit attention, shared experts and dense layers,
   and three custom GPU kernels on the critical path.
 
-## From 6.5 to 40.3 tok/s
+## From 6.5 to 42.7 tok/s
 
 ![How each step raised single-user decode speed](docs/speed_steps.svg)
 
@@ -76,25 +82,40 @@ approximate, not a clean ablation.
 | + 4-bit shared experts and dense layers | The same for the parts every token always uses | 31.3 | about unchanged |
 | + top-5, window reuse, mean stand-in | 5 of 8 experts; a skipped pick is kept if its expert is already loaded for a nearby token; the rest are replaced by the expert's average output | 36.2 | 0.065 |
 | + top-4 | 4 of 8 experts | 38.1 | 0.085 |
-| + GPU kernel work | Three faster GPU programs: a parallel tier kernel (decides per layer which expert runs where), FP8 weights + a custom kernel for the DSA attention step, and a custom kernel for the KDA attention projections | **40.3** | **0.085** |
+| + GPU kernel work | Three faster GPU programs: a parallel tier kernel (decides per layer which expert runs where), FP8 weights + a custom kernel for the DSA attention step, and a custom kernel for the KDA attention projections | 40.3 | 0.085 |
+| + late weak picks (top-3 on time + 2 late) | The 3 strongest experts on time; the 4th and 5th are computed by the workstation and added one layer later, so the GPU does not wait for them | **42.7** (+2.4) | **0.0996** |
 
-Where each 72-76 ms step goes now: about 85% is Spark GPU work (attention, the GPU-resident experts, the draft head).
+Where each 72-76 ms top-4 step went: about 85% is Spark GPU work (attention, the GPU-resident experts, the draft head).
 The GPU waits on the workstation only about 11 ms per step, the workstation CPU is about 40% busy, and the network is
-19% of each round trip. So the next gains have to come from the Spark side.
+19% of each round trip. The last step uses that spare workstation time: one pick fewer on time, two late picks on the
+workstation, 69 ms per step.
 
 ## How the headline numbers were measured
 
-How the 40.3 tok/s was measured: median of 5 interleaved rounds on one server boot, 72.0 ms per decode step and 2.90
+How the 42.7 tok/s was measured: median of 3 interleaved rounds on a fresh server boot, 69.2 ms per decode step and 2.95
+tokens committed per step, against 39.7 tok/s (72.1 ms) for top-4 on the same boot: +7.6%. An earlier boot gave 42.4 vs
+39.2 tok/s (+8.2%), so the gain repeats. About half of it is faster steps (72.1 → 69.2 ms, about +4%); the rest is
+more committed tokens per step (2.86 → 2.95), seen on both boots. It is top-3 + union routing on time, picks 4 and 5 computed by the workstation
+and added one layer later, the mean stand-in for picks 6-8, and the GPU kernel work. Full-eval KL is 0.0996 (worst
+domain instruction following 0.137): inside the quality bar (KL at most 0.1, no domain above 0.15, tool calling at
+least 87/100), but with a thin margin. Tool calling scored 90/100, against 88 for top-4 on the same boot and 89 for the
+all-experts baseline.
+
+The previous fastest point, top-4 at 40.3 tok/s: median of 5 interleaved rounds on one server boot, 72.0 ms per decode step and 2.90
 tokens committed per step (requests hit by a rare multi-second stall are left out of the median). It is top-4 + union
 routing + mean stand-in + the GPU kernel work. Against the same-day reference at 36.4 tok/s (77.3 ms per step), about 7%
 of the gain comes from faster steps; the rest is run-to-run variation in how many draft tokens get accepted. Full-eval
 KL is 0.0853, against 0.0856 for the same routing without the kernel work. Tool calling at top-4 scored 89/100, the same
 as the all-experts baseline (89); that run was before the kernel work, which leaves KL unchanged.
 
-Further detail on the two operating points and the comparison:
+Further detail on the operating points and the comparison:
 
 - GLM-5.3-Flash is a 320B-class MoE. Hardware: 1 DGX Spark plus a workstation's CPU and RAM; the workstation's GPUs
   are not used.
+- Top-3 + 2 late (42.7 tok/s, KL 0.0996): worst domain instruction following 0.137; top-1 agreement 90.0%; tool
+  calling 90/100.
+- Top-4 + 2 late (38.4 tok/s, KL 0.073): every domain better than plain top-4, worst knowledge QA 0.102; top-1 91.5%;
+  -4% speed against top-4 on the same boot (40.0); no tool-calling run of its own.
 - Top-4 (40.3 tok/s, KL 0.085): worst domain instruction following 0.132; tool calling 89/100.
 - Top-6 (34.3 tok/s, KL 0.057): every domain within 0.1. Top-5: 36.2 tok/s, KL 0.065.
 - Standard 2-bit build: every routed expert in 2 bits (IQ2_XXS), all on the Spark: 27-28 tok/s, KL 0.239, top-1 84.9%.
@@ -105,7 +126,8 @@ Further detail on the two operating points and the comparison:
 
 Single user, batch 1, speculative decoding. Quality is measured on 42K tokens across 7 domains (writing, knowledge,
 math, code, multilingual, instruction following, long context). Tool calling (tool-eval-bench, leaderboard settings):
-top-5 scored 90/100 and top-4 89/100, against 89/100 for the all-8-experts baseline (within run-to-run noise).
+top-3 + 2 late and top-5 scored 90/100 and top-4 88-89/100, against 89/100 for the all-8-experts baseline (within
+run-to-run noise).
 
 ## How it works: four levers
 
@@ -128,8 +150,8 @@ model in fast memory, that leaves four levers, and HeteroFlash pulls all four at
    always computed; the weakest are skipped and replaced by the expert's average output. In speculative decoding, a
    skipped pick is kept anyway when its expert is already being read for another token in the same window, since
    that costs nothing.
-4. **When each piece of work has to finish.** GPU and CPU work overlap, the link is tuned for latency, and speculative
-   decoding commits about 2.9 tokens per step.
+4. **When each piece of work has to finish.** GPU and CPU work overlap, the link is tuned for latency, the 4th and 5th
+   strongest picks may arrive one layer late, and speculative decoding commits about 2.9 tokens per step.
 
 The yardstick for every change is two numbers: decode speed, and quality measured per domain against a Q8 copy of the
 official BF16 weights. A change is kept only if it moves the speed-quality frontier.
@@ -177,11 +199,12 @@ Quality is KL divergence to a Q8 copy of the official BF16 weights (lower is bet
 | Parallel tier kernel (this project) | The per-layer GPU decision of which expert runs where used one GPU thread looping over all 288 experts; it now uses one thread per expert. It sits ahead of every workstation exchange, so its time is on the critical path | ✅ worked | 38 µs → 3.7 µs per layer, ~1.9 ms per step; output identical (checked on 59,808 live decode windows) |
 | Custom GEMV for the KDA attention projections (this project) | Runs the existing 4-bit (NVFP4) linear-attention projections with a kernel written for 1-4 tokens instead of a general GEMM | ✅ worked | ~1.2 ms per step, lossless (same weight bytes) |
 | Whole-partial deferral (this project; a coarser form of [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`, which defers one missed expert a sublayer) | Lets the GPU continue without waiting for the CPU's whole result, adding it one layer late | ❌ quality failed | 32-33 tok/s but KL 0.44 |
-| Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity); close to [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`) | Delays only the weakest experts by one layer instead of skipping them | ⚠️ quality yes, speed no | KL 0.079 at top-4, but 22-24 tok/s (the CPU side has no spare bandwidth) |
+| Weak picks one layer late ([K3.1 study](https://github.com/chronarion/derpk31pro/tree/main/docs/sensitivity); close to [derpseek](https://github.com/chronarion/derpseek)'s `deferred-fast`) | The 3 strongest picks are computed on time; the 4th and 5th are computed by the workstation and added one layer later, so the GPU does not wait for them | ✅ worked | +7.6-8.2% over top-4 on the same boot (42.7 vs 39.7 tok/s) at KL 0.0996, tool calling 90/100. An earlier test (22-24 tok/s) failed only because the workstation's page cache was thrashing. Delaying all 4 weak picks still fails (−19%): the workstation gets swamped. Top-4 + 2 late: KL 0.073 at −4% |
 | Longer drafts, MTP-4 ([speculative decoding](https://arxiv.org/abs/2211.17192), Leviathan et al., 2023) | Guesses 4 tokens ahead per step instead of 3 | ❌ no gain | 2.98 vs 2.92 tokens committed per step, but 95 vs 73 ms per step: ~31 vs 40.3 tok/s. Shorter MTP-2 vs MTP-3: 41.0 vs 40.3 tok/s, a tie (within 2%) |
 | Smaller draft vocabulary ([FR-Spec](https://arxiv.org/abs/2502.14856)) | The draft head scores only the ~20K most frequent tokens instead of the full vocabulary | ❌ slower | −4 ms per step, but accepted tokens drop from 2.84 to 2.40 per step: about −10% tok/s |
 
-**Net:** 6.5 tok/s (first deployment) → 40.3 tok/s at KL 0.085. The usual 2-bit single-Spark build runs 27-28 tok/s at
+**Net:** 6.5 tok/s (first deployment) → 42.7 tok/s at KL 0.0996 (or 38.4 tok/s at KL 0.073 in the quality setting).
+The usual 2-bit single-Spark build runs 27-28 tok/s at
 KL 0.239.
 
 ## Several users at once
@@ -271,16 +294,19 @@ accumulation order makes the fits vary slightly, so KL differences of 1-2% are t
 ## Takeaways
 
 - **On constrained hardware, co-design beats any single trick.** Past the first working system, each change gave roughly 5-25%.
-  Together they took it from 6.5 to 40.3 tok/s.
+  Together they took it from 6.5 to 42.7 tok/s.
 - **Not all expert computation is equal.** Ranking expert work by contribution, and approximating instead of
   dropping, buys speed at a fraction of the usual quality cost.
-- **Quality is a dial, not a cliff.** The frontier runs from near-reference quality (KL 0.038 at 26 tok/s) to
-  40.3 tok/s at KL 0.085, and every point is measured, not assumed.
+- **Quality is a dial, not a cliff.** The frontier runs from near-reference quality (KL 0.038 at 27 tok/s) to
+  42.7 tok/s at KL 0.0996, just inside the 0.1 bar, and every point is measured, not assumed.
 - **Once the workstation wait is mostly hidden, the Spark GPU sets the pace.** Small kernels on the critical path (a
   control kernel and attention projections) bought about 7%. That kernel work is specific to GLM-5.3-Flash's attention
   layout and to the Spark.
+- **Spare workstation time can carry the weak picks.** Computing the 4th and 5th picks on the workstation one layer late
+  bought another 7.6-8.2%. Delaying more of them swamps the workstation and costs 19%.
 - **Not lossless, and not yet at the original GPU server's speed (151 tok/s).** Single user, batch 1. Tool calling on
-  GLM-5.3-Flash matched the all-experts baseline (90/100 at top-5, 89/100 at top-4, vs 89/100), and math (GSM8K) was
+  GLM-5.3-Flash matched the all-experts baseline (90/100 at top-3 + 2 late and at top-5, 88-89/100 at top-4, vs
+  89/100), and math (GSM8K) was
   checked for the routing technique on Qwen3.6-35B.
   Math and knowledge scores on GLM itself, and time-to-first-token on long prompts, are the next measurements.
 
@@ -540,7 +566,7 @@ where it is neutral to slightly worse (`results/2026-11-19-union-qwen/`).
 stand-in vs 89/100 for the all-8-experts FP8 baseline. The difference is within run-to-run noise, so read it as
 "matched the baseline". Decode on the same benchmark: 28.1 vs 20.8 tok/s.
 
-### 4.7 GPU kernel work: the current best
+### 4.7 GPU kernel work
 
 Same checkpoint and routing as top-4 in section 4.6, plus three GPU changes on the Spark: a parallel tier kernel (the
 per-layer decision of which expert runs where), MXFP8 weights with a small-batch GEMV for the DSA attention kv_b absorb,
@@ -560,6 +586,33 @@ interleaved rounds; requests with a rare multi-second stall (own ms per step of 
   (same speed as MXFP8 at 5x the KL increase), and the smaller FR-Spec draft head (section "What worked and what
   didn't").
 - Raw files: `results/2026-11-24-gpuopt/` (not yet in this repository).
+
+### 4.8 Late weak picks: the current best
+
+Same as section 4.7, plus a late path. After the per-layer tier decision, picks ranked just below the on-time budget are
+sent to the workstation in a second request, packed after the main one, and their result is added after the next
+layer's experts. Picks past the late budget keep the mean stand-in; union picks stay on time. Speed: median of
+interleaved rounds against top-4 on the same boot; quality: full eval (41 chunks).
+
+| point | on time | one layer late | tok/s (same-boot top-4) | ms per step | full-eval KL | worst domain | top-1 |
+|---|---|---|---|---|---|---|---|
+| top-4 (reference) | top-4 + union | - | 39.7 | 72.1 | 0.0853 | instruction following 0.132 | 90.8% |
+| **top-3 + 2 late** | top-3 + union | picks 4-5 | **42.7** (39.7), +7.6% | 69.2 | **0.0996** | instruction following 0.137 | 90.0% |
+| top-4 + 2 late | top-4 + union | picks 5-6 | 38.4 (40.0), −4.0% | 74.0 | 0.073 | knowledge QA 0.102 | 91.5% |
+| top-3 + 3 late | top-3 + union | picks 4-6 | 38.3 (40.0), −4.2% | 75.6 | not run | | |
+| top-4 + 4 late | top-4 + union | picks 5-8 | 32.5 (40.0), −18.6% | 88.2 | not run | | |
+
+- The top-3 + 2 late gain repeats: 42.4 vs 39.2 tok/s (+8.2%) on one boot, 42.7 vs 39.7 (+7.6%) on a fresh one.
+- Why it pays now: the earlier test (section 4.5, F12) ran while the workstation's page cache was thrashing. With a
+  healthy expert server the workstation is about 40% busy and the GPU waits about 11 ms per top-4 step, so two late
+  picks fit in that slack. Four late picks overload it: the GPU waits 27 ms per window instead of 10.
+- Quality: KL 0.0996 and worst domain 0.137 pass the go/no-go bar (KL at most 0.1, no domain above 0.15) by a thin
+  margin. Top-4 + 2 late is better than plain top-4 in every domain.
+- Tool calling (tool-eval-bench, leaderboard settings, same boot): top-3 + 2 late 90/100, top-4 88/100; the all-experts
+  baseline scored 89/100. Differences of 2-3 points are within run-to-run noise. Top-4 + 2 late has no run of its own.
+- Not kept: top-3 + 1 late was faster still (+9.8%) but its subset quality, scaled to the full eval, missed the bar.
+  Putting GPU-resident weak picks on the GPU and only the rest late was slower (−7.7% at top-3, −19.4% at top-4).
+- Raw files: `results/2026-11-25-late/`, `results/2026-11-26-toolval/` (not yet in this repository).
 
 ## 5. Findings
 
@@ -670,10 +723,11 @@ expert selection, applied here to speculative verify windows; the cross-model me
 - Only ~21-29% of weak picks fall inside the union (GLM decode traces), which bounds the gain.
 
 **F12. Negative results worth stating.** *Measured.*
-- **Late weak experts over a bandwidth-bound link do not pay.**
-  - Their quality is good (F9). But the workstation's expert server already streams ~190 GB/s per request, so the
-    extra late work lands on the critical path.
-  - Speed: 22-24 tok/s (MoE blocked 45-57 ms per window) against 33 tok/s for plain drops.
+- **Late weak experts pay only while the workstation has slack.**
+  - Their quality is good (F9). In the first test the workstation's page cache was thrashing (since fixed), so the
+    extra late work landed on the critical path: 22-24 tok/s (MoE blocked 45-57 ms per window) against 33 tok/s for
+    plain drops.
+  - With a healthy expert server, two late picks are +7.6-8.2% (section 4.8); four late picks are still −19%.
 - **Grouping co-selected experts does not survive realistic load balancing.**
   - A side study on routing traces (branch `expert-correlation`) replayed them on 8-32 simulated GPUs. Experts do have partners, co-selected 2.2-4.3x above chance on all five models studied
     (GLM-5.3-Flash, Qwen3.6-35B, Qwen3-30B, gpt-oss-120b, DeepSeek-V2-Lite), stable across task types.
@@ -687,7 +741,8 @@ expert selection, applied here to speculative verify windows; the cross-model me
 
 ## 6. Limitations and what is not measured
 
-- **Far from the targets.** 40.3 tok/s at KL 0.085 (section 4.7; 34.3-36.2 tok/s at the lower-KL points of section 4.6)
+- **Far from the targets.** 42.7 tok/s at KL 0.0996 (section 4.8; 34.3-40.3 tok/s at the lower-KL points of sections
+  4.6-4.8)
   against a goal of 80 and a control at 151. With 4-bit experts and FP8 fixed
   weights, 80 tok/s exceeds the combined read bandwidth of both machines by about 1.6-1.7x *regardless of placement*
   (derived, `results/2026-11-09-audit/README.md`). Getting there needs fewer bytes per committed token, not only
@@ -698,13 +753,16 @@ expert selection, applied here to speculative verify windows; the cross-model me
 - **The section 4.6 speeds are not anchor-confirmed.** Boot d6 did not re-run the f1 anchors; plain
   top-5 read 35.46 tok/s on d5 and 35.87 on d6, just outside the 0.3 tok/s rule. Treat absolute speeds as ±0.5 tok/s
   and comparisons as same-boot.
+- **The fastest point passes the quality bar only just.** Full-eval KL 0.0996 against the 0.1 bar, worst domain 0.137
+  against 0.15. Tool calling (90/100) matches the baseline, but the KL margin is thin. Where quality matters more than
+  the last 10% of speed, top-4 + 2 late (KL 0.073, 38.4 tok/s) is the safer setting.
 - **The 40.3 tok/s point is compared across boots.** Its reference (36.4 tok/s) ran on an earlier boot the same day,
   and part of the gap is run-to-run variation in accepted draft tokens (section 4.7). The GPU kernel work is specific
   to GLM-5.3-Flash (DSA and KDA attention layers) and the Spark.
 - **Top-7 + coalescing off** (~27 tok/s) is modeled, not measured. (Coalescing off is now the default; the points in sections 4.5-4.6 include it.)
 - **Quality is teacher-forced agreement** with a Q8_0 proxy of the BF16 weights, on 41,943 tokens. Two bars are used: the two-GPU control's own cost (KLD 0.042) and a looser go/no-go of KLD < 0.1. There is no tool-calling domain in the eval; code is the closest proxy. Task scores
   so far: tool-eval-bench on GLM-5.3-Flash (90/100 at top-5 + union + stand-in vs 89/100 for all 8 experts,
-  `results/2026-11-19-llmbench/`) and GSM8K/MMLU-Pro for union routing on Qwen3.6-35B; no math or knowledge benchmark
+  `results/2026-11-19-llmbench/`; 90/100 at top-3 + 2 late, section 4.8) and GSM8K/MMLU-Pro for union routing on Qwen3.6-35B; no math or knowledge benchmark
   on GLM yet. The agent-suite scores in `results/2026-11-09-audit/` are for config B.
 - **Speed is batch 1, greedy,** on one hardware pair and one link type (TCP over 10GBASE-T).
 - **Unexplained:** the KV-size difference between boots (F8), and a race between the hook's 30-second stats-dump

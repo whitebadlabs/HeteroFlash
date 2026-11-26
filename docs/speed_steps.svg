@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 644" width="980" height="644" font-family="Helvetica,Arial,sans-serif"><rect width="980" height="644" fill="#fff"/>
-<text x="20" y="28" font-size="18" font-weight="bold" fill="#111">From 6.5 to 40.3 tok/s: each step adds one change to all the steps above it</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 686" width="980" height="686" font-family="Helvetica,Arial,sans-serif"><rect width="980" height="686" fill="#fff"/>
+<text x="20" y="28" font-size="18" font-weight="bold" fill="#111">From 6.5 to 42.7 tok/s: each step adds one change to all the steps above it</text>
 <text x="20" y="48" font-size="12" fill="#555">GLM-5.3-Flash, one user, decode tok/s. Steps were measured on different days and slightly different workloads, so increments are approximate.</text>
 <text x="360" y="89" font-size="12.5" fill="#222" text-anchor="end">First deployment (off-the-shelf llama.cpp, 1 GbE)</text>
 <rect x="370.0" y="76" width="79.8" height="20" fill="#9aa3ad" rx="2"/>
@@ -56,14 +56,19 @@
 <text x="881.6" y="511" font-size="12" fill="#1f6feb">+1.9</text>
 <text x="360" y="551" font-size="12.5" fill="#222" text-anchor="end">+ GPU kernel work</text>
 <line x1="837.6" y1="520" x2="837.6" y2="538" stroke="#bbb" stroke-dasharray="3 3"/>
-<rect x="837.6" y="538" width="27.0" height="20" fill="#1e7b3a" rx="2"/>
+<rect x="837.6" y="538" width="27.0" height="20" fill="#1f6feb" rx="2"/>
 <text x="870.6" y="553" font-size="12.5" fill="#111" font-weight="bold">40.3</text>
 <text x="908.6" y="553" font-size="12" fill="#1f6feb">+2.2</text>
-<line x1="370.0" y1="576" x2="370.0" y2="581" stroke="#333"/><text x="370.0" y="595" font-size="11" fill="#444" text-anchor="middle">0</text>
-<line x1="492.7" y1="576" x2="492.7" y2="581" stroke="#333"/><text x="492.7" y="595" font-size="11" fill="#444" text-anchor="middle">10</text>
-<line x1="615.5" y1="576" x2="615.5" y2="581" stroke="#333"/><text x="615.5" y="595" font-size="11" fill="#444" text-anchor="middle">20</text>
-<line x1="738.2" y1="576" x2="738.2" y2="581" stroke="#333"/><text x="738.2" y="595" font-size="11" fill="#444" text-anchor="middle">30</text>
-<line x1="860.9" y1="576" x2="860.9" y2="581" stroke="#333"/><text x="860.9" y="595" font-size="11" fill="#444" text-anchor="middle">40</text>
-<line x1="370.0" y1="576" x2="910.0" y2="576" stroke="#333"/>
-<text x="640.0" y="614" font-size="12.5" fill="#222" text-anchor="middle">decode tok/s (one user). Final: 40.3 tok/s at KL 0.085 vs a Q8 copy of the original BF16 weights</text>
+<text x="360" y="593" font-size="12.5" fill="#222" text-anchor="end">+ late weak picks (top-3 on time + 2 late)</text>
+<line x1="864.6" y1="562" x2="864.6" y2="580" stroke="#bbb" stroke-dasharray="3 3"/>
+<rect x="864.6" y="580" width="29.5" height="20" fill="#1e7b3a" rx="2"/>
+<text x="900.0" y="595" font-size="12.5" fill="#111" font-weight="bold">42.7</text>
+<text x="938.0" y="595" font-size="12" fill="#1f6feb">+2.4</text>
+<line x1="370.0" y1="618" x2="370.0" y2="623" stroke="#333"/><text x="370.0" y="637" font-size="11" fill="#444" text-anchor="middle">0</text>
+<line x1="492.7" y1="618" x2="492.7" y2="623" stroke="#333"/><text x="492.7" y="637" font-size="11" fill="#444" text-anchor="middle">10</text>
+<line x1="615.5" y1="618" x2="615.5" y2="623" stroke="#333"/><text x="615.5" y="637" font-size="11" fill="#444" text-anchor="middle">20</text>
+<line x1="738.2" y1="618" x2="738.2" y2="623" stroke="#333"/><text x="738.2" y="637" font-size="11" fill="#444" text-anchor="middle">30</text>
+<line x1="860.9" y1="618" x2="860.9" y2="623" stroke="#333"/><text x="860.9" y="637" font-size="11" fill="#444" text-anchor="middle">40</text>
+<line x1="370.0" y1="618" x2="910.0" y2="618" stroke="#333"/>
+<text x="640.0" y="656" font-size="12.5" fill="#222" text-anchor="middle">decode tok/s (one user). Final: 42.7 tok/s at KL 0.0996 vs a Q8 copy of the original BF16 weights</text>
 </svg>
